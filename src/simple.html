@@ -40,7 +40,6 @@
 
       if(typeof tle1 == 'string' || typeof tle2 == 'string') {
         var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
-        console.log(satrec);
       }
 
     
@@ -74,7 +73,7 @@
       
       if(i <= 1) { // ISS
         const satellitePoint = viewer.entities.add({
-          name: "ISS",
+          //name: "ISS",
           position: positionsOverTime,
           point: { pixelSize: 6, color: Cesium.Color.DARKMAGENTA}
         });
@@ -101,13 +100,15 @@
         position: positionsOverTime,
         point: { pixelSize: 3, color: Cesium.Color.YELLOW}
         });
-      }
+      } 
+
     
 
       /* TO DO:
 
       1. Double clicking on a point displays orbit trajectory and name
-        Maybe store the names in an array?
+        Store name in TLE array, so i=0 would be name, i=1 is TLE1 data, i=2 is TLE2 data
+        We have a 3 part element set
       2. add all starlinks, space stations, comm sattelites
       3. ensure array elements are correct
 
@@ -115,7 +116,8 @@
 
     }
 
-    // Double clicking on a point displays the name of the entity, e.g. ISS
+    // Double clicking on a point displays the name of the entity, 
+    // e.g. ISS in console for debugging purposes
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
       if (Cesium.defined(selectedEntity)) {
         if (Cesium.defined(selectedEntity.name)) {
