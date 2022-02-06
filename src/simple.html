@@ -34,9 +34,9 @@
 
     //console.log(activeSattelites); // Debugging purposes
 
-    for(i=0; i < dataset_size; i+=2) { // Loop through each satellite's TLE
-      var tle1 = activeSattelites[i];
-      var tle2 = activeSattelites[i+1];
+    for(i=0; i < dataset_size; i+=3) { // Loop through each satellite's TLE
+      var tle1 = activeSattelites[i+1];
+      var tle2 = activeSattelites[i+2];
 
       if(typeof tle1 == 'string' || typeof tle2 == 'string') {
         var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
@@ -71,15 +71,15 @@
       }
 
       
-      if(i <= 1) { // ISS
+  
         const satellitePoint = viewer.entities.add({
-          //name: "ISS",
+          name: activeSattelites[i],
           position: positionsOverTime,
-          point: { pixelSize: 6, color: Cesium.Color.DARKMAGENTA}
+          point: { pixelSize: 3, color: Cesium.Color.WHITE}
         });
-      }
+      
 
-      else if (i > 1 && i <= 264) { // Starlink satellites
+      /* else if (i > 1 && i <= 264) { // Starlink satellites
         const satellitePoint = viewer.entities.add({
         name: "Starlink",
         position: positionsOverTime,
@@ -100,7 +100,7 @@
         position: positionsOverTime,
         point: { pixelSize: 3, color: Cesium.Color.YELLOW}
         });
-      } 
+      }  */
 
     
 
