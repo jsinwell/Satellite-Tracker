@@ -6,8 +6,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
 
   <!-- css -->
-  <link rel="stylesheet" href="infobox.css" type="text/css" media="screen, projection" />
-  <link rel="stylesheet" href="main.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/src/css/main.css" type="text/css" media="screen, projection" />
 </head>
 <body>
   <div id="loading">
@@ -29,6 +29,7 @@
     
     viewer.infoBox.frame.removeAttribute('sandbox');
     viewer.scene.globe.enableLighting = true;
+
 
     var dataset_size = activeSattelites.length;
     var i = 0;
@@ -143,6 +144,15 @@
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
               pixelSize: 3, color: Cesium.Color.GREEN}
           });
+        }
+        
+        else if(j >= 18039 && j <= 21141) { // COSMOS 2251 Debris
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.RED}
+          });
         } 
 
       
@@ -161,12 +171,17 @@
         SCIENCE sats = yellow
         WEATHER sats = yellow
       
-      3. zooming out scales the points so it doesn't look weird
+      3. add search bar where you input name and it auto tracks to entity
+          we have the names stored in array every 3rd element.
+          if name  matches entity name, then we track onto target. 
+          viewer.entities shows EntityCollection with AssociativeArray with all the names of entities
       */
 
       j += 3;
 
     }
+
+    console.log(viewer.entities);
 
     // Double clicking on a point displays the name of the entity, 
     // e.g. ISS in console for debugging purposes
