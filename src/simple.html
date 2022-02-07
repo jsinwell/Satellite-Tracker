@@ -6,6 +6,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
 
   <!-- css -->
+  <link rel="stylesheet" href="infobox.css" type="text/css" media="screen, projection" />
   <link rel="stylesheet" href="main.css" type="text/css" media="screen, projection" />
 </head>
 <body>
@@ -25,12 +26,13 @@
       baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: true,
       navigationHelpButton: false, sceneModePicker: true
     });
-
+    
+    viewer.infoBox.frame.removeAttribute('sandbox');
     viewer.scene.globe.enableLighting = true;
 
     var dataset_size = activeSattelites.length;
     var i = 0;
-    var j = 0;
+    var j = 0; // Track name of elements in activeSatellites
 
     //console.log(activeSattelites); // Debugging purposes
 
@@ -43,7 +45,7 @@
       }
 
     
-      const totalSeconds = 28800; // Sample points up to 8 hours from current date
+      const totalSeconds = 7200; // Sample points up to 8 hours from current date
       const timestepInSeconds = 10; // Generate a new position every 10 seconds
       const start = Cesium.JulianDate.fromDate(new Date());
       const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
@@ -71,48 +73,90 @@
       }
 
       
-  
-        const satellitePoint = viewer.entities.add({
-          name: activeSattelites[i],
-          position: positionsOverTime,
-          point: { pixelSize: 3, color: Cesium.Color.WHITE}
-        });
+        if(j == 0) { // International Space Station
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { pixelSize: 3, color: Cesium.Color.DARKMAGENTA}
+          });
+        }
+
+        else if(j >= 3 && j <= 5346) { // Starlink (Comm)
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 0, 2.0e5, 10.0), pixelSize: 3, color: Cesium.Color.GREEN}
+          });
+        }
+
+       /* else if(j >= 5349 && j <= 5529) { // Space & Earth Science
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.YELLOW}
+          });
+        }
+
+        else if(j >= 5532 && j <= 6486) { // IRIDIUM 33 Debris
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.RED}
+          });
+        }
+
+        else if(j >= 6489 && j <= 6960) { // GNSS (Global Navigation Satellite Systems)
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.DODGERBLUE}
+          });
+        }
+
+        else if(j >= 6963 && j <= 14883) { // FENGYUN 1C Debris
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.RED}
+          });
+        }
+
+        else if(j >= 14886 && j <= 15201) { // Iridium & Iridium NEXT (Comm)
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.GREEN}
+          });
+        }
+
+        else if(j >= 15204 && j <= 18036) { // GEO Protected Zone (Comm)
+          const satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.GREEN}
+          });
+        } */
+
       
 
-      /* else if (i > 1 && i <= 264) { // Starlink satellites
-        const satellitePoint = viewer.entities.add({
-        name: "Starlink",
-        position: positionsOverTime,
-        point: { pixelSize: 4, color: Cesium.Color.WHITE}
-        });
-      }
 
-      else if (i > 265 && i <= 902) { // Iridium debris
-        const satellitePoint = viewer.entities.add({
-        name: "Iridium Debris",
-        position: positionsOverTime,
-        point: { pixelSize: 3, color: Cesium.Color.RED}
-        });
-      }
-
-      else { // Earth science satellites
-        const satellitePoint = viewer.entities.add({
-        position: positionsOverTime,
-        point: { pixelSize: 3, color: Cesium.Color.YELLOW}
-        });
-      }  */
 
     
 
       /* TO DO:
 
-      1. Double clicking on a point displays orbit trajectory and name
-        Store name in TLE array, so i=0 would be name, i=1 is TLE1 data, i=2 is TLE2 data
-        We have a 3 part element set
-      2. add all starlinks, space stations, comm sattelites
-      3. ensure array elements are correct
-
+      1. Double clicking on a point displays orbit trajectory
+      2. STATIONS = purple
+         DEBRIS = red
+        COMM sats = green
+        NAV sats = blue
+        SCIENCE sats = yellow
+        WEATHER sats = yellow
+      
+      3. zooming out scales the points so it doesn't look weird
       */
+
+      j += 3;
 
     }
 
@@ -157,6 +201,14 @@
           <td>Station</td>
           <td>Dark Magenta</td>
       </tr>
+      <tr>
+          <td>Starlink</td>
+          <td></td>
+          <td></td>
+          <td>SATCOM</td>
+          <td>White</td>
+      </tr>
   </table>
+  
 </body>
 </html>
