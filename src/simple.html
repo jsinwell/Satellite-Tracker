@@ -77,7 +77,8 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { pixelSize: 3, color: Cesium.Color.DARKMAGENTA}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.DARKMAGENTA}
           });
         }
 
@@ -85,15 +86,17 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 0, 2.0e5, 10.0), pixelSize: 3, color: Cesium.Color.GREEN}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.GREEN}
           });
         }
 
-       /* else if(j >= 5349 && j <= 5529) { // Space & Earth Science
+        else if(j >= 5349 && j <= 5529) { // Space & Earth Science
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.YELLOW}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.YELLOW}
           });
         }
 
@@ -101,7 +104,8 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.RED}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.RED}
           });
         }
 
@@ -109,7 +113,8 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.DODGERBLUE}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.DODGERBLUE}
           });
         }
 
@@ -117,7 +122,8 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.RED}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.RED}
           });
         }
 
@@ -125,7 +131,8 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.GREEN}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.GREEN}
           });
         }
 
@@ -133,9 +140,10 @@
           const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
-            point: { "scaleByDistance": { "nearFarScalar": [ 1.0, 2.0, 10000.0, 3.0 ] }, pixelSize: 3, color: Cesium.Color.GREEN}
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 3, color: Cesium.Color.GREEN}
           });
-        } */
+        } 
 
       
 
