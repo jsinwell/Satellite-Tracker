@@ -29,13 +29,11 @@
     
     viewer.infoBox.frame.removeAttribute('sandbox');
     viewer.scene.globe.enableLighting = true;
-
+    var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
     var dataset_size = activeSattelites.length;
     var i = 0;
     var j = 0; // Track name of elements in activeSatellites
-
-    //console.log(activeSattelites); // Debugging purposes
 
     for(i=0; i < dataset_size; i+=3) { // Loop through each satellite's TLE
       var tle1 = activeSattelites[i+1];
@@ -72,70 +70,32 @@
         const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
         positionsOverTime.addSample(time, position);
       }
-
-        var satellitePoint = null;
       
         if(j == 0) { // International Space Station
-          satellitePoint = viewer.entities.add({
+          const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 20, color: Cesium.Color.DARKMAGENTA}
+              pixelSize: 10, color: Cesium.Color.DARKMAGENTA}
           });
         }
 
-        // Code for displaying textbox next to entity //
-        // Somehow make it so only activates when clicking on entity //
-        // Also only shows for last entity for some reason //
-
-        var testElement = document.createElement('div');
-        testElement.style.position = 'absolute';
-        testElement.style.border = '2px solid #444';
-        testElement.style.font = '14px Arial';
-        testElement.innerHTML = satellitePoint.name;
-        viewer.container.appendChild(testElement);
-        var isEntityVisible = true;
-
-        var scratch3dPosition = new Cesium.Cartesian3();
-        var scratch2dPosition = new Cesium.Cartesian2();
-
-        viewer.clock.onTick.addEventListener(function(clock) {
-        var position3d;
-        var position2d;
-
-        position3d = satellitePoint.position.getValue(clock.currentTime, scratch3dPosition);
-        position2d = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
-                viewer.scene, position3d, scratch2dPosition);
-        
-
-        // Having a position doesn't guarantee it's on screen, need to check.
-        if (position2d) {
-            // Set the HTML position to match the entity's position.
-            testElement.style.left = position2d.x + 'px';
-            testElement.style.top = position2d.y + 'px';
-
-            // Reveal HTML when entity comes on screen
-            if (!isEntityVisible) {
-                isEntityVisible = true;
-                testElement.style.display = 'block';
-            }
-        } else if (isEntityVisible) {
-            // Hide HTML when entity goes off screen or loses its position.
-            isEntityVisible = false;
-            testElement.style.display = 'none';
-        }
-    });
-    
-       /* else if(j >= 3 && j <= 5346) { // Starlink (Comm)
-          satellitePoint = viewer.entities.add({
+        else if(j >= 3 && j <= 5346) { // Starlink (Comm)
+          const satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
               pixelSize: 3, color: Cesium.Color.GREEN}
           });
         }
-
         
+        console.log(viewer.entities);
+
+      // Double clicking on a point displays the name of the entity, 
+      // e.g. ISS in console for debugging purposes -> somehow it is displaying deselected by the number
+      // of active satellites there are
+
+        /*
 
         else if(j >= 5349 && j <= 5529) { // Space & Earth Science
           satellitePoint = viewer.entities.add({
@@ -220,18 +180,18 @@
 
     }
 
-    // Double clicking on a point displays the name of the entity, 
-    // e.g. ISS in console for debugging purposes
+
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
-      if (Cesium.defined(selectedEntity)) {
-        if (Cesium.defined(selectedEntity.name)) {
-          console.log('Selected ' + selectedEntity.name);
+        if (Cesium.defined(selectedEntity)) {
+          if (Cesium.defined(selectedEntity.name)) {
+            console.log('Selected ' + selectedEntity.name);
+          }
         }
-      }
-      else {
-        console.log('Deselected');
-      }
-    });
+        else {
+          console.log('Deselected');
+        }
+      });
+
 
     // Loading the globe and zooming out
     let initialized = false;
