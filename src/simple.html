@@ -90,8 +90,6 @@
           });
         }
 
-        /*
-
         else if(j >= 5349 && j <= 5529) { // Space & Earth Science
           satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
@@ -109,6 +107,8 @@
               pixelSize: 3, color: Cesium.Color.RED}
           });
         }
+
+        /*
 
         else if(j >= 6489 && j <= 6960) { // GNSS (Global Navigation Satellite Systems)
           satellitePoint = viewer.entities.add({
@@ -175,17 +175,20 @@
 
     }
 
-    // Double clicking on a point displays the name of the entity, 
-    // e.g. ISS in console for debugging purposes -> somehow it is displaying deselected by the number
-    // of active satellites there are
+    var testElement;
+
+    // DClicking on a point displays the name of the entity in a text box, which tracks the entity as it
+    // moves through space. This is achieved using a selectedEntity function that only triggers when an
+    // entity is selected
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
         if (Cesium.defined(selectedEntity)) {
           if (Cesium.defined(selectedEntity.name)) {
-            var testElement = document.createElement('div');
+            // Create a sample HTML element in the document.
+            testElement = document.createElement('div');
             testElement.style.position = 'absolute';
             testElement.style.border = '2px solid #444';
             testElement.style.font = '16px sans-serif';
-            testElement.innerHTML = satellitePoint.name;
+            testElement.innerHTML = selectedEntity.name;
             viewer.container.appendChild(testElement);
             var isEntityVisible = true;
 
@@ -198,8 +201,8 @@
                 var position2d;
 
                 // Not all entities have a position, need to check.
-                if (satellitePoint.position) {
-                    position3d = satellitePoint.position.getValue(clock.currentTime, scratch3dPosition);
+                if (selectedEntity.position) {
+                    position3d = selectedEntity.position.getValue(clock.currentTime, scratch3dPosition);
                 }
 
                 // Moving entities don't have a position for every possible time, need to check.
@@ -213,24 +216,18 @@
                     // Set the HTML position to match the entity's position.
                     testElement.style.left = position2d.x + 'px';
                     testElement.style.top = position2d.y + 'px';
-
-                    // Reveal HTML when entity comes on screen
-                    if (!isEntityVisible) {
-                        isEntityVisible = true;
-                        testElement.style.display = 'block';
-                    }
-                } else if (isEntityVisible) {
-                    // Hide HTML when entity goes off screen or loses its position.
-                    isEntityVisible = false;
-                    testElement.style.display = 'none';
-                }
+                } 
             });
           }
         }
+
         else {
+          testElement.remove(); // Destroy textbox on deselection, log to console for debugging
           console.log('Deselected');
         }
-      });
+    });
+
+    testElement.remove(); // Destroy textbox on deselection, log to console for debugging
 
     console.log(satellitePoint);
 
