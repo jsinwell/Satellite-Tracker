@@ -25,10 +25,10 @@
       baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: true,
       navigationHelpButton: false, sceneModePicker: true
     });
-    
-    viewer.infoBox.frame.removeAttribute('sandbox');
+
+    // viewer.infoBox.frame.removeAttribute('sandbox');
     viewer.scene.globe.enableLighting = true;
-    var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+    // var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
     var satellitePoint;
     var dataset_size = activeSattelites.length;
@@ -46,8 +46,12 @@
     
       const totalSeconds = 7200; // Sample points up to 8 hours from current date
       const timestepInSeconds = 10; // Generate a new position every 10 seconds
+
       const start = Cesium.JulianDate.fromDate(new Date());
       const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
+      
+      // Our timeline begins from current time and extends 8 hours ahead, with a default
+      // time multipler of 5x, which can be changed
       viewer.clock.startTime = start.clone();
       viewer.clock.stopTime = stop.clone();
       viewer.clock.currentTime = start.clone();
@@ -187,18 +191,24 @@
     // Clicking on a point displays the name of the entity in a text box, which tracks the entity as it
     // moves through space. This is achieved using a selectedEntity function that only triggers when an
     // entity is selected
-
-    // BUG: clicking on multiple entities makes textbox persist and do weird shit
-    var testElement;
+    
+    var testElement = document.createElement('div');
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
         if (Cesium.defined(selectedEntity)) {
           if (Cesium.defined(selectedEntity.name)) {
             // Create a sample HTML element in the document.
-            testElement = document.createElement('div');
             testElement.style.position = 'absolute';
-            testElement.style.border = '2px solid black';
+            testElement.style.border = '2px solid rgba(84, 84, 84, 1)';
+            testElement.style.background = 'rgba(84, 84, 84, 1)';
             testElement.style.padding = '2px';
-            testElement.style.font = '14px arial';
+            testElement.style.boxShadow = '0 0 10px 1px #000';
+            testElement.style.font = '13px sans-serif';
+            testElement.style.fontWeight = 'normal';
+            testElement.style.color = '#edffff';
+            testElement.style.borderTopLeftRadius = '7px';
+            testElement.style.borderBottomLeftRadius = '7px';
+            testElement.style.borderTopRightRadius = '7px';
+            testElement.style.borderBottomRightRadius = '7px';
             testElement.innerHTML = selectedEntity.name;
             viewer.container.appendChild(testElement);
             var isEntityVisible = true;
@@ -208,37 +218,24 @@
 
             // Every animation frame, update the HTML element position from the entity.
             viewer.clock.onTick.addEventListener(function(clock) {
-                var position3d;
-                var position2d;
-
-                // Not all entities have a position, need to check.
-                if (selectedEntity.position) {
-                    position3d = selectedEntity.position.getValue(clock.currentTime, scratch3dPosition);
-                }
-
-                // Moving entities don't have a position for every possible time, need to check.
-                if (position3d) {
-                    position2d = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
-                        viewer.scene, position3d, scratch2dPosition);
-                }
-
-                // Having a position doesn't guarantee it's on screen, need to check.
-                if (position2d) {
-                    // Set the HTML position to match the entity's position.
-                    testElement.style.left = position2d.x + 'px';
-                    testElement.style.top = position2d.y + 'px';
-                } 
+              var position3d;
+              var position2d;
+              position3d = selectedEntity.position.getValue(clock.currentTime, scratch3dPosition);
+              position2d = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
+                viewer.scene, position3d, scratch2dPosition);
+              
+              // Set the HTML position to match the entity's position.
+              testElement.style.left = position2d.x + 'px';
+              testElement.style.top = position2d.y + 'px'; 
             });
           }
         }
-
         else {
-          testElement.remove(); // Destroy textbox on deselection, log to console for debugging
+          testElement.remove(); // Remove contents of div after deselecting an entity
           console.log('Deselected');
         }
     });
 
-    console.log(satellitePoint);
 
   </script>
 
