@@ -210,12 +210,16 @@
               var position3d;
               var position2d;
               position3d = selectedEntity.position.getValue(clock.currentTime, scratch3dPosition);
+
+              // Moving entities don't always have a position for every time
+              if (position3d) {
               position2d = Cesium.SceneTransforms.wgs84ToWindowCoordinates(
                 viewer.scene, position3d, scratch2dPosition);
-              
-              // Set the HTML position to match the entity's position.
+              }
+              if (position2d) {
               entityNameBox.style.left = position2d.x + 'px';
               entityNameBox.style.top = position2d.y + 'px'; 
+              }
             });
           }
         }
