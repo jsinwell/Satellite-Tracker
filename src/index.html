@@ -191,28 +191,17 @@
     // Clicking on a point displays the name of the entity in a text box, which tracks the entity as it
     // moves through space. This is achieved using a selectedEntity function that only triggers when an
     // entity is selected
-    
-    var testElement = document.createElement('div');
+
+    // new bug: double click to track entity causes a crash
+
+    var entityNameBox = document.createElement('div');
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
         if (Cesium.defined(selectedEntity)) {
           if (Cesium.defined(selectedEntity.name)) {
-            // Create a sample HTML element in the document.
-            testElement.style.position = 'absolute';
-            testElement.style.border = '2px solid rgba(84, 84, 84, 1)';
-            testElement.style.background = 'rgba(84, 84, 84, 1)';
-            testElement.style.padding = '2px';
-            testElement.style.boxShadow = '0 0 10px 1px #000';
-            testElement.style.font = '13px sans-serif';
-            testElement.style.fontWeight = 'normal';
-            testElement.style.color = '#edffff';
-            testElement.style.borderTopLeftRadius = '7px';
-            testElement.style.borderBottomLeftRadius = '7px';
-            testElement.style.borderTopRightRadius = '7px';
-            testElement.style.borderBottomRightRadius = '7px';
-            testElement.innerHTML = selectedEntity.name;
-            viewer.container.appendChild(testElement);
-            var isEntityVisible = true;
-
+            entityNameBox.setAttribute("class", "textbox"); // Allows us to style our textbox in CSS
+            entityNameBox.innerHTML = selectedEntity.name; // Information inside textbox will be entity's name
+            viewer.container.appendChild(entityNameBox);
+            
             var scratch3dPosition = new Cesium.Cartesian3();
             var scratch2dPosition = new Cesium.Cartesian2();
 
@@ -225,18 +214,17 @@
                 viewer.scene, position3d, scratch2dPosition);
               
               // Set the HTML position to match the entity's position.
-              testElement.style.left = position2d.x + 'px';
-              testElement.style.top = position2d.y + 'px'; 
+              entityNameBox.style.left = position2d.x + 'px';
+              entityNameBox.style.top = position2d.y + 'px'; 
             });
           }
         }
         else {
-          testElement.remove(); // Remove contents of div after deselecting an entity
+          entityNameBox.remove(); // Remove contents of div after deselecting an entity
           console.log('Deselected');
         }
     });
-
-
+    
   </script>
 
 <!-- <table>
