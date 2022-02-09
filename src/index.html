@@ -4,6 +4,7 @@
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
+  <script src="TLE.js"></script> 
 
   <!-- css -->
   <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
@@ -14,8 +15,6 @@
    <h1>Satellite Visualizer</h1>
   </div>
   <div id="cesiumContainer"></div>
-
-  <script src="TLE.js"> // Fill in an array with TLE data </script> 
   
   <script>
     // Initialize Cesium viewer
@@ -53,7 +52,7 @@
       viewer.clock.stopTime = stop.clone();
       viewer.clock.currentTime = start.clone();
       viewer.timeline.zoomTo(start, stop);
-      viewer.clock.multiplier = 20;
+      viewer.clock.multiplier = 5;
       viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
       
       const positionsOverTime = new Cesium.SampledPositionProperty();
@@ -108,8 +107,6 @@
           });
         }
 
-        /*
-
         else if(j >= 6489 && j <= 6960) { // GNSS (Global Navigation Satellite Systems)
           satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
@@ -153,7 +150,7 @@
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
               pixelSize: 3, color: Cesium.Color.RED}
           });
-        } */
+        } 
 
       /* TO DO:
 
@@ -175,19 +172,33 @@
 
     }
 
-    var testElement;
+    // Loading the globe and zooming out
+    let initialized = false;
+    viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
+      if (!initialized && viewer.scene.globe.tilesLoaded === true) {
+        viewer.clock.shouldAnimate = true;
+        initialized = true;
+        viewer.scene.camera.zoomOut(7000000);
+        document.querySelector("#loading").classList.toggle('disappear', true)
+      }
+    });
 
-    // DClicking on a point displays the name of the entity in a text box, which tracks the entity as it
+
+    // Clicking on a point displays the name of the entity in a text box, which tracks the entity as it
     // moves through space. This is achieved using a selectedEntity function that only triggers when an
     // entity is selected
+
+    // BUG: clicking on multiple entities makes textbox persist and do weird shit
+    var testElement;
     viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
         if (Cesium.defined(selectedEntity)) {
           if (Cesium.defined(selectedEntity.name)) {
             // Create a sample HTML element in the document.
             testElement = document.createElement('div');
             testElement.style.position = 'absolute';
-            testElement.style.border = '2px solid #444';
-            testElement.style.font = '16px sans-serif';
+            testElement.style.border = '2px solid black';
+            testElement.style.padding = '2px';
+            testElement.style.font = '14px arial';
             testElement.innerHTML = selectedEntity.name;
             viewer.container.appendChild(testElement);
             var isEntityVisible = true;
@@ -227,24 +238,11 @@
         }
     });
 
-    testElement.remove(); // Destroy textbox on deselection, log to console for debugging
-
     console.log(satellitePoint);
-
-    // Loading the globe and zooming out
-    let initialized = false;
-    viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
-      if (!initialized && viewer.scene.globe.tilesLoaded === true) {
-        viewer.clock.shouldAnimate = true;
-        initialized = true;
-        viewer.scene.camera.zoomOut(7000000);
-        document.querySelector("#loading").classList.toggle('disappear', true)
-      }
-    });
 
   </script>
 
-  <table>
+<!-- <table>
       <tr>
           <th>Name</th>
           <th>Apogee</th>
@@ -266,7 +264,7 @@
           <td>SATCOM</td>
           <td>White</td>
       </tr>
-  </table>
+  </table>-->
   
 </body>
 </html>
