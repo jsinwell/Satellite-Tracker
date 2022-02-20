@@ -32,18 +32,17 @@
 
     var satellitePoint;
     var dataset_size = activeSattelites.length;
-    var i = 0;
+    var k = 0;
     var j = 0; // Track name of elements in activeSatellites
 
-    for(i=0; i < dataset_size; i+=3) { // Loop through each satellite's TLE
-      var tle1 = activeSattelites[i+1];
-      var tle2 = activeSattelites[i+2];
+    for(k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
+      var tle1 = activeSattelites[k+1];
+      var tle2 = activeSattelites[k+2];
 
-      if(typeof tle1 == 'string' || typeof tle2 == 'string') {
+      if(typeof tle1 == 'string' && typeof tle2 == 'string') {
         var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
       }
 
-    
       const totalSeconds = 7200; // Sample points up to 8 hours from current date
       const timestepInSeconds = 10; // Generate a new position every 10 seconds
 
@@ -75,90 +74,18 @@
         positionsOverTime.addSample(time, position);
       }
       
-        if(j == 0) { // International Space Station
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 10, color: Cesium.Color.DARKMAGENTA}
-          });
-        }
-
-        else if(j >= 3 && j <= 5346) { // Starlink (Comm)
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.GREEN}
-          });
-        }
-
-        else if(j >= 5349 && j <= 5529) { // Space & Earth Science
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.YELLOW}
-          });
-        }
-
-        else if(j >= 5532 && j <= 6486) { // IRIDIUM 33 Debris
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.RED}
-          });
-        }
-
-        else if(j >= 6489 && j <= 6960) { // GNSS (Global Navigation Satellite Systems)
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.DODGERBLUE}
-          });
-        }
-
-        else if(j >= 6963 && j <= 14883) { // FENGYUN 1C Debris
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.RED}
-          });
-        }
-
-        else if(j >= 14886 && j <= 15201) { // Iridium & Iridium NEXT (Comm)
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.GREEN}
-          });
-        }
-
-        else if(j >= 15204 && j <= 18036) { // GEO Protected Zone (Comm)
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.GREEN}
-          });
-        }
+       
+      satellitePoint = viewer.entities.add({
+        name: activeSattelites[j],
+        position: positionsOverTime,
+        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+          pixelSize: 5, color: Cesium.Color.GREEN}
+      });
         
-        else if(j >= 18039 && j <= 21141) { // COSMOS 2251 Debris
-          satellitePoint = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 3, color: Cesium.Color.RED}
-          });
-        } 
 
       /* TO DO:
 
-      1. Double clicking on a point displays orbit trajectory
+      1. automatically update tle data from celestrak
       2. STATIONS = purple
          DEBRIS = red
         COMM sats = green
