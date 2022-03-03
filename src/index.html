@@ -75,13 +75,34 @@
       }
       
        
-      satellitePoint = viewer.entities.add({
-        name: activeSattelites[j],
-        position: positionsOverTime,
-        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 5, color: Cesium.Color.GREEN}
-      });
+          if(activeSattelites[j].includes("IRIDIUM 33") || activeSattelites[j].includes("COSMOS 2251")) {
+            satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 4, color: Cesium.Color.RED}
+            });
+          }
+
+          else if(activeSattelites[j].includes("STARLINK")) {
+            satellitePoint = viewer.entities.add({
+            name: activeSattelites[j],
+            position: positionsOverTime,
+            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+              pixelSize: 4, color: Cesium.Color.WHITE}
+            });
+          }
+          
+          else {
+            satellitePoint = viewer.entities.add({
+              name: activeSattelites[j],
+              position: positionsOverTime,
+              point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+                pixelSize: 4, color: Cesium.Color.GREEN}
+            });
+          }
         
+          
 
       /* TO DO:
 
