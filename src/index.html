@@ -1,21 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
-  <script src="TLE.js"></script> 
-
   <!-- css -->
   <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
   <link rel="stylesheet" href="/src/css/main.css" type="text/css" media="screen, projection" />
+
+  <script src="preloader.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;700&display=swap" rel="stylesheet">
+
 </head>
 <body>
+  <div class="loader">
+    <img src = "../Assets/Preloader/preloader.gif"/>
+    <p>Loading...</p>
+  </div>
+
   <div id="loading">
    <h1>Satellite Visualizer</h1>
   </div>
   <div id="cesiumContainer"></div>
-  
+
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
+  <script src="TLE.js"></script>
   <script>
     // Initialize Cesium viewer
     const viewer = new Cesium.Viewer('cesiumContainer', {
@@ -75,7 +85,8 @@
       }
       
        
-          if(activeSattelites[j].includes("IRIDIUM 33") || activeSattelites[j].includes("COSMOS 2251")) {
+          if(activeSattelites[j].includes("IRIDIUM 33") || activeSattelites[j].includes("COSMOS 2251")
+          || activeSattelites[j].includes("FENGYUN 1C")) {
             satellitePoint = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
@@ -106,6 +117,7 @@
 
       /* TO DO:
 
+          loading screen 
       1. automatically update tle data from celestrak
       2. STATIONS = purple
          DEBRIS = red
@@ -125,6 +137,7 @@
     }
 
     // Loading the globe and zooming out
+    
     let initialized = false;
     viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
       if (!initialized && viewer.scene.globe.tilesLoaded === true) {
@@ -178,30 +191,6 @@
     });
     
   </script>
-
-<!-- <table>
-      <tr>
-          <th>Name</th>
-          <th>Apogee</th>
-          <th>Perigee</th>
-          <th>Type</th>
-          <th>Color</th>
-      </tr>
-      <tr>
-          <td>ISS</td>
-          <td>422 km</td>
-          <td>418 km</td>
-          <td>Station</td>
-          <td>Dark Magenta</td>
-      </tr>
-      <tr>
-          <td>Starlink</td>
-          <td></td>
-          <td></td>
-          <td>SATCOM</td>
-          <td>White</td>
-      </tr>
-  </table>-->
   
 </body>
 </html>
