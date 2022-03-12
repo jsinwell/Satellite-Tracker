@@ -4,11 +4,10 @@
   <!-- css -->
   <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
   <link rel="stylesheet" href="/src/css/main.css" type="text/css" media="screen, projection" />
-
-  <script src="preloader.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;700&display=swap" rel="stylesheet">
+  <script src="preloader.js"></script>
 
 </head>
 <body>
@@ -40,8 +39,9 @@
     viewer.scene.globe.enableLighting = true;
     // var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
-    var satellitePoint;
+    var satellitePoint = [];
     var dataset_size = activeSattelites.length;
+    var i = 0;
     var k = 0;
     var j = 0; // Track name of elements in activeSatellites
 
@@ -87,7 +87,7 @@
        
           if(activeSattelites[j].includes("IRIDIUM 33") || activeSattelites[j].includes("COSMOS 2251")
           || activeSattelites[j].includes("FENGYUN 1C")) {
-            satellitePoint = viewer.entities.add({
+            satellitePoint[i] = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
@@ -96,7 +96,7 @@
           }
 
           else if(activeSattelites[j].includes("STARLINK")) {
-            satellitePoint = viewer.entities.add({
+            satellitePoint[i] = viewer.entities.add({
             name: activeSattelites[j],
             position: positionsOverTime,
             point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
@@ -105,7 +105,7 @@
           }
           
           else {
-            satellitePoint = viewer.entities.add({
+            satellitePoint[i] = viewer.entities.add({
               name: activeSattelites[j],
               position: positionsOverTime,
               point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
@@ -117,7 +117,7 @@
 
       /* TO DO:
 
-          loading screen 
+          increase throughput through various tle.js files
       1. automatically update tle data from celestrak
       2. STATIONS = purple
          DEBRIS = red
@@ -133,6 +133,7 @@
       */
 
       j += 3;
+      i++;
 
     }
 
@@ -191,6 +192,21 @@
     });
     
   </script>
+
+  <input type="text" id="searchBar" placeholder="Search for names..">
   
+  <script> // Search bar that tracks the position of the entity
+    const searchBar = document.getElementById("searchBar");
+    for(let a = 0; a < satellitePoint.length; a++) {
+      searchBar.addEventListener("keyup", e => {
+        const searchString = e.target.value.toLowerCase();
+          if(satellitePoint[a].name.toLowerCase().includes(searchString) && (e.keyCode == 13)) {
+            viewer.trackedEntity = satellitePoint[a];
+            console.log(satellitePoint[a].name);
+          }
+      });
+    }
+    </script>
+
 </body>
 </html>
