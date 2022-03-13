@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <!-- css -->
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
   <link rel="stylesheet" href="/src/css/main.css" type="text/css" media="screen, projection" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,8 +22,9 @@
   </div>
   <div id="cesiumContainer"></div>
 
+  <input type="text" id="searchBar" placeholder="Search for names..">
+
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
-  <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
   <script src="TLE.js"></script>
   <script>
@@ -35,17 +37,14 @@
       navigationHelpButton: false, sceneModePicker: true
     });
 
-    // viewer.infoBox.frame.removeAttribute('sandbox');
+    viewer.infoBox.frame.removeAttribute('sandbox'); // Allows us to edit infoBox
     viewer.scene.globe.enableLighting = true;
-    // var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas);
 
     var satellitePoint = [];
     var dataset_size = activeSattelites.length;
     var i = 0;
-    var k = 0;
-    var j = 0; // Track name of elements in activeSatellites
 
-    for(k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
+    for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
       var tle1 = activeSattelites[k+1];
       var tle2 = activeSattelites[k+2];
 
@@ -72,6 +71,8 @@
       
       // Give SatelliteJS the TLE's and a specific time.
       // Get back a longitude, latitude, height (km).
+
+      //console.log(k);
       for (let i = 0; i < totalSeconds; i+= timestepInSeconds) {
         const time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
         const jsDate = Cesium.JulianDate.toDate(time);
@@ -85,33 +86,39 @@
       }
       
        
-          if(activeSattelites[j].includes("IRIDIUM 33") || activeSattelites[j].includes("COSMOS 2251")
-          || activeSattelites[j].includes("FENGYUN 1C")) {
-            satellitePoint[i] = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 4, color: Cesium.Color.RED}
-            });
-          }
+      if(activeSattelites[k].includes("IRIDIUM 33") || activeSattelites[k].includes("COSMOS 2251")
+      || activeSattelites[k].includes("FENGYUN 1C")) {
+        satellitePoint[i] = viewer.entities.add({
+        name: activeSattelites[k],
+        position: positionsOverTime,
+        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+          pixelSize: 4, color: Cesium.Color.RED}
+        });
+      }
 
-          else if(activeSattelites[j].includes("STARLINK")) {
-            satellitePoint[i] = viewer.entities.add({
-            name: activeSattelites[j],
-            position: positionsOverTime,
-            point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-              pixelSize: 4, color: Cesium.Color.WHITE}
-            });
-          }
-          
-          else {
-            satellitePoint[i] = viewer.entities.add({
-              name: activeSattelites[j],
-              position: positionsOverTime,
-              point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-                pixelSize: 4, color: Cesium.Color.GREEN}
-            });
-          }
+      else if(activeSattelites[k].includes("STARLINK")) {
+        satellitePoint[i] = viewer.entities.add({
+        name: activeSattelites[k],
+        position: positionsOverTime,
+        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+          pixelSize: 4, color: Cesium.Color.WHITE}
+        });
+      }
+      
+      else {
+        satellitePoint[i] = viewer.entities.add({
+          name: activeSattelites[k],
+          position: positionsOverTime,
+          point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+            pixelSize: 4, color: Cesium.Color.GREEN}
+        });
+      }
+
+      if(satellitePoint[i].name == "ISS (ZARYA)") {
+        satellitePoint[i].description = 'The International Space Station is a large spacecraft in orbit around Earth. It serves as a home where crews of astronauts and cosmonauts live. The space station is also a unique science laboratory. Several nations worked together to build and use the space station. The space station is made of parts that were assembled in space by astronauts. It orbits Earth at an average altitude of approximately 250 miles. It travels at 17,500 mph. This means it orbits Earth every 90 minutes. NASA is using the space station to learn more about living and working in space. These lessons will make it possible to send humans farther into space than ever before.';
+      }
+
+
         
           
 
@@ -132,13 +139,12 @@
           viewer.entities shows EntityCollection with AssociativeArray with all the names of entities
       */
 
-      j += 3;
       i++;
 
     }
 
+
     // Loading the globe and zooming out
-    
     let initialized = false;
     viewer.scene.globe.tileLoadProgressEvent.addEventListener(() => {
       if (!initialized && viewer.scene.globe.tilesLoaded === true) {
@@ -190,23 +196,21 @@
           console.log('Deselected');
         }
     });
-    
-  </script>
 
-  <input type="text" id="searchBar" placeholder="Search for names..">
-  
-  <script> // Search bar that tracks the position of the entity
+    // Search bar that tracks the position of the entity
     const searchBar = document.getElementById("searchBar");
     for(let a = 0; a < satellitePoint.length; a++) {
       searchBar.addEventListener("keyup", e => {
         const searchString = e.target.value.toLowerCase();
           if(satellitePoint[a].name.toLowerCase().includes(searchString) && (e.keyCode == 13)) {
             viewer.trackedEntity = satellitePoint[a];
+            viewer.selectedEntity = satellitePoint[a];
             console.log(satellitePoint[a].name);
           }
       });
     }
-    </script>
+    
+  </script>
 
 </body>
 </html>

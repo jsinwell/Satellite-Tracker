@@ -3,7 +3,7 @@
     position: absolute;
     top: 80px;
     right: 0;
-    width: 10%;
+    width: 25%;
     max-width: 480px;
     background: rgba(38, 38, 38, 0.95);
     color: #edffff;
@@ -28,7 +28,7 @@
   .cesium-infoBox-title {
     display: block;
     height: 20px;
-    padding: 5px 30px 5px 25px;
+    padding: 7px 30px 5px 30px;
     background: rgba(84, 84, 84, 1);
     border-top-left-radius: 7px;
     text-align: center;
