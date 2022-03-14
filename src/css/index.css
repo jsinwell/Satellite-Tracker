@@ -54,3 +54,10 @@ body {
     border-bottom-left-radius: 7px;
     border-bottom-right-radius: 7px;
 }
+
+#searchBar {
+    font: bold 10px 'Source Sans Pro', sans-serif;
+    position: fixed;
+    top: 80px;
+    right: 100px;
+}
