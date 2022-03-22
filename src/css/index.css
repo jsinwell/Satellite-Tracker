@@ -3,6 +3,11 @@
     padding: 0;
 }
 
+.container {
+    width: 90%;
+    margin: auto;
+}
+
 .loader {
     position: fixed;
     z-index: 99;
@@ -61,12 +66,23 @@ body {
 
 #searchBar {
     font: bold 10px 'Source Sans Pro', sans-serif;
-    position: block;
-    margin-right:auto;
-    margin-left:auto;
-    width: 15%;
-    text-align: left;
+    text-align: center;
     outline: 0;
+}
+
+#search {
+    position: absolute;
+    top: 0%;
+    right: 50%;
+    transform: translateX(50%);
+    padding: 10px;
+    z-index: 1;
+}
+
+.toolbar-left {
+    position: absolute;
+    z-index: 1;
+    padding: 10px;
 }
 
 nav {
@@ -96,7 +112,8 @@ ul li a:hover {
 }
 
 #cesiumContainer {
-    width: 100%; 
-    height: 100%; 
+    width: 100%;
+    height: 100%;
     overflow: hidden;
+    position: relative;
 }

@@ -2,6 +2,16 @@ import { activeSattelites } from './TLE.js';
 
 // Initialize Cesium viewer
 const viewer = new Cesium.Viewer('cesiumContainer', {
+    skyBox: new Cesium.SkyBox({
+      sources: {
+        positiveX : '../Assets/Skybox/tycho2t3_80_px.jpg',
+        negativeX : '../Assets/Skybox/tycho2t3_80_mx.jpg',
+        positiveY : '../Assets/Skybox/tycho2t3_80_py.jpg',
+        negativeY : '../Assets/Skybox/tycho2t3_80_my.jpg',
+        positiveZ : '../Assets/Skybox/tycho2t3_80_pz.jpg',
+        negativeZ : '../Assets/Skybox/tycho2t3_80_mz.jpg'
+      }
+    }),
     imageryProvider: new Cesium.TileMapServiceImageryProvider({
       url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
     }),
@@ -90,27 +100,6 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       satellitePoint[i].description = 'The International Space Station is a large spacecraft in orbit around Earth. It serves as a home where crews of astronauts and cosmonauts live. The space station is also a unique science laboratory. Several nations worked together to build and use the space station. The space station is made of parts that were assembled in space by astronauts. It orbits Earth at an average altitude of approximately 250 miles. It travels at 17,500 mph. This means it orbits Earth every 90 minutes. NASA is using the space station to learn more about living and working in space. These lessons will make it possible to send humans farther into space than ever before.';
     }
 
-
-      
-        
-
-    /* TO DO:
-
-        increase throughput through various tle.js files
-    1. automatically update tle data from celestrak
-    2. STATIONS = purple
-       DEBRIS = red
-      COMM sats = green
-      NAV sats = blue
-      SCIENCE sats = yellow
-      WEATHER sats = yellow
-    
-    3. add search bar where you input name and it auto tracks to entity
-        we have the names stored in array every 3rd element.
-        if name  matches entity name, then we track onto target. 
-        viewer.entities shows EntityCollection with AssociativeArray with all the names of entities
-    */
-
     i++;
 
   }
@@ -125,7 +114,6 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       viewer.scene.camera.zoomOut(7000000);
     }
   });
-
 
   // Clicking on a point displays the name of the entity in a text box, which tracks the entity as it
   // moves through space. This is achieved using a selectedEntity function that only triggers when an
@@ -176,4 +164,19 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
           viewer.selectedEntity = satellitePoint[a];
         }
     });
+  }
+
+  function skyboxOff() {
+    viewer.scene.skyBox.show = false;
+  }
+
+  function skyboxOn() {
+    viewer.scene.skyBox.show = true;
+  }
+
+  window.onload = function() {
+    var skyboxOffBtn = document.getElementById("skyboxOff");
+    var skyboxOnBtn = document.getElementById("skyboxOn");
+    skyboxOffBtn.onclick = skyboxOff;
+    skyboxOnBtn.onclick = skyboxOn;
   }

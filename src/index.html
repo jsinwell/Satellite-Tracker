@@ -8,49 +8,57 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;700&display=swap" rel="stylesheet">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
 
 </head>
 <body>
 
-  <div class="loader">
-    <img src = "../Assets/Preloader/preloader.gif"/>
-    <p>Loading...</p>
-  </div>
+  <div class="container">
 
-  <header class="primary-header flex">
-    <nav>
-      <ul id="primary-navigation" class="primary-navigation flex">
-        <li class="active">
-          <a href="index.html">
-            <span aria-hidden="true"></span>Home
-          </a>
-        <li>
-          <a href="list.html">
-            <span aria-hidden="true"></span>List
-          </a>
-        <li>
-          <a href="about.html">
-            <span aria-hidden="true"></span>About
-          </a>
-        <li>
-          <a href="contact.html">
-            <span aria-hidden="true"></span>Contact
-          </a>
-      </ul>
-    </nav>
-  </header>
+    <div class="loader">
+      <img src = "../Assets/Preloader/preloader.gif"/>
+      <p>Loading...</p>
+    </div>
 
-    <div id="cesiumContainer">
-      <div>
-        <!--<input type="text" id="searchBar" placeholder="Search for a satellite..."> -->
+    <header class="primary-header flex">
+      <nav>
+        <ul id="primary-navigation" class="primary-navigation flex">
+          <li class="active">
+            <a href="index.html">
+              <span aria-hidden="true"></span>Home
+            </a>
+          <li>
+            <a href="list.html">
+              <span aria-hidden="true"></span>List
+            </a>
+          <li>
+            <a href="about.html">
+              <span aria-hidden="true"></span>About
+            </a>
+          <li>
+            <a href="contact.html">
+              <span aria-hidden="true"></span>Contact
+            </a>
+        </ul>
+      </nav>
+    </header>
+
+      <div id="cesiumContainer">
+        <div id="search">
+          <input type="text" id="searchBar" placeholder="Search for a satellite...">
+        </div>
+        <div class="toolbar-left">
+          <button id="skyboxOff">Skybox OFF</button>
+          <button id="skyboxOn">Skybox ON</button>
+        </div>
       </div>
+
     </div>
   
 
-  <script src="../src/js/preloader.js"></script>
-  <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
-  <script type="module" src="../src/js/main.js" defer></script>
+    <script src="../src/js/preloader.js"></script>
+    <script type="module" src="../src/js/main.js"></script>
 
 </body>
 </html>
