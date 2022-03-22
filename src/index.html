@@ -17,17 +17,40 @@
     <p>Loading...</p>
   </div>
 
-  <div id="loading">
-   <h1>Satellite Visualizer</h1>
-  </div>
-  <div id="cesiumContainer"></div>
+  <header class="primary-header flex">
+    <nav>
+      <ul id="primary-navigation" class="primary-navigation flex">
+        <li class="active">
+          <a href="index.html">
+            <span aria-hidden="true"></span>Home
+          </a>
+        <li>
+          <a href="list.html">
+            <span aria-hidden="true"></span>List
+          </a>
+        <li>
+          <a href="about.html">
+            <span aria-hidden="true"></span>About
+          </a>
+        <li>
+          <a href="contact.html">
+            <span aria-hidden="true"></span>Contact
+          </a>
+      </ul>
+    </nav>
+  </header>
 
-  <input type="text" id="searchBar" placeholder="Search for a satellite...">
+    <div id="cesiumContainer">
+      <div>
+        <!--<input type="text" id="searchBar" placeholder="Search for a satellite..."> -->
+      </div>
+    </div>
+  
 
-  <script src="preloader.js"></script>
+  <script src="../src/js/preloader.js"></script>
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
-  <script type="module" src="main.js" defer></script>
+  <script type="module" src="../src/js/main.js" defer></script>
 
 </body>
 </html>

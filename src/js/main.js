@@ -123,7 +123,6 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       viewer.clock.shouldAnimate = true;
       initialized = true;
       viewer.scene.camera.zoomOut(7000000);
-      document.querySelector("#loading").classList.toggle('disappear', true)
     }
   });
 
