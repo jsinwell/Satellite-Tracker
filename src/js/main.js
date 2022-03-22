@@ -71,19 +71,21 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     if(activeSattelites[k].includes("IRIDIUM 33") || activeSattelites[k].includes("COSMOS 2251")
     || activeSattelites[k].includes("FENGYUN 1C")) {
       satellitePoint[i] = viewer.entities.add({
-      name: activeSattelites[k],
-      position: positionsOverTime,
-      point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-        pixelSize: 4, color: Cesium.Color.RED}
+        name: activeSattelites[k],
+        position: positionsOverTime,
+        show: true,
+        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+          pixelSize: 4, color: Cesium.Color.RED}
       });
     }
 
     else if(activeSattelites[k].includes("STARLINK")) {
       satellitePoint[i] = viewer.entities.add({
-      name: activeSattelites[k],
-      position: positionsOverTime,
-      point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-        pixelSize: 4, color: Cesium.Color.WHITE}
+        name: activeSattelites[k],
+        position: positionsOverTime,
+        show: true,
+        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
+          pixelSize: 4, color: Cesium.Color.WHITE}
       });
     }
     
@@ -91,6 +93,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       satellitePoint[i] = viewer.entities.add({
         name: activeSattelites[k],
         position: positionsOverTime,
+        show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
           pixelSize: 4, color: Cesium.Color.GREEN}
       });
@@ -159,9 +162,11 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   for(let a = 0; a < satellitePoint.length; a++) {
     searchBar.addEventListener("keyup", e => {
       const searchString = e.target.value.toLowerCase();
-        if(satellitePoint[a].name.toLowerCase().includes(searchString) && (e.key == 'Enter')) {
-          viewer.trackedEntity = satellitePoint[a];
-          viewer.selectedEntity = satellitePoint[a];
+        if(!satellitePoint[a].name.toLowerCase().includes(searchString)) {
+          satellitePoint[a].show = false;
+        }
+        else {
+          satellitePoint[a].show = true;
         }
     });
   }
