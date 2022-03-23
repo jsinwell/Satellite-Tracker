@@ -148,6 +148,14 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
             entityNameBox.style.left = position2d.x + 'px';
             entityNameBox.style.top = position2d.y + 'px'; 
             }
+
+            if(selectedEntity.show == false) {
+              entityNameBox.style.display = "none";
+            }
+            else {
+              entityNameBox.style.display = "block";
+            }
+            
           });
         }
       }
@@ -155,6 +163,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         entityNameBox.remove(); // Remove contents of div after deselecting an entity
         console.log('Deselected');
       }
+
   });
 
   // Search bar that tracks the position of the entity
