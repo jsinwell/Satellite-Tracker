@@ -64,25 +64,108 @@ body {
     border-bottom-right-radius: 7px;
 }
 
-#searchBar {
-    font: bold 10px 'Source Sans Pro', sans-serif;
-    text-align: center;
-    outline: 0;
-}
-
-#search {
+#search-wrapper {
     position: absolute;
-    top: 0%;
+    top: 2%;
     right: 50%;
     transform: translateX(50%);
-    padding: 10px;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    background: rgba(48,51,54,255);
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+    color: white;
+    
+}
+
+#searchBar {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: left;
+    outline: none;
+    border: none;
+    margin: 0 0.5rem 0 0.5rem;
+    width: 100%;
+    background: rgba(48,51,54,255);
+    color: white;
+    border: #3c62a3;
+}
+
+::placeholder {
+    color: white;
+}
+
+.fa-times {
+    z-index: 1;
+    cursor: pointer;
 }
 
 .toolbar-left {
     position: absolute;
     z-index: 1;
     padding: 10px;
+}
+
+#skyboxOff {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    background-color: rgba(48,51,54,255);
+    color: white;
+    padding: 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition-duration: 0.4s;
+    border-style: solid;
+}
+
+#skyboxOn {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    background-color: rgba(48,51,54,255);
+    color: white;
+    padding: 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition-duration: 0.4s;
+    border-style: solid;
+}
+
+#lightingOff {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    background-color: rgba(48,51,54,255);
+    color: white;
+    padding: 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition-duration: 0.4s;
+    border-style: solid;
+}
+
+#lightingOn {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    background-color: rgba(48,51,54,255);
+    color: white;
+    padding: 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition-duration: 0.4s;
+    border-style: solid;
+}
+
+#skyboxOff:hover {
+    background-color: #3c62a3;
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.4);
+}
+
+#skyboxOn:hover {
+    background-color: #3c62a3;
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.4);
 }
 
 nav {

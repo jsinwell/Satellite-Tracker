@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- css -->
+
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
   <link rel="stylesheet" href="/src/css/index.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;700&display=swap" rel="stylesheet">
@@ -45,12 +46,15 @@
     </header>
 
       <div id="cesiumContainer">
-        <div id="search">
-          <input type="text" id="searchBar" placeholder="Search for a satellite...">
+        <div id="search-wrapper">
+          <input type="text" id="searchBar" placeholder="Search for a satellite..."/>
+          <div class="fa fa-times fa-xs"></div>
         </div>
         <div class="toolbar-left">
           <button id="skyboxOff">Skybox OFF</button>
           <button id="skyboxOn">Skybox ON</button>
+          <button id="lightingOff">Lighting OFF</button>
+          <button id="lightingOn">Lighting ON</button>
         </div>
       </div>
 

@@ -34,14 +34,14 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
     }
 
-    const totalSeconds = 900; // Sample points up to 30 minutes from current date
-    const timestepInSeconds = 60; // Generate a new position every minute
+    const totalHours = 2; // Sample points up to 2 hours from current date
+    const timestepInHours = 0.0416666667; // Generate a new position every 5 min
 
     const start = Cesium.JulianDate.fromDate(new Date());
-    const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
+    const stop = Cesium.JulianDate.addHours(start, totalHours, new Cesium.JulianDate());
     
-    // Our timeline begins from current time and extends 30 minutes ahead, with a default
-    // time multipler of 5x, which can be changed
+    // Our timeline begins from current time and extends 2 hours ahead, with a default
+    // time multipler of 1x, which can be changed
     viewer.clock.startTime = start.clone();
     viewer.clock.stopTime = stop.clone();
     viewer.clock.currentTime = start.clone();
@@ -55,8 +55,8 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     // Get back a longitude, latitude, height (km).
 
     //console.log(k);
-    for (let i = 0; i < totalSeconds; i+= timestepInSeconds) {
-      const time = Cesium.JulianDate.addSeconds(start, i, new Cesium.JulianDate());
+    for (let i = 0; i < totalHours; i+= timestepInHours) {
+      const time = Cesium.JulianDate.addHours(start, i, new Cesium.JulianDate());
       const jsDate = Cesium.JulianDate.toDate(time);
 
       const positionAndVelocity = satellite.propagate(satrec, jsDate);
@@ -75,7 +75,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 6, color: Cesium.Color.RED},
+          pixelSize: 4, color: Cesium.Color.RED},
       });
     }
 
@@ -85,7 +85,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 6, color: Cesium.Color.WHITE}
+          pixelSize: 4, color: Cesium.Color.WHITE}
       });
     }
     
@@ -95,7 +95,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 6, color: Cesium.Color.GREEN}
+          pixelSize: 4, color: Cesium.Color.GREEN}
       });
     }
 
@@ -168,6 +168,8 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
   // Search bar that tracks the position of the entity
   const searchBar = document.getElementById("searchBar");
+  const clearIcon = document.querySelector(".fa-times");
+
   for(let a = 0; a < satellitePoint.length; a++) {
     searchBar.addEventListener("keyup", e => {
       const searchString = e.target.value.toLowerCase();
@@ -184,6 +186,11 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     });
   }
 
+  clearIcon.addEventListener("click", () => {
+    searchBar.value = "";
+  });
+
+
   function skyboxOff() {
     viewer.scene.skyBox.show = false;
   }
@@ -192,9 +199,21 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     viewer.scene.skyBox.show = true;
   }
 
+  function lightingOff() {
+    viewer.scene.globe.enableLighting = false;
+  }
+
+  function lightingOn() {
+    viewer.scene.globe.enableLighting = true;
+  }
+
   window.onload = function() {
     var skyboxOffBtn = document.getElementById("skyboxOff");
     var skyboxOnBtn = document.getElementById("skyboxOn");
+    var lightingOffBtn = document.getElementById("lightingOff");
+    var lightingOnBtn = document.getElementById("lightingOn");
     skyboxOffBtn.onclick = skyboxOff;
     skyboxOnBtn.onclick = skyboxOn;
+    lightingOffBtn.onclick = lightingOff;
+    lightingOnBtn.onclick = lightingOn;    
   }
