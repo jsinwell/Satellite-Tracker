@@ -155,7 +155,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
             else {
               entityNameBox.style.display = "block";
             }
-            
+
           });
         }
       }
@@ -176,6 +176,10 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         }
         else {
           satellitePoint[a].show = true;
+          if(e.key == 'Enter') {
+            viewer.trackedEntity = satellitePoint[a];
+            viewer.selectedEntity = satellitePoint[a];
+          }
         }
     });
   }
