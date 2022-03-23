@@ -16,11 +16,12 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
     }),
     baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: true,
-    navigationHelpButton: false, sceneModePicker: true
+    navigationHelpButton: false, sceneModePicker: true, selectionIndicator: false
   });
 
   viewer.infoBox.frame.removeAttribute('sandbox'); // Allows us to edit infoBox
   viewer.scene.globe.enableLighting = true;
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 6378137;
 
   var satellitePoint = [];
   var dataset_size = activeSattelites.length;
