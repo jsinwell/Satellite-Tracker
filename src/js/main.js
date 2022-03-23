@@ -34,19 +34,19 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
     }
 
-    const totalSeconds = 7200; // Sample points up to 8 hours from current date
-    const timestepInSeconds = 10; // Generate a new position every 10 seconds
+    const totalSeconds = 900; // Sample points up to 30 minutes from current date
+    const timestepInSeconds = 60; // Generate a new position every minute
 
     const start = Cesium.JulianDate.fromDate(new Date());
     const stop = Cesium.JulianDate.addSeconds(start, totalSeconds, new Cesium.JulianDate());
     
-    // Our timeline begins from current time and extends 8 hours ahead, with a default
+    // Our timeline begins from current time and extends 30 minutes ahead, with a default
     // time multipler of 5x, which can be changed
     viewer.clock.startTime = start.clone();
     viewer.clock.stopTime = stop.clone();
     viewer.clock.currentTime = start.clone();
     viewer.timeline.zoomTo(start, stop);
-    viewer.clock.multiplier = 5;
+    viewer.clock.multiplier = 1;
     viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
     
     const positionsOverTime = new Cesium.SampledPositionProperty();
@@ -75,7 +75,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.RED}
+          pixelSize: 6, color: Cesium.Color.RED},
       });
     }
 
@@ -85,7 +85,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.WHITE}
+          pixelSize: 6, color: Cesium.Color.WHITE}
       });
     }
     
@@ -95,7 +95,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
         position: positionsOverTime,
         show: true,
         point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.GREEN}
+          pixelSize: 6, color: Cesium.Color.GREEN}
       });
     }
 
