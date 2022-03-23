@@ -24,7 +24,7 @@
                 <span aria-hidden="true"></span>List
               </a>
             <li>
-              <a href="index.html">
+              <a href="about.html">
                 <span aria-hidden="true"></span>About
               </a>
             <li>
@@ -57,7 +57,7 @@
 
 <script>
 $(document).ready(function(){
-    $.getJSON("satellites.json", function(data) {
+    $.getJSON("../src/satellites.json", function(data) {
         let satellite_data = '';
         $.each(data, function(key, value){
             satellite_data += '<tr>';
