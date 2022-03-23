@@ -4,8 +4,17 @@
 }
 
 .container {
-    width: 90%;
+    width: 85%;
     margin: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#cesiumContainer {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
 }
 
 .loader {
@@ -54,9 +63,7 @@ body {
     background: rgba(84, 84, 84, 1);
     padding: 2px;
     box-shadow: 0 0 10px 1px #000;
-    font-family: sans-serif;
-    font-size: 13px;
-    font-weight: normal;
+    font: normal 14px 'Source Sans Pro', sans-serif;
     color: #edffff;
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
@@ -76,6 +83,7 @@ body {
     padding: 0.3rem;
     border-radius: 0.5rem;
     color: white;
+    border: 2px solid gray;
     
 }
 
@@ -106,7 +114,9 @@ body {
     padding: 10px;
 }
 
-#skyboxOff {
+.toolbar-left button {
+    display: block;
+    width: 100%;
     font: normal 12px 'Source Sans Pro', sans-serif;
     text-align: center;
     text-decoration: none;
@@ -117,55 +127,16 @@ body {
     cursor: pointer;
     transition-duration: 0.4s;
     border-style: solid;
+    margin-bottom: 10px;
 }
 
-#skyboxOn {
-    font: normal 12px 'Source Sans Pro', sans-serif;
-    text-align: center;
-    text-decoration: none;
-    background-color: rgba(48,51,54,255);
-    color: white;
-    padding: 3px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition-duration: 0.4s;
-    border-style: solid;
-}
-
-#lightingOff {
-    font: normal 12px 'Source Sans Pro', sans-serif;
-    text-align: center;
-    text-decoration: none;
-    background-color: rgba(48,51,54,255);
-    color: white;
-    padding: 3px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition-duration: 0.4s;
-    border-style: solid;
-}
-
-#lightingOn {
-    font: normal 12px 'Source Sans Pro', sans-serif;
-    text-align: center;
-    text-decoration: none;
-    background-color: rgba(48,51,54,255);
-    color: white;
-    padding: 3px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition-duration: 0.4s;
-    border-style: solid;
-}
-
-#skyboxOff:hover {
+.toolbar-left button:hover {
     background-color: #3c62a3;
     box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.4);
 }
 
-#skyboxOn:hover {
-    background-color: #3c62a3;
-    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.4);
+.primary-header {
+    border: 2px solid white;
 }
 
 nav {
@@ -185,7 +156,7 @@ ul li {
 
 ul li a {
     text-decoration: none;
-    font: bold 14px 'Source Sans Pro', sans-serif;
+    font: normal 14px 'Source Sans Pro', sans-serif;
     color: white;
     padding: 50px;
 }
@@ -194,9 +165,19 @@ ul li a:hover {
     color: #3c62a3;
 }
 
-#cesiumContainer {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
+
+footer h6 {
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font: normal 12px 'Source Sans Pro', sans-serif;
+}
+
+footer a {
+    text-decoration: none;
+    color: white;
+}
+
+footer a:hover {
+    color: #3c62a3;
 }
