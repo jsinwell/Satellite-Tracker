@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="stylesheet" href="/src/css/about.css" type="text/css" media="screen, projection" />
+    <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;400;600;700&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Me</title>
 </head>
@@ -11,28 +15,20 @@
 
   <div class = "container">
 
-    <header class="primary-header flex">
-        <nav>
-          <ul id="primary-navigation" class="primary-navigation flex">
-            <li class="active">
-              <a href="index.html">
-                <span aria-hidden="true"></span>Home
-              </a>
-            <li>
-              <a href="list.html">
-                <span aria-hidden="true"></span>List
-              </a>
-            <li>
-              <a href="about.html">
-                <span aria-hidden="true"></span>About
-              </a>
-            <li>
-              <a href="contact.html">
-                <span aria-hidden="true"></span>Contact
-              </a>
-          </ul>
-        </nav>
-      </header>
+    <nav class="navbar">
+      <div class="title">Satellite Visualizer</div>
+      <a href="#" class="toggle-button">
+        <i class="fa fa-bars"></i>
+      </a>
+      <div class="navbar-links">
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="list.html">List</a></li>
+        </ul>
+      </div>
+    </nav>
+   
 
     <div>
       <h1>
@@ -72,6 +68,8 @@
     </footer>
 
   </div>
+
+  <script src="/src/js/navbar.js"></script>
 
 </body>
 </html>

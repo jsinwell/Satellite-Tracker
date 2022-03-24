@@ -22,6 +22,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.infoBox.frame.removeAttribute('sandbox'); // Allows us to edit infoBox
   viewer.scene.globe.enableLighting = true;
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 6378137;
+  viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
   var satellitePoint = [];
   var dataset_size = activeSattelites.length;
@@ -108,6 +109,9 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
   }
 
+  // Clicking on a point also displays all of its data stored in satellites.json
+  
+
 
   // Loading the globe and zooming out
   let initialized = false;
@@ -189,8 +193,10 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
   clearIcon.addEventListener("click", () => {
     searchBar.value = "";
+    for(let i = 0; i < satellitePoint.length; i++) {
+      satellitePoint[i].show = true;
+    }
   });
-
 
   function skyboxOff() {
     viewer.scene.skyBox.show = false;

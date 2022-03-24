@@ -15,35 +15,28 @@
 </head>
 <body>
 
+  <div class="loader">
+    <img src = "../Assets/Preloader/preloader.gif"/>
+    <p>Loading...</p>
+  </div>
+
   <div class="container">
 
-    <div class="loader">
-      <img src = "../Assets/Preloader/preloader.gif"/>
-      <p>Loading...</p>
-    </div>
 
-    <header class="primary-header flex">
-      <nav>
-        <ul id="primary-navigation" class="primary-navigation flex">
-          <li class="active">
-            <a href="index.html">
-              <span aria-hidden="true"></span>Home
-            </a>
-          <li>
-            <a href="list.html">
-              <span aria-hidden="true"></span>List
-            </a>
-          <li>
-            <a href="about.html">
-              <span aria-hidden="true"></span>About
-            </a>
-          <li>
-            <a href="contact.html">
-              <span aria-hidden="true"></span>Contact
-            </a>
+    <nav class="navbar">
+      <div class="title">Satellite Visualizer</div>
+      <a href="#" class="toggle-button">
+        <i class="fa fa-bars"></i>
+      </a>
+      <div class="navbar-links">
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="list.html">List</a></li>
         </ul>
-      </nav>
-    </header>
+      </div>
+    </nav>
+   
 
       <div id="cesiumContainer">
         <div id="search-wrapper">
@@ -66,6 +59,7 @@
   
 
     <script src="../src/js/preloader.js"></script>
+    <script src="/src/js/navbar.js"></script>
     <script type="module" src="../src/js/main.js"></script>
 
 </body>
