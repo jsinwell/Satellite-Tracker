@@ -1,5 +1,20 @@
 import { activeSattelites } from './TLE.js';
 
+// Pre-loader
+window.addEventListener("load", function() {
+  const loader = document.querySelector(".loader");
+  loader.className += " hidden";
+});
+
+ // Nav-bar functionality when screen is less than 600px
+ const toggleButton = document.getElementsByClassName('toggle-button')[0];
+ const navbarLinks = document.getElementsByClassName('navbar-links')[0];
+
+ toggleButton.addEventListener('click', () =>{
+   navbarLinks.classList.toggle('active');
+ })
+
+
 // Initialize Cesium viewer
 const viewer = new Cesium.Viewer('cesiumContainer', {
     skyBox: new Cesium.SkyBox({
@@ -24,6 +39,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 6378137;
   viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
+  
   var satellitePoint = [];
   var dataset_size = activeSattelites.length;
   var i = 0;
@@ -31,10 +47,8 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
     var tle1 = activeSattelites[k+1];
     var tle2 = activeSattelites[k+2];
-
-    if(typeof tle1 == 'string' && typeof tle2 == 'string') {
-      var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
-    }
+    
+    var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
 
     const totalHours = 2; // Sample points up to 2 hours from current date
     const timestepInHours = 0.0416666667; // Generate a new position every 5 min
@@ -53,10 +67,11 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     
     const positionsOverTime = new Cesium.SampledPositionProperty();
     
+    
     // Give SatelliteJS the TLE's and a specific time.
     // Get back a longitude, latitude, height (km).
 
-    //console.log(k);
+    console.log(k);
     for (let i = 0; i < totalHours; i+= timestepInHours) {
       const time = Cesium.JulianDate.addHours(start, i, new Cesium.JulianDate());
       const jsDate = Cesium.JulianDate.toDate(time);
@@ -109,8 +124,10 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
   }
 
-  // Clicking on a point also displays all of its data stored in satellites.json
-  
+  // Drawing orbital path of a satellite when selecting an entity
+  viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
+
+  });
 
 
   // Loading the globe and zooming out

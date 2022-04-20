@@ -1,8 +1,13 @@
-1. Add filtered search bar functionality, which dynamically updates possible list of satellites from user input
-2. Add background music that can be turned off/on with volume control
-3. Geocoder widget on the left side of Cesium viewer, which gets user's coordinates and displays satellites that are currently visible
-    -Possibly form a "cylindrical radius" of x miles around a specific location, and if any entities are within radius, display it
-4. Improve UI of home, about, list, and contact pages
-5. Improve loading times when full TLE data is used
-6. Sidebar for turning on/off certain Cesium features, such as background image
-7. Color code based on type of satellite
+TO DO:
+    Add background music that can be turned off/on with volume control
+    Geocoder widget on the left side of Cesium viewer, which gets user's coordinates and displays satellites that are currently visible
+        -Possibly form a "cylindrical radius" of x miles around a specific location, and if any entities are within radius, display it
+    Color code based on type of satellite
+
+IN PROGRESS:
+    Improve UI of home, about, list, and contact pages
+    Improve loading times when full TLE data is used
+    Sidebar for turning on/off certain Cesium features, such as background image
+
+COMPLETED:
+    Add filtered search bar functionality, which dynamically updates possible list of satellites from user input
