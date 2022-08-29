@@ -44,19 +44,23 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   var dataset_size = activeSattelites.length;
   var i = 0;
 
+  // Problem: currently we are running O(n^2), which means super long load times for 10k+ records.
+  // Somehow need to reduce it down to O(n) using two separate for loops to calculate satrec and
+  // propagate
+
   for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
     var tle1 = activeSattelites[k+1];
     var tle2 = activeSattelites[k+2];
     
     var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
 
-    const totalHours = 2; // Sample points up to 2 hours from current date
+    const totalHours = 8; // Sample points up to 8 hours from current date
     const timestepInHours = 0.0416666667; // Generate a new position every 5 min
 
     const start = Cesium.JulianDate.fromDate(new Date());
     const stop = Cesium.JulianDate.addHours(start, totalHours, new Cesium.JulianDate());
     
-    // Our timeline begins from current time and extends 2 hours ahead, with a default
+    // Our timeline begins from current time and extends 8 hours ahead, with a default
     // time multipler of 1x, which can be changed
     viewer.clock.startTime = start.clone();
     viewer.clock.stopTime = stop.clone();
