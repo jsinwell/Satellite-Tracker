@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 import { activeSattelites } from './test.js';
+=======
+import { activeSattelites } from './TLE.js';
+
+>>>>>>> b13f6807f66759b33f72f6b2e6a8604dd0f61211
 // Pre-loader
 window.addEventListener("load", function() {
   const loader = document.querySelector(".loader");
@@ -38,7 +43,11 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = 6378137;
   viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> b13f6807f66759b33f72f6b2e6a8604dd0f61211
   var satellitePoint = [];
   var dataset_size = activeSattelites.length;
   var i = 0;
@@ -86,10 +95,13 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
       positionsOverTime.addSample(time, position);
     }
+<<<<<<< HEAD
 
     if(satrec.error > 0) {
       continue;
     }
+=======
+>>>>>>> b13f6807f66759b33f72f6b2e6a8604dd0f61211
     
      
     if(activeSattelites[k].includes("IRIDIUM 33") || activeSattelites[k].includes("COSMOS 2251")

@@ -1,4 +1,9 @@
 TO DO:
+<<<<<<< HEAD
+=======
+    Add background music that can be turned off/on with volume control
+
+>>>>>>> b13f6807f66759b33f72f6b2e6a8604dd0f61211
     Geocoder widget on the left side of Cesium viewer, which gets user's coordinates and displays satellites that are currently visible
         -Possibly form a "cylindrical radius" of x miles around a specific location, and if any entities are within radius, display it
 
@@ -8,8 +13,14 @@ TO DO:
 
 
 IN PROGRESS:
+<<<<<<< HEAD
     Improve loading times when full TLE data is used
         - store TLE data in map: [key: name, value: orbital data]
+=======
+    Improve UI of home, about, list, and contact pages
+    
+    Improve loading times when full TLE data is used
+>>>>>>> b13f6807f66759b33f72f6b2e6a8604dd0f61211
 
 COMPLETED:
     Add filtered search bar functionality, which dynamically updates possible list of satellites from user input
