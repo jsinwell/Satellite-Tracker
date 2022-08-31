@@ -1,4 +1,4 @@
-import { activeSattelites } from './test.js';
+import { activeSattelites } from './TLE.js';
 // Pre-loader
 window.addEventListener("load", function() {
   const loader = document.querySelector(".loader");
