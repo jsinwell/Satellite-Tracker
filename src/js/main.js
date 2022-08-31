@@ -49,8 +49,15 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
     var tle1 = activeSattelites[k+1];
     var tle2 = activeSattelites[k+2];
-    
-    var satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
+    var satrec;
+
+    try {
+      satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
+    }
+
+    catch(err) {
+      continue;
+    }
 
     const totalHours = 8; // Sample points up to 8 hours from current date
     const timestepInHours = 0.0416666667; // Generate a new position every 5 min
@@ -80,15 +87,21 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
       const positionAndVelocity = satellite.propagate(satrec, jsDate);
       const gmst = satellite.gstime(jsDate);
-      const p = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+      var p;
+
+      try {
+        p = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
+      }
+
+      catch(err) {
+        continue;
+      }
 
       const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
       positionsOverTime.addSample(time, position);
     }
 
-    if(satrec.error > 0) {
-      continue;
-    }
+    
 
     
      

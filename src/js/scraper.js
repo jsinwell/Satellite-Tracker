@@ -7,7 +7,7 @@ axios.get('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle')
     dataArray = data.data.split(/\r?\n/);
     console.log(dataArray);
 
-    fs.writeFile("./test.js", JSON.stringify(dataArray), function(err) {
+    fs.writeFile("./TLE.js", JSON.stringify(dataArray), function(err) {
         if(err) {
               console.log(err);
         } 
