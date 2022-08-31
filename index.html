@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+  <link rel="stylesheet" href="/src/css/infobox.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href="/src/css/index.css" type="text/css" media="screen, projection" />
+  <link rel="stylesheet" href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@200;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.81/Build/Cesium/Cesium.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.0.0/satellite.js"></script>
+
+</head>
+<body>
+
+  <div class="loader">
+    <img src = "../Assets/Preloader/preloader.gif"/>
+    <p>Loading...</p>
+  </div>
+
+  <div class="container">
+
+
+    <nav class="navbar">
+      <div class="title">Satellite Visualizer</div>
+      <a href="#" class="toggle-button">
+        <i class="fa fa-bars"></i>
+      </a>
+      <div class="navbar-links">
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="list.html">List</a></li>
+        </ul>
+      </div>
+    </nav>
+   
+
+      <div id="cesiumContainer">
+        <div id="search-wrapper">
+          <input type="text" id="searchBar" placeholder="Search for a satellite..."/>
+          <div class="fa fa-times fa-xs"></div>
+        </div>
+        <div class="toolbar-left">
+          <button id="skyboxOff">Skybox OFF</button>
+          <button id="skyboxOn">Skybox ON</button>
+          <button id="lightingOff">Lighting OFF</button>
+          <button id="lightingOn">Lighting ON</button>
+        </div>
+      </div>
+
+      <footer>
+        <h6>Data provided by <a href="https://celestrak.com/">Celestrak</a> and propagated by <a href="https://github.com/shashwatak/satellite-js">satellite-js</a></h6>
+      </footer>
+
+    </div>
+    
+    <script type="module" src="../src/js/main.js"></script>
+
+</body>
+</html>

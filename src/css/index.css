@@ -1,0 +1,247 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.container {
+    width: 100%;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+#cesiumContainer {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.loader {
+    position: absolute;
+    z-index: 99;
+    background-color: #000;
+    background-size: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader p {
+    font: normal 20px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    color: white;
+    display: block;
+}
+
+.loader > img {
+    width: 200px;
+    display: block;
+}
+
+.loader.hidden {
+    animation: fadeOut 1s;
+    animation-fill-mode: forwards;
+}
+
+@keyframes fadeOut {
+    100% {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+body {
+    background-color: #181a18;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #24252A;
+    color: white;
+}
+
+.title {
+    font: normal 1.3rem  'Source Sans Pro', sans-serif;
+    margin: .5rem;
+    margin-left: 1rem;
+
+}
+
+.navbar-links ul {
+    display: flex;
+}
+
+.navbar-links li {
+    list-style: none;
+}
+
+.navbar-links li a {
+    text-decoration: none;
+    color: white;
+    padding: 1rem;
+    display: block;
+    font: normal 1rem 'Source Sans Pro', sans-serif;
+}
+
+.navbar-links li:hover {
+    background-color: #555;
+}
+
+.toggle-button {
+    position: absolute;
+    top: .75rem;
+    right: .5rem;
+    display: none;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 30px;
+    height: 20px;
+}
+
+.toggle-button .fa-bars {
+    height: 3px;
+    width: 100%;
+    color: white;
+    border-radius: 10px;
+    font-size: 20px;
+    text-decoration: none;
+
+}
+
+@media (max-width: 600px) {
+    .toggle-button {
+        display: flex;
+    }
+
+    .navbar-links {
+        width: 100%;
+        display: none;
+    }
+
+    .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .navbar-links ul {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .navbar-links li {
+        text-align: center;
+    }
+
+    .navbar-links li a {
+        padding: .5rem 1rem;
+    }
+
+    .navbar-links.active {
+        display: flex;
+    }
+
+}
+
+.textbox {
+    position: absolute;
+    border: 2px solid rgba(84, 84, 84, 1);
+    background: rgba(84, 84, 84, 0.8);
+    padding: 2px;
+    margin-left: 10px;
+    box-shadow: 0 0 10px 1px #000;
+    font: normal 14px 'Source Sans Pro', sans-serif;
+    color: #edffff;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+    border-bottom-left-radius: 7px;
+    border-bottom-right-radius: 7px;
+}
+
+#search-wrapper {
+    position: absolute;
+    top: 2%;
+    right: 50%;
+    transform: translateX(50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    background: rgba(48,51,54,255);
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+    color: white;
+    border: 2px solid gray;
+    
+}
+
+#searchBar {
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: left;
+    outline: none;
+    border: none;
+    margin: 0 0.5rem 0 0.5rem;
+    width: 100%;
+    background: rgba(48,51,54,255);
+    color: white;
+    border: #3c62a3;
+}
+
+::placeholder {
+    color: white;
+}
+
+.fa-times {
+    z-index: 1;
+    cursor: pointer;
+}
+
+.toolbar-left {
+    position: absolute;
+    z-index: 1;
+    padding: 10px;
+}
+
+.toolbar-left button {
+    display: block;
+    width: 100%;
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    text-align: center;
+    text-decoration: none;
+    background-color: rgba(48,51,54,255);
+    color: white;
+    padding: 3px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition-duration: 0.4s;
+    border-style: solid;
+    margin-bottom: 10px;
+}
+
+.toolbar-left button:hover {
+    background-color: #3c62a3;
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.4);
+}
+
+footer h6 {
+    color: white;
+    text-align: center;
+    padding: 10px;
+    font: normal 12px 'Source Sans Pro', sans-serif;
+}
+
+footer a {
+    text-decoration: none;
+    color: white;
+}
+
+footer a:hover {
+    color: #3c62a3;
+}
