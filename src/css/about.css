@@ -172,3 +172,9 @@ footer {
 footer h6 {
     padding: 10px;
 }
+
+@media (max-width: 629px) {
+    .about img {
+        display: none;
+    }
+}
