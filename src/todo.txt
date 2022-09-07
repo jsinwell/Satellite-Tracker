@@ -9,9 +9,9 @@ IN PROGRESS:
     Improve loading times when full TLE data is used
         - store TLE data in map: [key: name, value: orbital data]
 
-    Color code based on type of satellite
-
     Draw orbital path around satellite when clicked
+
+    Use axios to get Active Satellite, Iridium 33, and COSMOS pages and combine into one large array
 
 
 COMPLETED:
@@ -20,3 +20,5 @@ COMPLETED:
     Sidebar for turning on/off certain Cesium features, such as background image
 
     Automatically scrape Celestrak website, format, and write to TLE.js
+
+    Color code based on type of satellite
