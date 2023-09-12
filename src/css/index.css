@@ -19,7 +19,7 @@
 }
 
 .loader {
-    position: absolute;
+    position: fixed;
     z-index: 99;
     background-color: #000;
     background-size: 100%;

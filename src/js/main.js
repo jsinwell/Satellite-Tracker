@@ -1,4 +1,4 @@
-import { activeSattelites } from './TLE.js';
+import { activeSatellites } from './TLE.js';
 // Pre-loader
 window.addEventListener("load", function() {
   const loader = document.querySelector(".loader");
@@ -39,16 +39,48 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
   var satellitePoint = [];
-  var dataset_size = activeSattelites.length;
+  var dataset_size = activeSatellites.length;
   var i = 0;
 
-  // Problem: currently we are running O(n^2), which means super long load times for 10k+ records.
+
+  // Satellite type defintions
+  const satelliteTypes = [
+    {
+      name: "IRIDIUM 33",
+      color: Cesium.Color.RED
+    },
+    {
+      name: "COSMOS 2251",
+      color: Cesium.Color.RED
+    },
+    {
+      name: "FENGYUN 1C",
+      color: Cesium.Color.RED
+    },
+    {
+      name: "STARLINK",
+      color: Cesium.Color.WHITE
+    }
+  ];
+  
+  // Helper function to determine how to color the satellite
+  function getColorForSatellite(satelliteName) {
+    for (let type of satelliteTypes) {
+      if (satelliteName.includes(type.name)) {
+        return type.color;
+      }
+    }
+    // Default color
+    return Cesium.Color.GREEN;
+  }
+
+    // Problem: currently we are running O(n^2), which means super long load times for 10k+ records.
   // Somehow need to reduce it down to O(n) using two separate for loops to calculate satrec and
   // propagate
 
   for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
-    var tle1 = activeSattelites[k+1];
-    var tle2 = activeSattelites[k+2];
+    var tle1 = activeSatellites[k+1];
+    var tle2 = activeSatellites[k+2];
     var satrec;
 
     try {
@@ -81,7 +113,9 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     // Give SatelliteJS the TLE's and a specific time.
     // Get back a longitude, latitude, height (km).
 
-    console.log(k);
+    // This object will store the orbital positions for each satellite
+    let satelliteOrbitalPositions = {};
+
     for (let i = 0; i < totalHours; i+= timestepInHours) {
       const time = Cesium.JulianDate.addHours(start, i, new Cesium.JulianDate());
       const jsDate = Cesium.JulianDate.toDate(time);
@@ -100,42 +134,21 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
       const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
       positionsOverTime.addSample(time, position);
+      
     }
 
-    
-
-    
-     
-    if(activeSattelites[k].includes("IRIDIUM 33") || activeSattelites[k].includes("COSMOS 2251")
-    || activeSattelites[k].includes("FENGYUN 1C")) {
-      satellitePoint[i] = viewer.entities.add({
-        name: activeSattelites[k],
-        position: positionsOverTime,
-        show: true,
-        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.RED},
-      });
-    }
-
-    else if(activeSattelites[k].includes("STARLINK")) {
-      satellitePoint[i] = viewer.entities.add({
-        name: activeSattelites[k],
-        position: positionsOverTime,
-        show: true,
-        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.WHITE}
-      });
-    }
-    
-    else {
-      satellitePoint[i] = viewer.entities.add({
-        name: activeSattelites[k],
-        position: positionsOverTime,
-        show: true,
-        point: { scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5), 
-          pixelSize: 4, color: Cesium.Color.GREEN}
-      });
-    }
+    // Adding our satellite to entity array with computed properties
+    let color = getColorForSatellite(activeSatellites[k]);
+    satellitePoint[i] = viewer.entities.add({
+      name: activeSatellites[k],
+      position: positionsOverTime,
+      show: true,
+      point: {
+        scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5),
+        pixelSize: 4,
+        color: color
+      }
+    });
     
     i++;
 

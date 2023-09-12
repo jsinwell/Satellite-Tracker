@@ -1,33 +1,23 @@
 const axios = require('axios');
 const fs = require('fs');
-const prepend = require('prepend');
 
-var dataArray;
-axios.get('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle').then(function(data) {
+axios.get('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle')
+  .then(function(data) {
     console.log("Data received");
-    dataArray = data.data.split(/\r?\n/);
-    console.log(dataArray);
+    const dataArray = data.data.split(/\r?\n/);
 
+    // Combine everything into one string before writing to file
+    const output = `var activeSatellites = ${JSON.stringify(dataArray)};\nexport {activeSatellites};`;
 
-    // prepending JS variable
-    prepend('./TLE.js', 'var activeSattelites =', function(err) {
-    if(err) {
-      console.log(err);
-      }
-    });
-
-    // writing actual data from Celestrak
-    fs.writeFile("./TLE.js", JSON.stringify(dataArray), function(err) {
+    // Now write the data to the file once
+    fs.writeFile("./TLE.js", output, function(err) {
       if(err) {
-        console.log(err);
-      } 
+        console.error(err);
+      } else {
+        console.log("Data successfully written to TLE.js");
+      }
     }); 
-
-    // appending export call
-    fs.appendFile('./TLE.js', ';\nexport {activeSattelites};',
-      function(err) {     
-        if(err) {
-          console.error(Error);
-        }
-    });
   })
+  .catch(function(error) {
+    console.error("Error fetching data:", error);
+  });
