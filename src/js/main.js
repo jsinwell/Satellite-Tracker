@@ -1,4 +1,5 @@
 import { activeSatellites } from './TLE.js';
+import { satelliteDescriptions } from './descriptions.js';
 // Pre-loader
 window.addEventListener("load", function() {
   const loader = document.querySelector(".loader");
@@ -140,7 +141,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     // Adding our satellite to entity array with computed properties
     let color = getColorForSatellite(activeSatellites[k]);
     satellitePoint[i] = viewer.entities.add({
-      name: activeSatellites[k],
+      name: activeSatellites[k].trim(),
       position: positionsOverTime,
       show: true,
       point: {
@@ -179,7 +180,14 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       if (Cesium.defined(selectedEntity)) {
         if (Cesium.defined(selectedEntity.name)) {
           entityNameBox.setAttribute("class", "textbox"); // Allows us to style our textbox in CSS
-          entityNameBox.innerHTML = selectedEntity.name; // Information inside textbox will be entity's name
+
+          const satelliteDescription = satelliteDescriptions[selectedEntity.name];
+          if(satelliteDescription) {
+            entityNameBox.innerHTML = `<strong>${selectedEntity.name}</strong><br>${satelliteDescription}`;
+          } else {
+            entityNameBox.innerHTML = selectedEntity.name; // Information inside textbox will be entity's name
+          }
+
           viewer.container.appendChild(entityNameBox);
           
           var scratch3dPosition = new Cesium.Cartesian3();
@@ -213,7 +221,6 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
       }
       else {
         entityNameBox.remove(); // Remove contents of div after deselecting an entity
-        console.log('Deselected');
       }
 
   });
