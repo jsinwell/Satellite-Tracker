@@ -219,31 +219,58 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   });
 
   // Search bar that tracks the position of the entity
+  const searchResultsContainer = document.getElementById("searchResults");
   const searchBar = document.getElementById("searchBar");
   const clearIcon = document.querySelector(".fa-times");
 
-  for(let a = 0; a < satellitePoint.length; a++) {
-    searchBar.addEventListener("keyup", e => {
-      const searchString = e.target.value.toLowerCase();
-        if(!satellitePoint[a].name.toLowerCase().includes(searchString)) {
-          satellitePoint[a].show = false;
-        }
-        else {
-          satellitePoint[a].show = true;
-          if(e.key == 'Enter') {
-            viewer.trackedEntity = satellitePoint[a];
-            viewer.selectedEntity = satellitePoint[a];
-          }
-        }
-    });
+  // Handle keyup event on the search bar
+  searchBar.addEventListener("keyup", e => {
+  const searchString = e.target.value.toLowerCase();
+  
+  // Filter satellites based on the search string
+  const filteredSatellites = satellitePoint.filter(satellite => 
+    satellite.name.toLowerCase().includes(searchString)
+  );
+  
+  // Clear the previous results
+  searchResultsContainer.innerHTML = "";
+  
+  // Check if there are search results to display
+  if (searchString.length > 0) {
+    searchResultsContainer.style.display = "block";
+  } else {
+    searchResultsContainer.style.display = "none";
   }
+  
+  // Display filtered satellites
+  filteredSatellites.forEach(satellite => {
+    const resultItem = document.createElement("div");
+    resultItem.textContent = satellite.name;
+    resultItem.addEventListener("click", () => selectSatellite(satellite));
+    searchResultsContainer.appendChild(resultItem);
+  });
 
-  clearIcon.addEventListener("click", () => {
-    searchBar.value = "";
-    for(let i = 0; i < satellitePoint.length; i++) {
-      satellitePoint[i].show = true;
+  // If enter is pressed and only one result, select it
+  if (e.key === 'Enter' && filteredSatellites.length === 1) {
+    selectSatellite(filteredSatellites[0]);
     }
   });
+
+// Handle click event on the clear icon
+clearIcon.addEventListener("click", () => {
+  searchBar.value = "";
+  searchResultsContainer.style.display = "none"; 
+  for(let i = 0; i < satellitePoint.length; i++) {
+    satellitePoint[i].show = true;
+  }
+});
+
+// Function to handle satellite selection
+function selectSatellite(satellite) {
+  viewer.trackedEntity = satellite;
+  viewer.selectedEntity = satellite;
+  searchResultsContainer.style.display = "none"; 
+}
 
   function skyboxOff() {
     viewer.scene.skyBox.show = false;

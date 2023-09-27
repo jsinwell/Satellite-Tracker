@@ -194,6 +194,34 @@ body {
     border: #3c62a3;
 }
 
+#searchResults {
+    position: absolute;
+    top: 40px; 
+    right: 50%;
+    transform: translateX(50%);
+    z-index: 2;
+    background-color: rgba(48,51,54,255);
+    border-radius: 0.5rem;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    display: none;
+    max-height: 200px; 
+    overflow-y: auto;
+    width: 80%;
+}
+
+#searchResults div {
+    padding: 8px 16px;
+    font: normal 12px 'Source Sans Pro', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#searchResults div:hover {
+    background-color: #ddd;
+}
+
 ::placeholder {
     color: white;
 }
