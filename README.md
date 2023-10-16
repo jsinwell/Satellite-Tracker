@@ -17,6 +17,9 @@ A real-time satellite tracking application built with [Cesium](https://cesium.co
 ## Data Source
 The application uses Node.js and axios to retrieve up-to-date TLE data from [CelesTrak](https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle).
 
+## Web Workers
+Web Workers play a critical role in the application by allowing concurrent processing. Given the vast number of satellites (over 26,000) and the need to compute their positions in real time, processing this data can be computationally intensive. Web Workers ensures that the main thread remains unblocked, delivering faster loading times.
+
 ## Usage
 1. **Launch the Application**: Start the application and you will see Earth with satellites marked with different colors based on their types.
 2. **Search and Select**: Use the search bar to find specific satellites. Select a satellite to view its information and track its movement.
