@@ -9,6 +9,7 @@ A real-time satellite tracking application built with [Cesium](https://cesium.co
 - **Search Functionality**: Users can quickly track specific satellites using the search bar.
 - **Satellite Information**: Displays information about a select few satellites (like the ISS) when selected.
 - **Customizable View**: Toggle features like skybox and globe lighting to customize the viewing experience.
+- **Efficient Data Processing**: Utilizes Web Workers to significantly reduce load times.
 
 ## Limitations
 - The tracking results may have a small margin of error due to outdated Two-Line Element Set (TLE) data and orbital perturbations not accounted for in the model.
