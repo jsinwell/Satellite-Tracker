@@ -21,7 +21,7 @@ The application uses Node.js and axios to retrieve up-to-date TLE data from [Cel
 Web Workers play a critical role in the application by allowing concurrent processing. Given the vast number of satellites (over 26,000) and the need to compute their positions in real time, processing this data can be computationally intensive. Web Workers ensures that the main thread remains unblocked, delivering faster loading times.
 
 ## Usage
-1. **Launch the Application**: Start the application and you will see Earth with satellites marked with different colors based on their types.
+1. **Launch the Application**: Start the application or go to this page: [Satellite Tracker](https://jsinwell-satellite-tracker.pages.dev/) and you will see Earth with satellites marked with different colors based on their types.
 2. **Search and Select**: Use the search bar to find specific satellites. Select a satellite to view its information and track its movement.
 3. **Customize View**: Use the provided buttons to toggle the skybox and globe lighting to enhance your viewing experience.
 
