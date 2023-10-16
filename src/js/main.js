@@ -1,18 +1,13 @@
 import { activeSatellites } from './TLE.js';
 import { satelliteDescriptions } from './descriptions.js';
-// Pre-loader
-window.addEventListener("load", function() {
-  const loader = document.querySelector(".loader");
-  loader.className += " hidden";
-});
 
  // Nav-bar functionality when screen is less than 600px
- const toggleButton = document.getElementsByClassName('toggle-button')[0];
- const navbarLinks = document.getElementsByClassName('navbar-links')[0];
+  const toggleButton = document.getElementsByClassName('toggle-button')[0];
+  const navbarLinks = document.getElementsByClassName('navbar-links')[0];
 
- toggleButton.addEventListener('click', () =>{
-   navbarLinks.classList.toggle('active');
- })
+toggleButton.addEventListener('click', () => {
+  navbarLinks.classList.toggle('active');
+  })
 
 
 // Initialize Cesium viewer
@@ -40,14 +35,11 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
   var satellitePoint = [];
-  var dataset_size = activeSatellites.length;
-  var i = 0;
-
 
   // Satellite type defintions
   const satelliteTypes = [
     {
-      name: "IRIDIUM 33",
+      name: "DEB",
       color: Cesium.Color.RED
     },
     {
@@ -66,8 +58,8 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   
   // Helper function to determine how to color the satellite
   function getColorForSatellite(satelliteName) {
-    for (let type of satelliteTypes) {
-      if (satelliteName.includes(type.name)) {
+    for(let type of satelliteTypes) {
+      if(satelliteName.includes(type.name)) {
         return type.color;
       }
     }
@@ -75,85 +67,62 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     return Cesium.Color.GREEN;
   }
 
-    // Problem: currently we are running O(n^2), which means super long load times for 10k+ records.
+  // Calculate size of pixel based on satellite type
+  function getSizeForSatellite(satelliteName) {
+    if(satelliteName.includes("DEB")) {
+      return 2;
+    }
+    return 4;
+  }
+
+  // Problem: currently we are running O(n^2), which means super long load times for 10k+ records.
   // Somehow need to reduce it down to O(n) using two separate for loops to calculate satrec and
   // propagate
 
-  for(var k=0; k < dataset_size; k+=3) { // Loop through each satellite's TLE
-    var tle1 = activeSatellites[k+1];
-    var tle2 = activeSatellites[k+2];
-    var satrec;
+  const worker = new Worker('../src/js/satelliteWorker.js');
 
-    try {
-      satrec = satellite.twoline2satrec(tle1, tle2); // Initialize satellite record
-    }
+// Send the satellites to the worker for position calculation
+  worker.postMessage({
+    satellites: activeSatellites,
+    totalHours: 8,
+    timestepInHours: 0.0416666667
+  });
+  console.log("Message sent to worker");
 
-    catch(err) {
-      console.log("Bad TLE data detected.");
-      continue;
-    }
+// Listen for messages from the worker
+  worker.addEventListener('message', function(e) {
+    const satellitePositions = e.data;
 
-    const totalHours = 8; // Sample points up to 8 hours from current date
-    const timestepInHours = 0.0416666667; // Generate a new position every 5 min
+    // Process received satellite positions to add them to the viewer
+    satellitePositions.forEach(satelliteData => {
+        const positionsOverTime = new Cesium.SampledPositionProperty();
 
-    const start = Cesium.JulianDate.fromDate(new Date());
-    const stop = Cesium.JulianDate.addHours(start, totalHours, new Cesium.JulianDate());
-    
-    // Our timeline begins from current time and extends 8 hours ahead, with a default
-    // time multipler of 1x, which can be changed
-    viewer.clock.startTime = start.clone();
-    viewer.clock.stopTime = stop.clone();
-    viewer.clock.currentTime = start.clone();
-    viewer.timeline.zoomTo(start, stop);
-    viewer.clock.multiplier = 1;
-    viewer.clock.clockRange = Cesium.ClockRange.LOOP_STOP;
-    
-    const positionsOverTime = new Cesium.SampledPositionProperty();
-    
-    
-    // Give SatelliteJS the TLE's and a specific time.
-    // Get back a longitude, latitude, height (km).
+        satelliteData.positions.forEach(data => {
+            const time = Cesium.JulianDate.fromDate(data.time);
+            const position = Cesium.Cartesian3.fromRadians(data.position.longitude, data.position.latitude, data.position.height);
+            positionsOverTime.addSample(time, position);
+        });
 
-    // This object will store the orbital positions for each satellite
-    let satelliteOrbitalPositions = {};
-
-    for (let i = 0; i < totalHours; i+= timestepInHours) {
-      const time = Cesium.JulianDate.addHours(start, i, new Cesium.JulianDate());
-      const jsDate = Cesium.JulianDate.toDate(time);
-
-      const positionAndVelocity = satellite.propagate(satrec, jsDate);
-      const gmst = satellite.gstime(jsDate);
-      var p;
-
-      try {
-        p = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
-      }
-
-      catch(err) {
-        continue;
-      }
-
-      const position = Cesium.Cartesian3.fromRadians(p.longitude, p.latitude, p.height * 1000);
-      positionsOverTime.addSample(time, position);
-      
-    }
-
-    // Adding our satellite to entity array with computed properties
-    let color = getColorForSatellite(activeSatellites[k]);
-    satellitePoint[i] = viewer.entities.add({
-      name: activeSatellites[k].trim(),
-      position: positionsOverTime,
-      show: true,
-      point: {
-        scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5),
-        pixelSize: 4,
-        color: color
-      }
+        let color = getColorForSatellite(satelliteData.name);
+        let size = getSizeForSatellite(satelliteData.name);
+        let entity = viewer.entities.add({
+          name: satelliteData.name,
+          position: positionsOverTime,
+          show: true,
+          point: {
+              scaleByDistance: new Cesium.NearFarScalar(1.5e2, 2.0, 2.0e7, 0.5),
+              pixelSize: size,
+              color: color
+          }
+      });
+        // Populate array for the search bar functionality
+        satellitePoint.push(entity);
     });
-    
-    i++;
+    // Hide the preloader screen after Workers finishes tasks
+    const loader = document.querySelector(".loader");
+    loader.className += " hidden";
+}, false);
 
-  }
 
   // Drawing orbital path of a satellite when selecting an entity
   viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {

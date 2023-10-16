@@ -1,22 +1,35 @@
 const axios = require('axios');
 const fs = require('fs');
 
-axios.get('https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle')
-  .then(function(data) {
-    console.log("Data received");
-    const dataArray = data.data.split(/\r?\n/);
+const activeURL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle';
+const debrisURL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=iridium-33-debris&FORMAT=tle'; 
 
-    // Combine everything into one string before writing to file
-    const output = `var activeSatellites = ${JSON.stringify(dataArray)};\nexport {activeSatellites};`;
+// Fetch active satellite data
+axios.get(activeURL)
+  .then(function(responseActive) {
+    console.log("Active satellite data received");
+    const activeDataArray = responseActive.data.split(/\r?\n/)
+    
+    // Fetch debris data
+    return axios.get(debrisURL)
+      .then(function(responseDebris) {
+        console.log("Debris data received");
+        const debrisDataArray = responseDebris.data.split(/\r?\n/)
 
-    // Now write the data to the file once
-    fs.writeFile("./TLE.js", output, function(err) {
-      if(err) {
-        console.error(err);
-      } else {
-        console.log("Data successfully written to TLE.js");
-      }
-    }); 
+        // Combine data and filter out any empty elements
+        const combinedArray = activeDataArray.concat(debrisDataArray).filter(line => line.trim() !== "");
+        
+        const output = `var activeSatellites = ${JSON.stringify(combinedArray)};\nexport {activeSatellites};`;
+
+        // Write combined data to TLE.js
+        fs.writeFile("./TLE.js", output, function(err) {
+          if(err) {
+            console.error(err);
+          } else {
+            console.log("Data successfully written to TLE.js");
+          }
+        });
+      });
   })
   .catch(function(error) {
     console.error("Error fetching data:", error);

@@ -45,6 +45,23 @@
     display: block;
 }
 
+/* https://stackoverflow.com/questions/13014808/is-there-any-way-to-animate-an-ellipsis-with-css-animations */
+.loading::after {
+    display: inline-block;
+    animation: dotty 2s infinite; 
+    content: '...';
+    opacity: 0; 
+    width: 2em; 
+    text-align: left;
+}
+
+@keyframes dotty {
+    0%, 100% { opacity: 0; content: '...'; }
+    25%  { opacity: 1; content: '.'; }
+    50%  { opacity: 1; content: '..'; }
+    75%  { opacity: 1; content: '...'; }
+}
+
 .loader.hidden {
     animation: fadeOut 1s;
     animation-fill-mode: forwards;
