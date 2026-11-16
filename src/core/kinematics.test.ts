@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { highlyElliptical, iss } from './__fixtures__/satellites';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM } from './constants';
-import { extrapolatePosition, hasState, isOccludedByEarth, speed, type Vec3 } from './kinematics';
+import {
+  extrapolatePosition,
+  hasState,
+  isOccludedByEarth,
+  speed,
+  trailSeconds,
+  type Vec3,
+} from './kinematics';
 import { Propagator, STATE_STRIDE } from './propagator';
 
 const origin = (): Vec3 => ({ x: 0, y: 0, z: 0 });
@@ -94,5 +101,28 @@ describe('isOccludedByEarth', () => {
 
   it('sees a satellite off to the side, beyond the closest approach to the Earth', () => {
     expect(isOccludedByEarth(eye, { x: 0, y: EARTH_RADIUS_KM + 400, z: 0 })).toBe(false);
+  });
+});
+
+describe('trailSeconds', () => {
+  it('draws no trail in real time or when paused', () => {
+    expect(trailSeconds(1)).toBe(0);
+    expect(trailSeconds(0)).toBe(0);
+  });
+
+  it('lengthens with the time rate', () => {
+    expect(trailSeconds(10)).toBeCloseTo(1.2);
+    expect(trailSeconds(100)).toBeCloseTo(12);
+  });
+
+  it('stops growing at a length the extrapolation can still draw accurately', () => {
+    expect(trailSeconds(1000)).toBe(75);
+    expect(trailSeconds(100_000)).toBe(75);
+    // The far end of the longest trail must still be close to where SGP4 puts it.
+    expect(extrapolationError(iss, -75)).toBeLessThan(1);
+  });
+
+  it('points the other way when time runs backwards', () => {
+    expect(trailSeconds(-100)).toBeCloseTo(-12);
   });
 });
