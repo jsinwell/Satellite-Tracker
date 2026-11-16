@@ -5,14 +5,14 @@ import type { Vec3 } from '../core/kinematics';
 /**
  * Two coordinate systems meet in the scene:
  *
- * - Physics works in TEME, the inertial frame SGP4 outputs: kilometres,
+ * - Physics works in TEME, the inertial frame SGP4 outputs: kilometers,
  *   z through the north pole, x toward the vernal equinox.
  * - Three.js is y-up, and the camera works in Earth radii so that its
  *   distances and clip planes are small, well-conditioned numbers.
  *
  * Everything physical is drawn inside one group carrying the transform below,
  * so satellite buffers, orbit lines and the Earth are all authored in TEME
- * kilometres and nothing downstream has to think about the conversion.
+ * kilometers and nothing downstream has to think about the conversion.
  */
 const KM_TO_SCENE = 1 / EARTH_RADIUS_KM;
 

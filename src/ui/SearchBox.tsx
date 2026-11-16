@@ -7,7 +7,7 @@ import { formatInteger } from './format';
 
 /**
  * A one-letter query matches thousands of satellites. Only the best few are
- * ever rendered; the rest are summarised as a count.
+ * ever rendered; the rest are summarized as a count.
  */
 const MAX_RESULTS = 40;
 

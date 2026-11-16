@@ -1,4 +1,4 @@
-const utcFormat = new Intl.DateTimeFormat('en-GB', {
+const utcFormat = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
   year: 'numeric',
   month: 'short',
@@ -6,12 +6,13 @@ const utcFormat = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
   second: '2-digit',
-  hour12: false,
+  // Not `hour12: false`, which makes en-US print midnight as 24:00.
+  hourCycle: 'h23',
 });
 
 const integerFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
-/** `16 Nov 2026, 06:31:07` */
+/** `Nov 16, 2026, 06:31:07` */
 export function formatUtc(timeMs: number): string {
   return utcFormat.format(timeMs);
 }

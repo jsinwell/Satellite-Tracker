@@ -12,7 +12,7 @@ export function gmst(timeMs: number): number {
   return gstime(julianDate(timeMs));
 }
 
-/** Unit vector from the Earth's centre toward the Sun, inertial frame. */
+/** Unit vector from the Earth's center toward the Sun, inertial frame. */
 export function sunDirection(timeMs: number, out: Vec3): Vec3 {
   const { rsun } = sunPos(julianDate(timeMs));
   const length = Math.hypot(rsun.x, rsun.y, rsun.z);
@@ -27,7 +27,7 @@ export interface GroundPoint {
   latitude: number;
   /** Degrees, east positive, in (−180, 180]. */
   longitude: number;
-  /** Kilometres above the WGS-84 ellipsoid. */
+  /** Kilometers above the WGS-84 ellipsoid. */
   altitudeKm: number;
 }
 

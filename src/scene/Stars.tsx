@@ -41,7 +41,7 @@ function buildSky() {
 }
 
 /**
- * A decorative backdrop, not a star catalogue. It is fixed in the inertial
+ * A decorative backdrop, not a star catalog. It is fixed in the inertial
  * frame like the real sky, so the Earth visibly turns against it.
  */
 export function Stars() {

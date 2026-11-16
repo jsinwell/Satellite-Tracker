@@ -24,8 +24,8 @@ const state = new Float32Array(satellites.length * STATE_STRIDE);
 let timeMs = Date.parse(fixtures[0].elements.epoch);
 
 describe(`${satellites.length} satellites`, () => {
-  test('initialise SGP4 for every satellite', async ({ bench }) => {
-    await bench('initialise', () => {
+  test('initialize SGP4 for every satellite', async ({ bench }) => {
+    await bench('initialize', () => {
       new Propagator(satellites);
     }).run();
   });

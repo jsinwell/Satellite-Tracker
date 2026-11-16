@@ -9,7 +9,7 @@ import { EARTH_RADIUS_KM } from '../core/constants';
 import { extrapolatePosition, hasState, type Vec3 } from '../core/kinematics';
 import { directionToWorld } from './frame';
 
-// Distances from the Earth's centre, in Earth radii.
+// Distances from the Earth's center, in Earth radii.
 const MIN_DISTANCE = 1.12;
 const MAX_DISTANCE = 40;
 const INITIAL_DISTANCE = 3.6;
@@ -84,7 +84,7 @@ function advanceFlight(
 }
 
 /**
- * Orbit controls around the Earth's centre, plus a fly-to when a satellite is
+ * Orbit controls around the Earth's center, plus a fly-to when a satellite is
  * selected. The camera lives in the inertial frame, so left alone it watches
  * the Earth rotate rather than rotating with it.
  */

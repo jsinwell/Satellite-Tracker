@@ -59,7 +59,7 @@ export function speed(state: Float32Array, index: number): number {
 
 /**
  * True if the straight line from `eye` to `target` passes through the Earth
- * (modelled as a sphere of equatorial radius). Both points in km, same frame.
+ * (modeled as a sphere of equatorial radius). Both points in km, same frame.
  */
 export function isOccludedByEarth(eye: Vec3, target: Vec3): boolean {
   const dx = target.x - eye.x;
@@ -67,7 +67,7 @@ export function isOccludedByEarth(eye: Vec3, target: Vec3): boolean {
   const dz = target.z - eye.z;
   const lengthSquared = dx * dx + dy * dy + dz * dz;
   if (lengthSquared === 0) return false;
-  // Parameter of the point on the segment closest to the Earth's centre.
+  // Parameter of the point on the segment closest to the Earth's center.
   const t = Math.min(1, Math.max(0, -(eye.x * dx + eye.y * dy + eye.z * dz) / lengthSquared));
   const cx = eye.x + t * dx;
   const cy = eye.y + t * dy;

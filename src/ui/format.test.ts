@@ -10,7 +10,7 @@ import {
 
 describe('format', () => {
   it('formats instants in UTC regardless of the local time zone', () => {
-    expect(formatUtc(Date.UTC(2026, 10, 16, 6, 31, 7))).toBe('16 Nov 2026, 06:31:07');
+    expect(formatUtc(Date.UTC(2026, 10, 16, 6, 31, 7))).toBe('Nov 16, 2026, 06:31:07');
   });
 
   it('groups thousands', () => {

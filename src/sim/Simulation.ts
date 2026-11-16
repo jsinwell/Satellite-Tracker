@@ -72,7 +72,7 @@ export class Simulation {
   private requestSentAt = 0;
   private lastClock: Clock | null = null;
 
-  /** Starts a worker, initialises SGP4 for every satellite, and resolves once it is ready. */
+  /** Starts a worker, initializes SGP4 for every satellite, and resolves once it is ready. */
   static start(
     satellites: SatelliteRecord[],
     worker: SimWorker = spawnWorker(),
@@ -148,7 +148,7 @@ export class Simulation {
     this.worker.terminate();
   }
 
-  /** Real milliseconds between refreshes needed to honour the staleness budget. */
+  /** Real milliseconds between refreshes needed to honor the staleness budget. */
   private refreshIntervalMs(rate: number): number {
     return MAX_STALENESS_SIM_MS / Math.abs(rate);
   }

@@ -11,7 +11,7 @@ interface ToggleProps {
   title?: string;
   count: number;
   enabled: boolean;
-  /** Legend swatch; omitted for filters that do not affect colour. */
+  /** Legend swatch; omitted for filters that do not affect color. */
   color?: string;
   onToggle(): void;
 }
@@ -25,7 +25,7 @@ function Toggle({ label, title, count, enabled, color, onToggle }: ToggleProps) 
       title={title}
       className="group flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-500 hover:bg-white/10 aria-pressed:text-slate-200"
     >
-      {/* Filled when shown, hollow when hidden. Colour-neutral filters get a neutral square. */}
+      {/* Filled when shown, hollow when hidden. Color-neutral filters get a neutral square. */}
       <span
         className={`size-2 shrink-0 border border-slate-400 bg-slate-400 group-aria-[pressed=false]:!bg-transparent ${
           color ? 'rounded-full' : 'rounded-[2px]'
@@ -38,7 +38,7 @@ function Toggle({ label, title, count, enabled, color, onToggle }: ToggleProps) 
   );
 }
 
-/** Doubles as the colour legend: each object type's swatch is its colour on the globe. */
+/** Doubles as the color legend: each object type's swatch is its color on the globe. */
 export function FilterPanel({ world }: { world: World }) {
   const filters = useApp((state) => state.filters);
   const toggleType = useApp((state) => state.toggleType);

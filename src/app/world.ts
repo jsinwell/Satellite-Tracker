@@ -5,7 +5,7 @@ import { Simulation } from '../sim/Simulation';
 
 /**
  * Everything derived from a catalog. Built once at startup and immutable
- * afterwards; satellites are referred to everywhere by their index into
+ * afterward; satellites are referred to everywhere by their index into
  * `satellites`, which every parallel array here shares.
  */
 export interface World {

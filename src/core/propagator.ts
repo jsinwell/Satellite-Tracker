@@ -12,7 +12,7 @@ const MS_PER_MINUTE = 60_000;
 /** Anything SGP4 places this far inside the Earth has decayed or diverged. */
 const MIN_RADIUS_SQUARED_KM = (EARTH_RADIUS_KM * 0.98) ** 2;
 
-/** Converts a catalog record back to the OMM shape satellite.js initialises from. */
+/** Converts a catalog record back to the OMM shape satellite.js initializes from. */
 export function toOmm(record: SatelliteRecord): OMMJsonObject {
   const { elements } = record;
   return {
@@ -34,7 +34,7 @@ export function toOmm(record: SatelliteRecord): OMMJsonObject {
   };
 }
 
-/** Initialises SGP4 for one satellite, or returns null if its elements are unusable. */
+/** Initializes SGP4 for one satellite, or returns null if its elements are unusable. */
 export function createSatRec(record: SatelliteRecord): SatRec | null {
   try {
     const satrec = json2satrec(toOmm(record));
@@ -78,7 +78,7 @@ function writeState(
 /**
  * Propagates a fixed set of satellites to arbitrary instants.
  *
- * Construction runs SGP4 initialisation once per satellite; `propagate` then
+ * Construction runs SGP4 initialization once per satellite; `propagate` then
  * only does the per-instant work and writes into a caller-owned buffer, so the
  * steady state allocates no typed arrays.
  */
@@ -124,7 +124,7 @@ export class Propagator {
 }
 
 /**
- * Samples one full revolution of a satellite's orbit, centred on `timeMs`, as
+ * Samples one full revolution of a satellite's orbit, centered on `timeMs`, as
  * `segments + 1` TEME positions (km). Returns null if any sample fails.
  */
 export function sampleOrbit(

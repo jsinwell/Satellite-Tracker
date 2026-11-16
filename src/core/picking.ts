@@ -9,11 +9,11 @@ export interface PickQuery {
   /** Non-zero where a satellite is currently drawn. */
   visible: Uint8Array;
   /**
-   * Column-major 4×4 matrix taking TEME kilometres to clip space
+   * Column-major 4×4 matrix taking TEME kilometers to clip space
    * (projection × view × model), as Three.js stores matrices.
    */
   clipFromTeme: ArrayLike<number>;
-  /** Camera position in TEME kilometres. */
+  /** Camera position in TEME kilometers. */
   eye: Vec3;
   /** Pointer position in CSS pixels, relative to the viewport's top-left. */
   pointer: { x: number; y: number };

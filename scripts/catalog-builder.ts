@@ -107,7 +107,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Splits one CSV line, honouring double-quoted fields. */
+/** Splits one CSV line, honoring double-quoted fields. */
 export function parseCsvLine(line: string): string[] {
   const fields: string[] = [];
   let field = '';
@@ -245,7 +245,7 @@ async function loadMetadata(context: BuildContext, previous: Catalog | null): Pr
   try {
     context.log('Fetching SATCAT…');
     const byNoradId = parseSatcat(await context.fetchText(SATCAT_URL));
-    context.log(`  ${byNoradId.size} catalogued objects`);
+    context.log(`  ${byNoradId.size} cataloged objects`);
     return { byNoradId, fetchedAt: new Date(context.now()).toISOString() };
   } catch (error) {
     context.log(`  SATCAT unavailable, continuing without a refresh: ${messageOf(error)}`);

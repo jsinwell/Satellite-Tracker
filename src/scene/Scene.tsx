@@ -20,7 +20,7 @@ const UnsupportedNotice = (
 export function Scene({ world }: { world: World }) {
   return (
     <Canvas
-      // `flat` disables tone mapping: colours here encode data and must not shift.
+      // `flat` disables tone mapping: colors here encode data and must not shift.
       flat
       dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: 'high-performance' }}

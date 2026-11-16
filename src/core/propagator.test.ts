@@ -66,7 +66,7 @@ describe('Propagator', () => {
     expect(state[3]).toBeCloseTo(reference?.velocity.x ?? Number.NaN, 4);
   });
 
-  it('writes zeros for a satellite it cannot propagate, without disturbing its neighbours', () => {
+  it('writes zeros for a satellite it cannot propagate, without disturbing its neighbors', () => {
     const propagator = new Propagator([iss, unusable, geostationary]);
     const state = new Float32Array(3 * STATE_STRIDE).fill(123);
 

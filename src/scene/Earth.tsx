@@ -21,7 +21,7 @@ const NIGHT_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_night_4096.jpg`
 const ATMOSPHERE_SCALE = 1.15;
 
 /**
- * SphereGeometry puts its poles on ±y and the texture's centre column
+ * SphereGeometry puts its poles on ±y and the texture's center column
  * (the Greenwich meridian) on +x. Tipping it onto +z gives Earth-fixed axes:
  * z through the north pole, x through 0° longitude, y through 90° east.
  */

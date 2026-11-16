@@ -13,7 +13,7 @@ import { useSimTime, useTelemetry } from './hooks';
 import { Panel } from './Panel';
 
 /**
- * SGP4 loses roughly a kilometre or more of accuracy per day away from the
+ * SGP4 loses roughly a kilometer or more of accuracy per day away from the
  * epoch of its elements. Past this, the position shown is not trustworthy.
  */
 const STALE_ELEMENTS_MS = 14 * 86_400_000;
@@ -131,7 +131,7 @@ export function InfoPanel({ world, index }: { world: World; index: number }) {
           onClick={() => useApp.getState().focusSelected()}
           className="w-full rounded-lg px-3 py-1.5 text-xs font-medium text-accent hover:bg-white/10"
         >
-          Centre view on satellite
+          Center view on satellite
         </button>
       </div>
     </Panel>

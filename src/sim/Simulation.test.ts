@@ -51,7 +51,7 @@ async function start(satellites: SatelliteRecord[] = fixtures) {
 }
 
 describe('Simulation', () => {
-  it('starts once the worker has initialised every satellite', async () => {
+  it('starts once the worker has initialized every satellite', async () => {
     const { simulation } = await start();
     expect(simulation.count).toBe(fixtures.length);
     expect(simulation.invalid).toEqual([]);

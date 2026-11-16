@@ -15,7 +15,7 @@ const SEGMENTS = 256;
 const REFRESH_INTERVAL_MS = 200;
 
 /**
- * One revolution of the selected satellite's orbit, centred on where it is
+ * One revolution of the selected satellite's orbit, centered on where it is
  * now. Drawn in the inertial frame, where an orbit is a closed ellipse; the
  * Earth turns underneath it.
  */

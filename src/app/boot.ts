@@ -40,7 +40,7 @@ function syncSelectionWithUrl(world: World): void {
 
 /**
  * `?t=<ISO-8601 instant>` opens the app at that moment instead of the present.
- * Read once at startup; it is not kept in step afterwards, since time runs on.
+ * Read once at startup; it is not kept in step afterward, since time runs on.
  */
 function applyStartTimeFromUrl(): void {
   const requested = new URLSearchParams(window.location.search).get(TIME_PARAM);

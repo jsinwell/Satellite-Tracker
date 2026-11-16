@@ -5,11 +5,11 @@ import { type PickQuery, pickSatellite } from './picking';
 import { STATE_STRIDE } from './propagator';
 
 const viewport = { width: 800, height: 600 };
-const centre = { x: 400, y: 300 };
+const center = { x: 400, y: 300 };
 const eye = { x: 30_000, y: 0, z: 0 };
 const NEAR_SIDE = EARTH_RADIUS_KM + 500;
 
-/** A camera on the +x axis looking at the Earth's centre, working directly in kilometres. */
+/** A camera on the +x axis looking at the Earth's center, working directly in kilometers. */
 function clipMatrix(): number[] {
   const camera = new PerspectiveCamera(40, viewport.width / viewport.height, 100, 200_000);
   camera.position.set(eye.x, eye.y, eye.z);
@@ -39,7 +39,7 @@ function query(state: Float32Array, overrides: Partial<PickQuery> = {}): PickQue
     visible: new Uint8Array(count).fill(1),
     clipFromTeme: clipMatrix(),
     eye,
-    pointer: centre,
+    pointer: center,
     viewport,
     radiusPx: 10,
     ...overrides,
@@ -71,14 +71,14 @@ describe('pickSatellite', () => {
     const rows = [...Array(viewport.height).keys()];
 
     const hitColumn = columns.find(
-      (x) => pickSatellite(query(right, { pointer: { x, y: centre.y }, radiusPx: 2 })) === 0,
+      (x) => pickSatellite(query(right, { pointer: { x, y: center.y }, radiusPx: 2 })) === 0,
     );
     const hitRow = rows.find(
-      (y) => pickSatellite(query(up, { pointer: { x: centre.x, y }, radiusPx: 2 })) === 0,
+      (y) => pickSatellite(query(up, { pointer: { x: center.x, y }, radiusPx: 2 })) === 0,
     );
 
-    expect(hitColumn).toBeGreaterThan(centre.x + 20);
-    expect(hitRow).toBeLessThan(centre.y - 20);
+    expect(hitColumn).toBeGreaterThan(center.x + 20);
+    expect(hitRow).toBeLessThan(center.y - 20);
   });
 
   it('ignores satellites hidden behind the Earth', () => {
