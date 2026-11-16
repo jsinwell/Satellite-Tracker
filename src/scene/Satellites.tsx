@@ -13,12 +13,13 @@ import {
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { TYPE_COLORS } from '../app/palette';
-import { currentSimTime, useApp } from '../app/store';
+import { constellationColor, TYPE_COLORS } from '../app/palette';
+import { type ColorBy, currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
 import type { ObjectType } from '../core/catalog';
 import { wallNow } from '../core/clock';
+import { CONSTELLATION_IDS, type ConstellationId, soleEnabled } from '../core/constellation';
 import { trailSeconds, type Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
 import { ORBIT_GLSL } from './orbitGlsl';
@@ -132,21 +133,17 @@ function buildSatellites(world: World) {
   const stateBuffer = new InstancedInterleavedBuffer(simulation.state, STATE_STRIDE);
   stateBuffer.setUsage(DynamicDrawUsage);
 
-  const colors = new Float32Array(count * 3);
-  const sizes = new Float32Array(count);
-  const color = new Color();
-  satellites.forEach((satellite, i) => {
-    color.set(TYPE_COLORS[satellite.objectType]).toArray(colors, i * 3);
-    sizes[i] = TYPE_SIZES[satellite.objectType];
-  });
+  const sizes = Float32Array.from(satellites, (satellite) => TYPE_SIZES[satellite.objectType]);
 
+  // Filled in by the component, since both change while the app runs.
+  const colors = new InstancedBufferAttribute(new Float32Array(count * 3), 3);
   const visibility = new InstancedBufferAttribute(new Uint8Array(count), 1);
   visibility.setUsage(DynamicDrawUsage);
 
   const perSatellite = {
     aPosition: new InterleavedBufferAttribute(stateBuffer, 3, 0),
     aVelocity: new InterleavedBufferAttribute(stateBuffer, 3, 3),
-    aColor: new InstancedBufferAttribute(colors, 3),
+    aColor: colors,
     aVisible: visibility,
   };
   const instanced = (vertices: number[]) => {
@@ -197,7 +194,24 @@ function buildSatellites(world: World) {
   points.frustumCulled = false;
   trails.frustumCulled = false;
 
-  return { points, trails, uniforms, stateBuffer, visibility };
+  return { points, trails, uniforms, stateBuffer, colors, visibility };
+}
+
+/** The color of each satellite under the current color scheme, as packed RGB. */
+function paint(
+  world: World,
+  colorBy: ColorBy,
+  alone: ConstellationId | null,
+  out: Float32Array,
+): void {
+  const color = new Color();
+  world.satellites.forEach((satellite, i) => {
+    const hex =
+      colorBy === 'type'
+        ? TYPE_COLORS[satellite.objectType]
+        : constellationColor(CONSTELLATION_IDS[world.constellations[i]], alone !== null);
+    color.set(hex).toArray(out, i * 3);
+  });
 }
 
 /**
@@ -207,11 +221,18 @@ function buildSatellites(world: World) {
  * arrived, and tells the shaders how far to extrapolate from it.
  */
 export function Satellites({ world }: { world: World }) {
-  const { points, trails, uniforms, stateBuffer, visibility } = useMemo(
+  const { points, trails, uniforms, stateBuffer, colors, visibility } = useMemo(
     () => buildSatellites(world),
     [world],
   );
   const visible = useApp((state) => state.visible);
+  const colorBy = useApp((state) => state.colorBy);
+  const alone = useApp((state) => soleEnabled(state.filters.constellations));
+
+  useEffect(() => {
+    paint(world, colorBy, alone, colors.array as Float32Array);
+    colors.needsUpdate = true;
+  }, [world, colorBy, alone, colors]);
 
   useEffect(() => {
     (visibility.array as Uint8Array).set(visible);

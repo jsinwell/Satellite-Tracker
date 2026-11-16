@@ -1,12 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { debris, fixtures, geostationary, iss } from './__fixtures__/satellites';
+import { debris, fixtures, geostationary, iss, starlink } from './__fixtures__/satellites';
+import { CONSTELLATION_IDS, constellationOf } from './constellation';
 import { countVisible, type Filters, launchYear, SHOW_EVERYTHING, visibilityMask } from './filter';
 import { summarizeOrbit } from './orbit';
 
 const orbits = fixtures.map((record) => summarizeOrbit(record.elements));
 const launchYears = fixtures.map((record) => launchYear(record) ?? 0);
+const constellations = fixtures.map((record) => CONSTELLATION_IDS.indexOf(constellationOf(record)));
 const maskFor = (filters: Filters, years: number[] = launchYears) =>
-  visibilityMask(fixtures, orbits, years, filters);
+  visibilityMask({ satellites: fixtures, orbits, launchYears: years, constellations }, filters);
+
+describe('constellation filter', () => {
+  it('hides a disabled constellation and nothing else', () => {
+    const filters = {
+      ...SHOW_EVERYTHING,
+      constellations: { ...SHOW_EVERYTHING.constellations, starlink: false },
+    };
+    const mask = maskFor(filters);
+    expect(mask[fixtures.indexOf(starlink)]).toBe(0);
+    expect(countVisible(mask)).toBe(fixtures.length - 1);
+  });
+});
 const isShown = (filters: Filters, record: (typeof fixtures)[number]) =>
   maskFor(filters)[fixtures.indexOf(record)] === 1;
 
