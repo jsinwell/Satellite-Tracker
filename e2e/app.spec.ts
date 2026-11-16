@@ -135,13 +135,24 @@ test.describe('with a catalog', () => {
   test('limits the view to what had been launched by a given year', async ({ page }) => {
     await page.goto(`/?t=${FIXTURE_TIME}`);
     const slider = page.getByRole('slider', { name: 'Launched by' });
+    const payloads = page.getByRole('button', { name: /^Payloads/ });
+    const search = page.getByRole('combobox');
+    // textContent, not innerText: it is what toHaveText compares against.
+    const payloadsToday = (await payloads.textContent()) ?? '';
 
     await slider.fill('2000');
     await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+    // The legend counts and the search follow the year, like the globe does.
+    await expect(payloads).not.toHaveText(payloadsToday);
+    await search.fill('goes 16'); // launched in 2016
+    await expect(page.getByText('No matches among the satellites shown.')).toBeVisible();
 
     // Dragging back to the present lifts the limit entirely.
     await slider.fill((await slider.getAttribute('max')) ?? '');
     await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+    await expect(payloads).toHaveText(payloadsToday);
+    await search.fill('goes 16');
+    await expect(page.getByRole('option', { name: /GOES 16/ })).toBeVisible();
   });
 
   test('colors by constellation and isolates one', async ({ page }) => {

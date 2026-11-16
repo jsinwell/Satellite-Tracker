@@ -77,4 +77,14 @@ describe('createSearchIndex', () => {
     ]);
     expect(local.search('aqua', 1).indices).toEqual([2]);
   });
+
+  it('only considers the satellites it is told are shown', () => {
+    const shown = new Uint8Array(records.length).fill(1);
+    shown[0] = 0; // hide ISS (ZARYA)
+
+    const results = index.search('iss', 10, shown);
+
+    expect(results.indices.map((i) => records[i].name)).toEqual(['ISS (NAUKA)', 'SWISSCUBE']);
+    expect(results.total).toBe(2);
+  });
 });

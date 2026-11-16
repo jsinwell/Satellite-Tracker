@@ -78,6 +78,8 @@ function formatAltitude(km: number | null): string | undefined {
 /** Doubles as the color legend: each swatch is that group's color on the globe. */
 export function FilterPanel({ world }: { world: World }) {
   const filters = useApp((state) => state.filters);
+  // What each row would show under the other filters, so the numbers follow the globe.
+  const counts = useApp((state) => state.counts);
   const colorBy = useApp((state) => state.colorBy);
   const alone = soleEnabled(filters.constellations);
   const { setColorBy, toggleType, toggleRegime, toggleConstellation, soloConstellation } =
@@ -109,7 +111,7 @@ export function FilterPanel({ world }: { world: World }) {
             <Toggle
               key={type}
               label={TYPE_LABELS[type]}
-              count={world.countByType[type]}
+              count={counts.types[type]}
               enabled={filters.types[type]}
               color={TYPE_COLORS[type]}
               onToggle={() => toggleType(type)}
@@ -124,7 +126,7 @@ export function FilterPanel({ world }: { world: World }) {
                 id === 'other' ? undefined : formatAltitude(world.altitudeByConstellation[id])
               }
               title={id === 'other' ? undefined : 'Typical altitude of this constellation'}
-              count={world.countByConstellation[id]}
+              count={counts.constellations[id]}
               enabled={filters.constellations[id]}
               color={constellationColor(id, alone === id)}
               onToggle={() => toggleConstellation(id)}
@@ -137,7 +139,7 @@ export function FilterPanel({ world }: { world: World }) {
           key={regime}
           label={regime}
           title={REGIME_LABELS[regime]}
-          count={world.countByRegime[regime]}
+          count={counts.regimes[regime]}
           enabled={filters.regimes[regime]}
           onToggle={() => toggleRegime(regime)}
         />
