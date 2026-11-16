@@ -1,6 +1,8 @@
 import type { ObjectType } from '../core/catalog';
-import type { ConstellationId } from '../core/constellation';
+import { CONSTELLATION_IDS, type ConstellationId } from '../core/constellation';
 import type { OrbitRegime } from '../core/orbit';
+import type { ColorBy } from './store';
+import type { World } from './world';
 
 /** Shared by the renderer and the legend, so the two cannot disagree. */
 export const TYPE_COLORS: Record<ObjectType, string> = {
@@ -60,4 +62,20 @@ export const ACCENT_COLOR = '#5eead4';
 export function constellationColor(id: ConstellationId, alone: boolean): string {
   const color = CONSTELLATION_COLORS[id];
   return alone && color === MUTED_COLOR ? ACCENT_COLOR : color;
+}
+
+/**
+ * The color one satellite is drawn in under the current color scheme. The
+ * single source for it: the points, their trails and the selected satellite's
+ * orbit line all ask here, so they cannot disagree.
+ */
+export function satelliteColor(
+  world: World,
+  index: number,
+  colorBy: ColorBy,
+  alone: ConstellationId | null,
+): string {
+  return colorBy === 'type'
+    ? TYPE_COLORS[world.satellites[index].objectType]
+    : constellationColor(CONSTELLATION_IDS[world.constellations[index]], alone !== null);
 }

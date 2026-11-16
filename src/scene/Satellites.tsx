@@ -13,13 +13,13 @@ import {
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { constellationColor, TYPE_COLORS } from '../app/palette';
+import { satelliteColor } from '../app/palette';
 import { type ColorBy, currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
 import type { ObjectType } from '../core/catalog';
 import { wallNow } from '../core/clock';
-import { CONSTELLATION_IDS, type ConstellationId, soleEnabled } from '../core/constellation';
+import { type ConstellationId, soleEnabled } from '../core/constellation';
 import { trailSeconds, type Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
 import { ORBIT_GLSL } from './orbitGlsl';
@@ -205,13 +205,9 @@ function paint(
   out: Float32Array,
 ): void {
   const color = new Color();
-  world.satellites.forEach((satellite, i) => {
-    const hex =
-      colorBy === 'type'
-        ? TYPE_COLORS[satellite.objectType]
-        : constellationColor(CONSTELLATION_IDS[world.constellations[i]], alone !== null);
-    color.set(hex).toArray(out, i * 3);
-  });
+  for (let i = 0; i < world.satellites.length; i++) {
+    color.set(satelliteColor(world, i, colorBy, alone)).toArray(out, i * 3);
+  }
 }
 
 /**
