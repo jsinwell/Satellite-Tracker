@@ -1,0 +1,30 @@
+name: Refresh satellite data
+
+# Cloudflare Pages builds the site (and fetches the catalog) only when a commit
+# is pushed. This asks it to rebuild on a schedule, so the orbital elements stay
+# current when the code is not changing.
+on:
+  schedule:
+    # Every six hours, off the top of the hour. CelesTrak refreshes about every
+    # two hours and asks clients not to poll more often than that.
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger a Cloudflare Pages build
+        env:
+          # Created under the Pages project's Settings → Build → Deploy hooks.
+          # The URL is a credential: anyone holding it can trigger builds.
+          DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error::The CLOUDFLARE_DEPLOY_HOOK secret is not set, so the data is not being refreshed."
+            exit 1
+          fi
+          curl --fail --silent --show-error --request POST "$DEPLOY_HOOK" --output /dev/null
