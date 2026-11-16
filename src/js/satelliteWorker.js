@@ -20,6 +20,8 @@ self.addEventListener('message', function(e) {
         }
         
 
+        // Orbital period calculation. satrec.no is the mean motion in rads/min
+        let orbitalPeriodInMinutes = (2 * Math.PI) / satrec.no;
         const totalHours = 8;
         const timestepInHours = 0.0416666667;
         const start = new Date();
@@ -29,6 +31,7 @@ self.addEventListener('message', function(e) {
             const jsDate = new Date(start.getTime() + i * 3600000);
 
             try {
+                // Computes the position of the satellite at a given time using satrec
                 positionAndVelocity = satellite.propagate(satrec, jsDate);
                 gmst = satellite.gstime(jsDate);
                 p = satellite.eciToGeodetic(positionAndVelocity.position, gmst);
@@ -54,3 +57,5 @@ self.addEventListener('message', function(e) {
     }
     self.postMessage(satellitePositions);
 }, false);
+
+

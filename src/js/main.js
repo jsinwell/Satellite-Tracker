@@ -28,6 +28,15 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     baseLayerPicker: false, geocoder: false, homeButton: true, infoBox: true,
     navigationHelpButton: false, sceneModePicker: true, selectionIndicator: false
   });
+  
+
+  // Making sure the user can only view the next 8 hours from the current time
+  const now = Cesium.JulianDate.now();
+  const stopTime = Cesium.JulianDate.addHours(now, 8, new Cesium.JulianDate());
+  viewer.clock.startTime = now.clone();
+  viewer.clock.stopTime = stopTime.clone();
+  viewer.clock.currentTime = now.clone();
+  viewer.clock.clockRange = Cesium.ClockRange.CLAMPED;
 
   viewer.infoBox.frame.removeAttribute('sandbox'); // Allows us to edit infoBox
   viewer.scene.globe.enableLighting = true;
@@ -35,6 +44,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
   viewer.scene.screenSpaceCameraController.maximumZoomDistance = 6378137 * 20;
 
   var satellitePoint = [];
+  let satellitePositions = [];
 
   // Satellite type defintions
   const satelliteTypes = [
@@ -91,7 +101,7 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
 
 // Listen for messages from the worker
   worker.addEventListener('message', function(e) {
-    const satellitePositions = e.data;
+    satellitePositions = e.data;
 
     // Process received satellite positions to add them to the viewer
     satellitePositions.forEach(satelliteData => {
@@ -123,10 +133,33 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     loader.className += " hidden";
 }, false);
 
+function drawOrbit(satelliteData) {
+  const positions = satelliteData.positions.map(data => Cesium.Cartesian3.fromRadians(data.position.longitude, data.position.latitude, data.position.height));
+
+  const orbitEntity = viewer.entities.add({
+      polyline: {
+          positions: positions,
+          width: 1,
+          material: Cesium.Color.RED
+      }
+  });
+  return orbitEntity.id; // Return the id so we can destroy the line later
+}
 
   // Drawing orbital path of a satellite when selecting an entity
+  let currentOrbitEntityId = null;
   viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
+      if (currentOrbitEntityId) {
+          viewer.entities.removeById(currentOrbitEntityId);
+          currentOrbitEntityId = null;
+      }
 
+      if (Cesium.defined(selectedEntity)) {
+          const satelliteData = satellitePositions.find(sat => sat.name === selectedEntity.name);
+          if (satelliteData) {
+              currentOrbitEntityId = drawOrbit(satelliteData);
+          }
+      }
   });
 
 
