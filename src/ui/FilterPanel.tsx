@@ -41,14 +41,21 @@ function Toggle({ label, detail, title, count, enabled, color, onToggle, onSolo 
         />
         <span className={enabled ? '' : 'line-through'}>{label}</span>
         {detail && <span className="text-slate-500">{detail}</span>}
-        <span className="ml-auto pl-3 font-mono tabular-nums">{formatInteger(count)}</span>
+        {/* On rows with an "only" control, the count steps aside for it rather than being overlapped. */}
+        <span
+          className={`ml-auto pl-3 font-mono tabular-nums ${
+            onSolo ? 'group-hover:invisible group-has-[:focus-visible]:invisible' : ''
+          }`}
+        >
+          {formatInteger(count)}
+        </span>
       </button>
       {onSolo && (
         <button
           type="button"
           onClick={onSolo}
           aria-label={`Show only ${label}`}
-          className="absolute right-1 hidden rounded bg-slate-800 px-1.5 py-0.5 text-[0.65rem] font-medium text-accent group-hover:block hover:bg-slate-700 focus-visible:block"
+          className="absolute right-1 hidden rounded bg-slate-800 px-1.5 py-0.5 text-[0.65rem] font-medium text-accent group-hover:block group-has-[:focus-visible]:block hover:bg-slate-700"
         >
           only
         </button>
@@ -77,7 +84,11 @@ export function FilterPanel({ world }: { world: World }) {
     useApp.getState();
 
   return (
-    <Panel aria-label="Filters" className="w-56 p-1.5">
+    <Panel
+      aria-label="Filters"
+      // Scrolls rather than running under the search box on a short window.
+      className="max-h-[calc(100dvh-5.5rem)] w-56 overflow-y-auto p-1.5"
+    >
       <fieldset className="mb-1.5 flex gap-0.5 rounded-md bg-white/5 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>
         {COLOR_MODES.map(({ value, label }) => (
