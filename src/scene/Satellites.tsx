@@ -9,14 +9,17 @@ import {
   InterleavedBufferAttribute,
   Points,
   ShaderMaterial,
+  Vector3,
 } from 'three';
 import { TYPE_COLORS } from '../app/palette';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
+import { sunDirection } from '../core/astro';
 import type { ObjectType } from '../core/catalog';
 import { wallNow } from '../core/clock';
-import { EARTH_MU } from '../core/constants';
+import type { Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
+import { ORBIT_GLSL } from './orbitGlsl';
 
 /** Relative point size by object type; debris is drawn smaller so payloads read first. */
 const TYPE_SIZES: Record<ObjectType, number> = {
@@ -26,7 +29,6 @@ const TYPE_SIZES: Record<ObjectType, number> = {
   unknown: 0.8,
 };
 
-// The extrapolation here must match `extrapolatePosition` in core/kinematics.ts.
 const vertexShader = /* glsl */ `
   attribute vec3 aVelocity;
   attribute vec3 aColor;
@@ -35,10 +37,11 @@ const vertexShader = /* glsl */ `
 
   uniform float uDt;
   uniform float uPixelRatio;
+  uniform vec3 uSunDirection;
 
   varying vec3 vColor;
 
-  const float MU = ${EARTH_MU.toFixed(4)};
+  ${ORBIT_GLSL}
 
   void main() {
     float r2 = dot(position, position);
@@ -49,8 +52,7 @@ const vertexShader = /* glsl */ `
       return;
     }
 
-    vec3 acceleration = -MU * position / (r2 * sqrt(r2));
-    vec3 p = position + aVelocity * uDt + 0.5 * acceleration * uDt * uDt;
+    vec3 p = extrapolate(position, aVelocity, uDt);
 
     vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * viewPosition;
@@ -58,7 +60,8 @@ const vertexShader = /* glsl */ `
     // Shrink with distance (in Earth radii), but never below a visible dot.
     float size = clamp(aSize * 9.0 / -viewPosition.z, 1.6, 6.0);
     gl_PointSize = size * uPixelRatio;
-    vColor = aColor;
+    // Satellites dim as they pass into the Earth's shadow.
+    vColor = aColor * sunlight(p, uSunDirection);
   }
 `;
 
@@ -73,6 +76,8 @@ const fragmentShader = /* glsl */ `
     #include <colorspace_fragment>
   }
 `;
+
+const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 
 function buildPoints(world: World) {
   const { simulation, satellites } = world;
@@ -102,7 +107,12 @@ function buildPoints(world: World) {
   geometry.setAttribute('aVisible', visibility);
 
   const material = new ShaderMaterial({
-    uniforms: { uDt: { value: 0 }, uPixelRatio: { value: 1 } },
+    uniforms: {
+      uDt: { value: 0 },
+      uPixelRatio: { value: 1 },
+      // In the TEME frame, like the positions it is compared with.
+      uSunDirection: { value: new Vector3(1, 0, 0) },
+    },
     vertexShader,
     fragmentShader,
     transparent: true,
@@ -149,7 +159,10 @@ export function Satellites({ world }: { world: World }) {
       uploadedVersion.current = simulation.version;
       stateBuffer.needsUpdate = true;
     }
-    material.uniforms.uDt.value = simulation.dtSeconds(currentSimTime());
+    const simMs = currentSimTime();
+    material.uniforms.uDt.value = simulation.dtSeconds(simMs);
+    const sun = sunDirection(simMs, scratch);
+    material.uniforms.uSunDirection.value.set(sun.x, sun.y, sun.z);
     material.uniforms.uPixelRatio.value = gl.getPixelRatio();
   });
 
