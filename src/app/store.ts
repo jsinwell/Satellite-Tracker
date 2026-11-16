@@ -39,6 +39,8 @@ interface AppActions {
   selectAndFocus(index: number): void;
   toggleType(type: ObjectType): void;
   toggleRegime(regime: OrbitRegime): void;
+  /** Shows only objects launched in or before `year`; null removes the limit. */
+  setLaunchedBy(year: number | null): void;
   /** Sets simulated seconds per real second; 0 pauses. */
   setRate(rate: number): void;
   /** Returns to the present, running in real time. */
@@ -47,7 +49,7 @@ interface AppActions {
 
 function applyFilters(world: World | null, filters: Filters) {
   const visible = world
-    ? visibilityMask(world.satellites, world.orbits, filters)
+    ? visibilityMask(world.satellites, world.orbits, world.launchYears, filters)
     : new Uint8Array(0);
   return { filters, visible, visibleCount: countVisible(visible) };
 }
@@ -77,6 +79,10 @@ export const useApp = create<AppState & AppActions>()((set, get) => ({
     const { world, filters } = get();
     const types = { ...filters.types, [type]: !filters.types[type] };
     set(applyFilters(world, { ...filters, types }));
+  },
+  setLaunchedBy: (year) => {
+    const { world, filters } = get();
+    if (filters.launchedBy !== year) set(applyFilters(world, { ...filters, launchedBy: year }));
   },
   toggleRegime: (regime) => {
     const { world, filters } = get();

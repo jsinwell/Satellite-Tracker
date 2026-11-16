@@ -1,4 +1,5 @@
 import { type Catalog, OBJECT_TYPES, type ObjectType, type SatelliteRecord } from '../core/catalog';
+import { launchYear } from '../core/filter';
 import { ORBIT_REGIMES, type OrbitRegime, type OrbitSummary, summarizeOrbit } from '../core/orbit';
 import { createSearchIndex, type SearchIndex } from '../core/search';
 import { Simulation } from '../sim/Simulation';
@@ -16,6 +17,10 @@ export interface World {
   readonly orbits: readonly OrbitSummary[];
   readonly simulation: Simulation;
   readonly search: SearchIndex;
+  /** Launch year of each satellite; 0 where the catalog does not say. */
+  readonly launchYears: Int16Array;
+  /** The earliest and latest launch years among the satellites. */
+  readonly launchYearRange: readonly [number, number];
   readonly indexByNoradId: ReadonlyMap<number, number>;
   readonly countByType: Readonly<Record<ObjectType, number>>;
   readonly countByRegime: Readonly<Record<OrbitRegime, number>>;
@@ -30,6 +35,8 @@ function tally<K extends string>(keys: readonly K[], values: Iterable<K>): Recor
 export async function createWorld(catalog: Catalog): Promise<World> {
   const { satellites } = catalog;
   const orbits = satellites.map((satellite) => summarizeOrbit(satellite.elements));
+  const launchYears = Int16Array.from(satellites, (satellite) => launchYear(satellite) ?? 0);
+  const knownYears = launchYears.filter((year) => year !== 0);
   return {
     generatedAtMs: Date.parse(catalog.generatedAt),
     source: catalog.source,
@@ -37,6 +44,11 @@ export async function createWorld(catalog: Catalog): Promise<World> {
     orbits,
     simulation: await Simulation.start(satellites),
     search: createSearchIndex(satellites),
+    launchYears,
+    launchYearRange: [
+      knownYears.reduce((a, b) => Math.min(a, b), Number.POSITIVE_INFINITY),
+      knownYears.reduce((a, b) => Math.max(a, b), Number.NEGATIVE_INFINITY),
+    ],
     indexByNoradId: new Map(satellites.map((satellite, index) => [satellite.noradId, index])),
     countByType: tally(
       OBJECT_TYPES,
