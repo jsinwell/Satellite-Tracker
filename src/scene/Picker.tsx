@@ -26,6 +26,12 @@ function pick(
   pointer: Point,
   radiusPx: number,
 ): number | null {
+  // Bring the camera's matrices in line with its current position and
+  // orientation. The renderer only does this when it draws, and the orbit
+  // controls leave the inverse matrix half-updated (new position, old
+  // orientation) after moving the camera, which would throw picks off by
+  // however far the camera moved this frame.
+  camera.updateMatrixWorld();
   clipFromTeme
     .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
     .multiply(WORLD_FROM_TEME);
@@ -76,9 +82,9 @@ export function Picker({ world }: { world: World }) {
     const onPointerUp = (event: PointerEvent) => {
       if (!pressedAt || !event.isPrimary) return;
       const released = toLocal(event);
-      const travelled = Math.hypot(released.x - pressedAt.x, released.y - pressedAt.y);
+      const traveled = Math.hypot(released.x - pressedAt.x, released.y - pressedAt.y);
       pressedAt = null;
-      if (travelled > CLICK_SLOP) return;
+      if (traveled > CLICK_SLOP) return;
       const radius = event.pointerType === 'mouse' ? PICK_RADIUS.mouse : PICK_RADIUS.touch;
       useApp.getState().select(pick(world, camera, element, released, radius));
     };

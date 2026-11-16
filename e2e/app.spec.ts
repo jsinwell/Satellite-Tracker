@@ -44,7 +44,7 @@ test.describe('with a catalog', () => {
 
     await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
     await expect(page.locator('canvas')).toBeVisible();
-    await expect(page.getByText('16 Nov 2026, 06:30')).toBeVisible();
+    await expect(page.getByText('Nov 16, 2026, 06:30')).toBeVisible();
   });
 
   test('finds a satellite by name and shows where it is', async ({ page }) => {
@@ -91,26 +91,29 @@ test.describe('with a catalog', () => {
 
   test('picks the satellite under the pointer', async ({ page }) => {
     // The camera flies to look straight down on a linked satellite, which
-    // leaves it at the exact centre of the view: a known place to point at.
+    // leaves it at the exact center of the view: a known place to point at.
     await page.goto(`/?sat=41866&t=${FIXTURE_TIME}`);
     await expect(selection(page)).toContainText('GOES 16');
     // The canvas fills the viewport. Measured from the viewport, not the
     // canvas, which is still at its default size for the first few frames.
     const viewport = page.viewportSize();
     if (!viewport) throw new Error('The page has no viewport.');
-    const centre = { x: viewport.width / 2, y: viewport.height / 2 };
+    const center = { x: viewport.width / 2, y: viewport.height / 2 };
 
     // Retried with a fresh pointer move each time: the scene attaches its
     // listeners a few frames after the HUD appears, and the flight takes a moment.
     await expect(async () => {
-      await page.mouse.move(centre.x + 1, centre.y);
-      await page.mouse.move(centre.x, centre.y);
+      await page.mouse.move(center.x + 1, center.y);
+      await page.mouse.move(center.x, center.y);
       await expect(page.getByRole('tooltip')).toContainText('GOES 16', { timeout: 500 });
     }).toPass({ timeout: 15_000 });
+    // Hover starts a moment before the 1.2 s flight lands, and deselecting
+    // cancels it. Let it finish so the satellite is dead center, not just in range.
+    await page.waitForTimeout(1500);
 
     await page.keyboard.press('Escape');
     await expect(selection(page)).toBeHidden();
-    await page.mouse.click(centre.x, centre.y);
+    await page.mouse.click(center.x, center.y);
     await expect(selection(page)).toContainText('GOES 16');
 
     // Clicking empty sky clears the selection.
