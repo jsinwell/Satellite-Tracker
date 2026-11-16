@@ -46,8 +46,15 @@ export interface SatelliteRecord {
 
 export interface Catalog {
   schemaVersion: typeof CATALOG_SCHEMA_VERSION;
-  /** ISO-8601 UTC instant the catalog was built. */
+  /** ISO-8601 UTC instant the orbital elements were fetched. */
   generatedAt: string;
+  /**
+   * ISO-8601 UTC instant the descriptive fields (object type, owner, launch
+   * date) were last refreshed from SATCAT, which happens far less often than
+   * the elements; null if they never have been. Used by the catalog build to
+   * decide when to refresh them, not by the app.
+   */
+  metadataFetchedAt?: string | null;
   source: string;
   satellites: SatelliteRecord[];
 }

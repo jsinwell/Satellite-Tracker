@@ -19,14 +19,14 @@ Requires Node 22.18 or newer.
 
 ```sh
 npm install
-npm run data    # fetch the satellite catalog from CelesTrak (once; see below)
+npm run data    # download the satellite catalog (once)
 npm run dev
 ```
 
 | Command          | What it does                                                    |
 | ---------------- | --------------------------------------------------------------- |
 | `npm run dev`    | Start the dev server                                            |
-| `npm run data`   | Rebuild `public/data/catalog.json` from CelesTrak               |
+| `npm run data`   | Download the catalog to `public/data/catalog.json`              |
 | `npm run check`  | Type-check, lint and unit-test: run this before pushing         |
 | `npm run e2e`    | Build, then run the browser tests against the production bundle |
 | `npm run bench`  | Benchmark SGP4 over the full catalog                            |
@@ -36,13 +36,14 @@ npm run dev
 `npm run e2e` needs a browser: either `npx playwright install chromium`, or set
 `PW_CHANNEL=chrome` to use an installed Chrome.
 
-Please don't run `npm run data` in a loop. CelesTrak is a free service that refreshes about
-every two hours and blocks clients that poll harder than that.
+`npm run data` copies the catalog the live site is already serving; it does not contact
+CelesTrak unless you pass `-- --fresh`. Use that sparingly: CelesTrak is a free service that
+blocks an address for hours if it downloads data more often than the data changes.
 
 ## How it works
 
 ```
- CelesTrak ──► scripts/fetch-catalog.ts ──► catalog.json     (each build, every 6 h)
+ CelesTrak ──► scripts/fetch-catalog.ts ──► catalog.json   (production build, every 6 h)
                                                 │
                                          fetched once at startup
                                                 │
@@ -54,10 +55,11 @@ every two hours and blocks clients that poll harder than that.
                                                               in the vertex shader
 ```
 
-**Data.** Every build fetches orbital elements (as OMM JSON) and the satellite catalog from
-CelesTrak, validates and joins them, and ships the result inside the site. A scheduled job
-triggers a rebuild every six hours. Nothing is committed, and visitors' browsers never
-contact CelesTrak.
+**Data.** The production build fetches orbital elements (as OMM JSON) from CelesTrak,
+validates them, joins on descriptive fields from the satellite catalog, and ships the result
+inside the site. A scheduled job triggers that build every six hours. Nothing is committed,
+and visitors' browsers never contact CelesTrak. Neither do other builds: see
+[Staying within CelesTrak's limits](#staying-within-celestraks-limits).
 
 **Simulation.** A Web Worker initialises SGP4 once per satellite, then propagates all of them
 to whatever instant the main thread asks for, writing position and velocity into a
@@ -147,14 +149,33 @@ deploys to production, and every other branch gets a preview URL.
 Cloudflare only builds on a push, so `.github/workflows/refresh-data.yml` calls a Cloudflare
 [deploy hook](https://developers.cloudflare.com/pages/configuration/deploy-hooks/) every six
 hours to rebuild with fresh elements. It needs the hook's URL in a repository secret named
-`CLOUDFLARE_DEPLOY_HOOK`. If CelesTrak is unreachable during a build, the build fails and the
-previous deployment stays live.
+`CLOUDFLARE_DEPLOY_HOOK`.
 
 GitHub pauses scheduled workflows in repositories with no activity for 60 days; if the data
 stops refreshing, re-enable the workflow from the Actions tab.
 
-To host elsewhere, run `npm run data && npm run build` on a schedule and serve `dist/`.
-Set `BASE_PATH` if the site is not served from the domain root.
+### Staying within CelesTrak's limits
+
+CelesTrak blocks an address for hours if it downloads data more often than the data changes:
+elements change about every two hours, the satellite catalog two or three times a day. A
+site that fetched both on every build would lock itself out with two pushes in a row, so
+`scripts/catalog-builder.ts` follows these rules (each covered by a unit test):
+
+- Only the production build contacts CelesTrak. Branch previews and local development reuse
+  the catalog the live site is serving.
+- The production build skips CelesTrak if the published elements are under two hours old.
+- Satellite-catalog fields (object type, owner, launch date) are carried forward and
+  re-downloaded at most once a day. If that download fails, the build carries on and
+  classifies any new objects from their names.
+- If the elements cannot be fetched, the build reuses the published catalog, so a CelesTrak
+  outage delays the data but never blocks a code deploy. A catalog more than three days old
+  is not reused; the build fails instead, and the previous deployment stays live.
+
+### Hosting elsewhere
+
+Run `npm run data -- --fresh && npm run build` on a schedule and serve `dist/`. Set
+`PUBLISHED_CATALOG_URL` to where your site serves `data/catalog.json` so that the rules above
+have a catalog to reuse, and `BASE_PATH` if the site is not served from the domain root.
 
 ## Possible next steps
 
