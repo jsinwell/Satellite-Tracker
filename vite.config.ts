@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  // GitHub Pages serves the app from /<repo>/; the deploy workflow sets this.
+  // Set BASE_PATH when the site is served from a sub-path rather than the domain root.
   base: process.env.BASE_PATH ?? '/',
   plugins: [react(), tailwindcss()],
   worker: { format: 'es' },

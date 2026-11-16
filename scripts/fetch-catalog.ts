@@ -6,7 +6,7 @@
  * has outgrown. Object type, owner and launch date are joined in from SATCAT.
  *
  * CelesTrak refreshes GP data roughly every two hours and blocks clients that
- * poll harder than that, so this runs on a schedule in CI — never per visitor.
+ * poll harder than that, so this runs once per site build — never per visitor.
  *
  * Usage: node scripts/fetch-catalog.ts [output path]
  */

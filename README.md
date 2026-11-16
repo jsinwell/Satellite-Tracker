@@ -3,6 +3,8 @@
 A live 3D view of every active satellite and the major debris fields in Earth orbit —
 about 19,500 objects — propagated in real time in the browser.
 
+**Live at [jsinwell-satellite-tracker.pages.dev](https://jsinwell-satellite-tracker.pages.dev/)**
+
 ![The ISS selected over the Southern Ocean, with its orbit drawn](docs/screenshot.png)
 
 - **Live positions** from current orbital elements, with the real day/night line and Earth rotation.
@@ -40,7 +42,7 @@ every two hours and blocks clients that poll harder than that.
 ## How it works
 
 ```
- CelesTrak ──► scripts/fetch-catalog.ts ──► catalog.json        (CI, every 6 h)
+ CelesTrak ──► scripts/fetch-catalog.ts ──► catalog.json     (each build, every 6 h)
                                                 │
                                          fetched once at startup
                                                 │
@@ -52,9 +54,10 @@ every two hours and blocks clients that poll harder than that.
                                                               in the vertex shader
 ```
 
-**Data.** A scheduled GitHub Action fetches orbital elements (as OMM JSON) and the satellite
-catalog from CelesTrak, validates and joins them, and ships the result inside the deployed
-site. Nothing is committed, and visitors' browsers never contact CelesTrak.
+**Data.** Every build fetches orbital elements (as OMM JSON) and the satellite catalog from
+CelesTrak, validates and joins them, and ships the result inside the site. A scheduled job
+triggers a rebuild every six hours. Nothing is committed, and visitors' browsers never
+contact CelesTrak.
 
 **Simulation.** A Web Worker initialises SGP4 once per satellite, then propagates all of them
 to whatever instant the main thread asks for, writing position and velocity into a
@@ -120,8 +123,8 @@ five-character field for that ID, which the catalog has outgrown.
 **No WebAssembly, no SharedArrayBuffer.** satellite.js ships a WASM build, but at real-time
 speed the JavaScript path is one 8 ms pass every two seconds: well under 1% of one core. At
 higher time rates it runs more often, but never more than one request at a time.
-SharedArrayBuffer would save a 470 kB copy at the price of cross-origin isolation headers that
-static hosts such as GitHub Pages cannot set.
+SharedArrayBuffer would save one 470 kB copy per update: too little to justify the
+cross-origin isolation headers it requires, which restrict everything else the page loads.
 
 ## Accuracy
 
@@ -132,8 +135,20 @@ after that. The info panel shows the age of each satellite's elements and flags 
 
 ## Deployment
 
-`.github/workflows/deploy.yml` builds and publishes to GitHub Pages on every push to `main`
-and every six hours. To enable it, set **Settings → Pages → Source** to **GitHub Actions**.
+The site is hosted on Cloudflare Pages, connected to this repository: every push to `main`
+deploys to production, and every other branch gets a preview URL.
+
+| Cloudflare Pages setting | Value                           |
+| ------------------------ | ------------------------------- |
+| Build command            | `npm run data && npm run build` |
+| Build output directory   | `dist`                          |
+| Node version             | read from `.nvmrc`              |
+
+Cloudflare only builds on a push, so `.github/workflows/refresh-data.yml` calls a Cloudflare
+[deploy hook](https://developers.cloudflare.com/pages/configuration/deploy-hooks/) every six
+hours to rebuild with fresh elements. It needs the hook's URL in a repository secret named
+`CLOUDFLARE_DEPLOY_HOOK`. If CelesTrak is unreachable during a build, the build fails and the
+previous deployment stays live.
 
 GitHub pauses scheduled workflows in repositories with no activity for 60 days; if the data
 stops refreshing, re-enable the workflow from the Actions tab.
