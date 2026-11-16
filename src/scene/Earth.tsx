@@ -12,20 +12,13 @@ import { currentSimTime } from '../app/store';
 import { gmst, sunDirection } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import type { Vec3 } from '../core/kinematics';
-import { directionToWorld } from './frame';
+import { directionToWorld, SPHERE_POLES_TO_Z } from './frame';
 
 const DAY_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_day_4096.jpg`;
 const NIGHT_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_night_4096.jpg`;
 
 /** The glow shell's radius relative to the Earth's. */
 const ATMOSPHERE_SCALE = 1.15;
-
-/**
- * SphereGeometry puts its poles on ±y and the texture's center column
- * (the Greenwich meridian) on +x. Tipping it onto +z gives Earth-fixed axes:
- * z through the north pole, x through 0° longitude, y through 90° east.
- */
-const SPHERE_TO_EARTH_FIXED = [Math.PI / 2, 0, 0] as const;
 
 const surfaceVertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -137,7 +130,8 @@ export function Earth() {
   return (
     <>
       <group ref={spin}>
-        <mesh rotation={SPHERE_TO_EARTH_FIXED}>
+        {/* Earth-fixed axes: z through the north pole, x through 0° longitude. */}
+        <mesh rotation={[...SPHERE_POLES_TO_Z]}>
           <sphereGeometry args={[EARTH_RADIUS_KM, 128, 64]} />
           <shaderMaterial
             uniforms={uniforms.surface}

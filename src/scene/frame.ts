@@ -26,6 +26,14 @@ export const WORLD_FROM_TEME = new Matrix4()
 
 export const TEME_FROM_WORLD = WORLD_FROM_TEME.clone().invert();
 
+/**
+ * SphereGeometry puts its poles on ±y and the center column of its texture on
+ * +x. This rotation tips the poles onto ±z, leaving the texture's center on +x
+ * and its right-hand side toward +y: the layout of an equirectangular map in
+ * any z-up frame, whether Earth-fixed (longitude) or celestial (right ascension).
+ */
+export const SPHERE_POLES_TO_Z = [Math.PI / 2, 0, 0] as const;
+
 /** Converts a TEME direction to a world direction, without scaling. */
 export function directionToWorld(direction: Vec3, out: Vector3): Vector3 {
   return out.set(direction.x, direction.z, -direction.y);
