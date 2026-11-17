@@ -207,11 +207,39 @@ test.describe('with a catalog', () => {
     // The view starts toward the south, with the horizon in sight.
     await expect(compass.filter({ hasText: /^S$/ })).toBeVisible();
 
+    // Dragging pulls the sky along with the pointer, as in a panorama.
+    const south = compass.filter({ hasText: /^S$/ });
+    await page.waitForTimeout(1600); // the way down takes 1.4 s
+    const from = (await south.boundingBox())?.x ?? Number.NaN;
+    await page.mouse.move(640, 300);
+    await page.mouse.down();
+    await page.mouse.move(740, 300, { steps: 5 });
+    await page.mouse.move(840, 300, { steps: 5 });
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await south.boundingBox())?.x ?? Number.NaN)
+      .toBeGreaterThan(from + 100);
+
     // Escape comes back up, as the button does.
     await page.locator('canvas').focus();
     await page.keyboard.press('Escape');
     await expect(sky.getByRole('button', { name: 'Look up from here' })).toBeVisible();
     await expect(compass).toHaveCount(0);
+  });
+
+  test('lists the planets in the sky', async ({ page }) => {
+    // From the North Pole, a planet is up exactly when it is north of the
+    // celestial equator, which for these does not change for months.
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '90, 0');
+    const planets = page.getByRole('list', { name: 'Planets above the horizon' });
+    for (const name of ['Mars', 'Jupiter', 'Saturn']) {
+      await expect(planets).toContainText(name);
+    }
+    for (const name of ['Mercury', 'Venus', 'Neptune']) {
+      await expect(planets).not.toContainText(name);
+    }
+    await expect(planets.getByText('Jupiter')).toBeVisible();
   });
 
   test('takes a place from a click on the globe', async ({ page }) => {
@@ -256,6 +284,7 @@ test.describe('with a catalog', () => {
       await expect(point('SW')).toBeVisible();
       await page.waitForTimeout(1600); // the way down takes 1.4 s
       const before = await apart();
+      const southBefore = (await point('S').boundingBox())?.x ?? Number.NaN;
 
       // Two fingers 400 px apart, drawn together to 100 px, about the middle.
       const cdp = await page.context().newCDPSession(page);
@@ -275,6 +304,9 @@ test.describe('with a catalog', () => {
       await touch('touchEnd', 0);
 
       await expect.poll(apart).toBeLessThan(before * 0.8);
+      // A pinch zooms about the middle and turns nothing: south stays put.
+      const southAfter = (await point('S').boundingBox())?.x ?? Number.NaN;
+      expect(Math.abs(southAfter - southBefore)).toBeLessThan(40);
     });
   });
 

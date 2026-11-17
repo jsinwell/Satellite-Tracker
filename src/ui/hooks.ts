@@ -16,6 +16,7 @@ import {
   skyNow,
   type ViewingWindow,
 } from '../core/observer';
+import { type PlanetInSky, planetsUp } from '../core/planets';
 
 /**
  * Re-evaluates `read` on an interval. The simulation changes every frame;
@@ -202,4 +203,10 @@ export function useViewingWindow(observer: Observer): ViewingWindow | null {
     return () => clearInterval(timer);
   }, [observer]);
   return cache.observer === observer ? cache.window : null;
+}
+
+/** The planets above `observer`'s horizon that the eye can see, brightest first. */
+export function usePlanetsUp(observer: Observer): PlanetInSky[] {
+  const read = useCallback(() => planetsUp(observer, currentSimTime()), [observer]);
+  return usePolled(read, SKY_INTERVAL_MS);
 }

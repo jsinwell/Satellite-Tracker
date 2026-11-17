@@ -418,6 +418,10 @@ export function CameraRig({ world }: { world: World }) {
     // zenith (the stand-in straight below it).
     sky.minPolarAngle = Math.PI / 2 - SKY_BELOW_HORIZON;
     sky.maxPolarAngle = Math.PI - 1e-3;
+    // Two fingers are a pinch, handled below. Left to the controls, the
+    // second finger would leave them turning the view from where the first
+    // one landed to the middle of both, a jump of half the spread.
+    sky.touches.TWO = null;
     const onWheel = (event: WheelEvent) => {
       if (!sky.enabled) return;
       event.preventDefault();
@@ -573,8 +577,10 @@ export function CameraRig({ world }: { world: World }) {
       return;
     }
     if (now.kind === 'standing' && standing) {
-      // Turns the view by about as much as the pointer moves across it.
-      sky.rotateSpeed = camera.fov / 360;
+      // Turns the view by about as much as the pointer moves across it, and
+      // the opposite way to an orbit: the sky is grabbed and pulled along
+      // with the pointer, as in any panorama, rather than flown around.
+      sky.rotateSpeed = -camera.fov / 360;
       if (steering) {
         // The stand-in sits opposite the way the view faces, so it goes
         // the other way round.

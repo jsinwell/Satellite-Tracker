@@ -128,6 +128,25 @@ export function lookAngles(
   return out;
 }
 
+/**
+ * Where the observer would look for something so far away that only its
+ * direction matters, like a planet: `direction` is a unit vector, inertial.
+ * The range is left as infinite.
+ */
+export function directionAngles(
+  frame: ObserverFrame,
+  direction: Vec3,
+  out: LookAngles = { azimuth: 0, elevation: 0, rangeKm: 0 },
+): LookAngles {
+  const { up, east, north } = frame;
+  const along = (axis: Vec3) => direction.x * axis.x + direction.y * axis.y + direction.z * axis.z;
+  const azimuth = Math.atan2(along(east), along(north)) / DEG;
+  out.azimuth = azimuth < 0 ? azimuth + 360 : azimuth;
+  out.elevation = Math.asin(Math.max(-1, Math.min(1, along(up)))) / DEG;
+  out.rangeKm = Number.POSITIVE_INFINITY;
+  return out;
+}
+
 /** How high the Sun is for the observer, degrees: negative once it has set. */
 export function sunElevation(frame: ObserverFrame, sun: Vec3): number {
   const up = sun.x * frame.up.x + sun.y * frame.up.y + sun.z * frame.up.z;

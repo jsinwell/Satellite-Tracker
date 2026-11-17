@@ -21,7 +21,8 @@ computed live in the browser.
   satellite to see when it next passes over, with the passes you could see marked. Click one
   to jump to it.
 - Look up from where you are: the camera stands on the ground and shows the real sky, with
-  the satellites, stars, Sun and Moon where they'd be. The sky is dark, twilit or blue to
+  the satellites, stars, planets, Sun and Moon where they'd be. The sky panel lists which
+  planets are up and how bright they are, so you can tell them from satellites. The sky is dark, twilit or blue to
   match the hour. Drag to look around, and scroll or pinch to widen or narrow the view.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
@@ -113,6 +114,7 @@ instead. You can force a real download with `npm run data -- --fresh`, but don't
 ## Credits
 
 Orbital data from [CelesTrak](https://celestrak.org), propagation by
-[satellite.js](https://github.com/shashwatak/satellite-js), Earth and Moon textures from the
+[satellite.js](https://github.com/shashwatak/satellite-js), planet positions by
+[Astronomy Engine](https://github.com/cosinekitty/astronomy), Earth and Moon textures from the
 [three.js](https://github.com/mrdoob/three.js) examples, star map from
 [NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851).
