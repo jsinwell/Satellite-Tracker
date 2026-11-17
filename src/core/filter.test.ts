@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { debris, fixtures, geostationary, iss, starlink } from './__fixtures__/satellites';
 import { CONSTELLATION_IDS, constellationOf } from './constellation';
-import { countVisible, type Filters, launchYear, SHOW_EVERYTHING, visibilityMask } from './filter';
+import {
+  countVisible,
+  type Filters,
+  facetCounts,
+  launchYear,
+  SHOW_EVERYTHING,
+  visibilityMask,
+} from './filter';
 import { summarizeOrbit } from './orbit';
 
 const orbits = fixtures.map((record) => summarizeOrbit(record.elements));
@@ -77,5 +84,50 @@ describe('launchYear', () => {
 
   it('is null when the catalog gives neither', () => {
     expect(launchYear({ ...iss, launchDate: null, intlDesignator: '' })).toBeNull();
+  });
+});
+
+describe('facetCounts', () => {
+  const subjects = { satellites: fixtures, orbits, launchYears, constellations };
+  const countsFor = (filters: Filters) => facetCounts(subjects, filters);
+  const total = (counts: Record<string, number>) =>
+    Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+  it('counts every satellite once per filter when nothing is filtered', () => {
+    const counts = countsFor(SHOW_EVERYTHING);
+    expect(total(counts.types)).toBe(fixtures.length);
+    expect(total(counts.regimes)).toBe(fixtures.length);
+    expect(total(counts.constellations)).toBe(fixtures.length);
+    expect(counts.types.debris).toBe(1);
+    expect(counts.constellations.starlink).toBe(1);
+  });
+
+  it('follows the launch year in every filter', () => {
+    // Starlink did not exist yet, so its row must read zero.
+    const counts = countsFor({ ...SHOW_EVERYTHING, launchedBy: 2000 });
+    const launchedBy2000 = launchYears.filter((year) => year !== 0 && year <= 2000).length;
+    expect(total(counts.types)).toBe(launchedBy2000);
+    expect(total(counts.regimes)).toBe(launchedBy2000);
+    expect(total(counts.constellations)).toBe(launchedBy2000);
+    expect(counts.constellations.starlink).toBe(0);
+  });
+
+  it("keeps a row's own count when that row is switched off", () => {
+    const counts = countsFor({
+      ...SHOW_EVERYTHING,
+      types: { ...SHOW_EVERYTHING.types, debris: false },
+    });
+    expect(counts.types.debris).toBe(1); // what switching it back on would show
+  });
+
+  it('applies the other filters to each row', () => {
+    const counts = countsFor({
+      ...SHOW_EVERYTHING,
+      types: { ...SHOW_EVERYTHING.types, debris: false },
+    });
+    // The debris fixture is in LEO, so hiding debris takes one off the LEO count.
+    const everything = countsFor(SHOW_EVERYTHING);
+    expect(counts.regimes.LEO).toBe(everything.regimes.LEO - 1);
+    expect(counts.regimes.GEO).toBe(everything.regimes.GEO);
   });
 });

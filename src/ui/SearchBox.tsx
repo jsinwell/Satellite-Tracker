@@ -1,7 +1,8 @@
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { TYPE_COLORS } from '../app/palette';
+import { satelliteColor } from '../app/palette';
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
+import { soleEnabled } from '../core/constellation';
 import type { SearchResults } from '../core/search';
 import { formatInteger } from './format';
 
@@ -11,8 +12,10 @@ import { formatInteger } from './format';
  */
 const MAX_RESULTS = 40;
 
-function summarize({ indices, total }: SearchResults): string {
-  if (total === 0) return 'No satellites match.';
+function summarize({ indices, total }: SearchResults, filtered: boolean): string {
+  // Say so when filters may be why: otherwise a hidden satellite just looks missing.
+  if (total === 0)
+    return filtered ? 'No matches among the satellites shown.' : 'No satellites match.';
   if (total > indices.length) {
     return `Showing the best ${indices.length} of ${formatInteger(total)} matches`;
   }
@@ -26,7 +29,15 @@ export function SearchBox({ world }: { world: World }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
 
-  const results = useMemo(() => world.search.search(query, MAX_RESULTS), [world, query]);
+  // Search covers what is on the globe: a satellite hidden by the filters is not offered.
+  const visible = useApp((state) => state.visible);
+  const filtered = useApp((state) => state.visibleCount < world.satellites.length);
+  const colorBy = useApp((state) => state.colorBy);
+  const alone = useApp((state) => soleEnabled(state.filters.constellations));
+  const results = useMemo(
+    () => world.search.search(query, MAX_RESULTS, visible),
+    [world, query, visible],
+  );
   const showResults = open && query.trim() !== '';
   const optionId = (position: number) => `${listId}-option-${position}`;
 
@@ -137,7 +148,7 @@ export function SearchBox({ world }: { world: World }) {
                 >
                   <span
                     className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: TYPE_COLORS[satellite.objectType] }}
+                    style={{ backgroundColor: satelliteColor(world, index, colorBy, alone) }}
                   />
                   <span className="truncate text-slate-100">{satellite.name}</span>
                   <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">
@@ -148,7 +159,7 @@ export function SearchBox({ world }: { world: World }) {
             })}
           </div>
           <p className="border-t border-white/10 px-4 py-1.5 text-xs text-slate-500">
-            {summarize(results)}
+            {summarize(results, filtered)}
           </p>
         </div>
       )}

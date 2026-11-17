@@ -5,7 +5,10 @@ import { CONSTELLATION_IDS, type ConstellationId, soleEnabled } from '../core/co
 import {
   allEnabled,
   countVisible,
+  type FacetCounts,
+  type FilterSubjects,
   type Filters,
+  facetCounts,
   SHOW_EVERYTHING,
   visibilityMask,
 } from '../core/filter';
@@ -33,6 +36,8 @@ interface AppState {
   /** One byte per satellite: 1 if it passes `filters`. Replaced, never mutated. */
   visible: Uint8Array;
   visibleCount: number;
+  /** What each legend row stands for under the other filters. */
+  counts: FacetCounts;
 }
 
 interface AppActions {
@@ -66,9 +71,23 @@ interface AppActions {
   goLive(): void;
 }
 
+/** Stands in for the world before the catalog has loaded. */
+const NO_SATELLITES: FilterSubjects = {
+  satellites: [],
+  orbits: [],
+  launchYears: [],
+  constellations: [],
+};
+
 function applyFilters(world: World | null, filters: Filters) {
-  const visible = world ? visibilityMask(world, filters) : new Uint8Array(0);
-  return { filters, visible, visibleCount: countVisible(visible) };
+  const subjects = world ?? NO_SATELLITES;
+  const visible = visibilityMask(subjects, filters);
+  return {
+    filters,
+    visible,
+    visibleCount: countVisible(visible),
+    counts: facetCounts(subjects, filters),
+  };
 }
 
 export const useApp = create<AppState & AppActions>()((set, get) => {

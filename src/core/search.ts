@@ -8,7 +8,12 @@ export interface SearchResults {
 }
 
 export interface SearchIndex {
-  search(query: string, limit: number): SearchResults;
+  /**
+   * Finds the satellites matching `query`. If `among` is given (one byte per
+   * satellite, as `visibilityMask` produces), only those it marks are
+   * considered, so results never include a satellite that is filtered out.
+   */
+  search(query: string, limit: number, among?: Uint8Array): SearchResults;
 }
 
 /** Match quality, best first. Its numeric value is the bucket a match lands in. */
@@ -55,13 +60,14 @@ export function createSearchIndex(records: readonly SatelliteRecord[]): SearchIn
   const designators = records.map((record) => record.intlDesignator.toLowerCase());
 
   return {
-    search(query, limit) {
+    search(query, limit, among) {
       const needle = query.trim().toLowerCase();
       if (needle === '') return { indices: [], total: 0 };
 
       const buckets: number[][] = Array.from({ length: RANK_COUNT }, () => []);
       let total = 0;
       for (let i = 0; i < records.length; i++) {
+        if (among && among[i] === 0) continue;
         const matchRank = rank(needle, names[i], ids[i], designators[i]);
         if (matchRank === -1) continue;
         total++;
