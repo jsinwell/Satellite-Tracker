@@ -49,6 +49,11 @@ computed live in the browser.
 - Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
   moment in time with `?t=2026-11-16T06:30:00Z`.
 
+![The total solar eclipse of 2 August 2027 seen from Luxor, with Venus and Mercury beside the Sun](docs/eclipse.png)
+
+The total solar eclipse of 2 August 2027, looking up from Luxor at mid-eclipse. Venus and
+Mercury are out in the darkened sky beside the Sun.
+
 ## Running it
 
 Needs Node 22.18 or newer.
