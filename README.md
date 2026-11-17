@@ -5,7 +5,7 @@ computed live in the browser.
 
 **[jsinwell-satellite-tracker.pages.dev](https://jsinwell-satellite-tracker.pages.dev/)**
 
-![The ISS selected, with its orbit drawn](docs/screenshot.png)
+![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/screenshot.png)
 
 ## Features
 
@@ -22,7 +22,7 @@ computed live in the browser.
   to jump to it.
 - Look up from where you are: the camera stands on the ground and shows the real sky, with
   the satellites, stars, Sun and Moon where they'd be. The sky is dark, twilit or blue to
-  match the hour. Drag to look around, and scroll to widen or narrow the view.
+  match the hour. Drag to look around, and scroll or pinch to widen or narrow the view.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the

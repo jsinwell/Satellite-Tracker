@@ -27,6 +27,17 @@ function trackErrors(page: Page): string[] {
 
 const selection = (page: Page) => page.getByRole('region', { name: 'Selected satellite' });
 
+/** Opens the sky panel and sets the place by typing its coordinates. */
+async function setPlace(page: Page, coordinates: string): Promise<void> {
+  await page.getByRole('button', { name: 'Your sky' }).click();
+  const field = page
+    .getByRole('region', { name: 'Your sky' })
+    .getByLabel('Or type its coordinates');
+  await field.fill(coordinates);
+  await field.press('Enter');
+  await expect(page.getByRole('button', { name: 'Look up from here' })).toBeVisible();
+}
+
 test.describe('with a catalog', () => {
   let errors: string[];
 
@@ -223,6 +234,72 @@ test.describe('with a catalog', () => {
     await expect(sky).toContainText(/\d+\.\d+° [NS], \d+\.\d+° [EW]/);
   });
 
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true });
+
+    test('widens the view of the sky with a pinch', async ({ page }) => {
+      await page.goto(`/?t=${FIXTURE_TIME}`);
+      await setPlace(page, '41.88, -87.63');
+      await page.getByRole('button', { name: 'Look up from here' }).click();
+
+      // Facing south, south-west is off to the right. A wider view brings it
+      // closer to the middle, so its distance from south shrinks.
+      const point = (name: string) => page.locator(`[data-compass-point="${name}"]`);
+      const apart = async () => {
+        const [south, southWest] = await Promise.all([
+          point('S').boundingBox(),
+          point('SW').boundingBox(),
+        ]);
+        if (!south || !southWest) throw new Error('A compass point is off screen.');
+        return southWest.x - south.x;
+      };
+      await expect(point('SW')).toBeVisible();
+      await page.waitForTimeout(1600); // the way down takes 1.4 s
+      const before = await apart();
+
+      // Two fingers 400 px apart, drawn together to 100 px, about the middle.
+      const cdp = await page.context().newCDPSession(page);
+      const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', spread: number) =>
+        cdp.send('Input.dispatchTouchEvent', {
+          type,
+          touchPoints:
+            type === 'touchEnd'
+              ? []
+              : [
+                  { x: 640 - spread / 2, y: 360, id: 1 },
+                  { x: 640 + spread / 2, y: 360, id: 2 },
+                ],
+        });
+      await touch('touchStart', 400);
+      for (let spread = 380; spread >= 100; spread -= 20) await touch('touchMove', spread);
+      await touch('touchEnd', 0);
+
+      await expect.poll(apart).toBeLessThan(before * 0.8);
+    });
+  });
+
+  test('keeps the sky panel clear of the filters', async ({ page }) => {
+    // Short windows are where they used to overlap.
+    for (const viewport of [
+      { width: 800, height: 420 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto(`/?t=${FIXTURE_TIME}`);
+      await setPlace(page, '41.88, -87.63');
+      await page.getByRole('button', { name: 'Constellation', exact: true }).click();
+
+      await expect(async () => {
+        const sky = await page.locator('#your-sky').boundingBox();
+        const filters = await page.getByRole('region', { name: 'Filters' }).boundingBox();
+        if (!sky || !filters) throw new Error('A panel is missing.');
+        expect(sky.y + sky.height).toBeLessThanOrEqual(filters.y);
+      }).toPass({ timeout: 5000 });
+      // Reset the place, so the next size starts from scratch.
+      await page.evaluate(() => localStorage.clear());
+    }
+  });
+
   test.describe('with location access', () => {
     test.use({
       geolocation: { latitude: -33.8688, longitude: 151.2093 },
@@ -387,6 +464,29 @@ test.describe('on a phone-sized screen', () => {
     // There is not room for both, so opening the filters folds the details away.
     await page.getByRole('button', { name: 'Filters', exact: true }).click();
     await expect(panel.getByText('Inclination')).toBeHidden();
+  });
+
+  test('takes turns between the sky panel and the filters', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '41.88, -87.63');
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    const filters = page.getByRole('region', { name: 'Filters' });
+    const toggle = page.getByRole('button', { name: 'Filters', exact: true });
+
+    await toggle.click();
+    await expect(filters).toBeVisible();
+    await expect(sky).toBeHidden();
+
+    await toggle.click();
+    await expect(sky).toBeVisible();
+
+    // And the other way round: the sky button brings the sky back.
+    await toggle.click();
+    await expect(sky).toBeHidden();
+    await page.getByRole('button', { name: 'Your sky' }).click();
+    await expect(sky).toBeVisible();
+    await expect(filters).toBeHidden();
   });
 
   test('keeps every control on screen', async ({ page }) => {

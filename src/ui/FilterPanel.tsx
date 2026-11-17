@@ -76,7 +76,12 @@ function formatAltitude(km: number | null): string | undefined {
 }
 
 /** Doubles as the color legend: each swatch is that group's color on the globe. */
-export function FilterPanel({ world }: { world: World }) {
+/**
+ * `sharingColumn` says the sky panel is open above, in the same column. The
+ * filters then keep to the lower half of it, so neither has to cover the
+ * other; the sky panel takes whatever they leave.
+ */
+export function FilterPanel({ world, sharingColumn }: { world: World; sharingColumn: boolean }) {
   const filters = useApp((state) => state.filters);
   // What each row would show under the other filters, so the numbers follow the globe.
   const counts = useApp((state) => state.counts);
@@ -91,7 +96,11 @@ export function FilterPanel({ world }: { world: World }) {
       // Scrolls rather than running under the search box on a short window. The
       // allowance is for what shares its column: the search box above and, on
       // tablet widths, the time bar below.
-      className="thin-scrollbar max-h-[42dvh] w-56 overflow-y-auto p-1.5 sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]"
+      className={`thin-scrollbar max-h-[42dvh] w-56 overflow-y-auto p-1.5 ${
+        sharingColumn
+          ? 'sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)]'
+          : 'sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]'
+      }`}
     >
       <fieldset className="mb-1.5 flex gap-0.5 rounded-md bg-white/5 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>

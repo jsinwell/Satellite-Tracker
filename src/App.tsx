@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useApp } from './app/store';
 import { setLabelLayer } from './scene/labelLayer';
 import { Scene } from './scene/Scene';
@@ -29,6 +29,46 @@ function useEscapeToDeselect() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+}
+
+/** The space kept between two panels stacked in a column, px; Tailwind's `gap-3`. */
+const PANEL_GAP = 12;
+
+/**
+ * Caps the height of `panel` to the room between its top and the top of
+ * `below`, which shares its column further down, so that the two never
+ * overlap however short the window. Measured, rather than set in CSS, because
+ * the room depends on how tall `below` is at the moment. Where `below` is not
+ * shown, the panel's own CSS cap applies.
+ */
+function useRoomAbove(
+  panel: RefObject<HTMLElement | null>,
+  below: RefObject<HTMLElement | null>,
+  active: boolean,
+): void {
+  useLayoutEffect(() => {
+    const top = panel.current;
+    const bottom = below.current;
+    if (!active || !top || !bottom) return;
+    const refit = () => {
+      if (bottom.getClientRects().length === 0) {
+        top.style.maxHeight = '';
+        return;
+      }
+      const room = bottom.getBoundingClientRect().top - top.getBoundingClientRect().top - PANEL_GAP;
+      top.style.maxHeight = `${Math.max(0, room)}px`;
+    };
+    refit();
+    // The filters change height when switching what color stands for.
+    const observer = new ResizeObserver(refit);
+    observer.observe(bottom);
+    window.addEventListener('resize', refit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', refit);
+      top.style.maxHeight = '';
+    };
+  }, [panel, below, active]);
 }
 
 /** A crescent and a star: the night sky. */
@@ -65,6 +105,15 @@ export function App() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Open from the start for anyone who has said where they are before.
   const [skyOpen, setSkyOpen] = useState(() => useApp.getState().observer !== null);
+  const skyRef = useRef<HTMLDivElement>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  useRoomAbove(skyRef, filtersRef, skyOpen && phase === 'ready');
+  // A new place replaces what the sky panel shows; start it from the top,
+  // not wherever typing the coordinates left it scrolled.
+  const observer = useApp((state) => state.observer);
+  useEffect(() => {
+    if (observer) skyRef.current?.scrollTo({ top: 0 });
+  }, [observer]);
   useEscapeToDeselect();
 
   if (phase !== 'ready' || world === null) return <BootScreen />;
@@ -96,7 +145,12 @@ export function App() {
               </div>
               <button
                 type="button"
-                onClick={() => setSkyOpen((open) => !open)}
+                onClick={() => {
+                  // On a phone the open filters hide the sky; then this shows it.
+                  if (filtersOpen) setSkyOpen(true);
+                  else setSkyOpen((open) => !open);
+                  setFiltersOpen(false);
+                }}
                 aria-expanded={skyOpen}
                 aria-controls="your-sky"
                 aria-label="Your sky"
@@ -107,12 +161,15 @@ export function App() {
               </button>
             </div>
             {skyOpen && (
-              // On a phone the selected satellite takes this spot; the sky
-              // comes back when it is closed.
+              // On a phone the selected satellite takes this spot, and the
+              // filters need the room it would cover; the sky comes back when
+              // they are closed. Wider, it shares the left column with the
+              // filters, and is fitted to the room above them.
               <div
                 id="your-sky"
-                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-xl sm:block sm:max-h-[50dvh] ${
-                  selected === null ? '' : 'hidden'
+                ref={skyRef}
+                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-xl sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
+                  selected === null && !filtersOpen ? '' : 'hidden'
                 }`}
               >
                 <SkyPanel world={world} onClose={() => setSkyOpen(false)} />
@@ -147,9 +204,10 @@ export function App() {
         <div className={BOTTOM_ROW}>
           <div
             id="filters"
+            ref={filtersRef}
             className={`[grid-area:filters] sm:block ${filtersOpen ? '' : 'hidden'}`}
           >
-            <FilterPanel world={world} />
+            <FilterPanel world={world} sharingColumn={skyOpen} />
           </div>
           <button
             type="button"

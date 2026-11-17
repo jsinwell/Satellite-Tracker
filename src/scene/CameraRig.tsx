@@ -10,7 +10,7 @@ import { extrapolatePosition, extrapolateVelocity, hasState, type Vec3 } from '.
 import { createObserverFrame, type Observer, observerFrame } from '../core/observer';
 import { CAMERA_FOV, directionToWorld } from './frame';
 import { rideElevation } from './ride';
-import { createStance, stand } from './standing';
+import { createStance, SKY_FOV, stand, zoomFov } from './standing';
 
 // Distances from the Earth's center, in Earth radii.
 const MIN_DISTANCE = 1.12;
@@ -31,9 +31,6 @@ const RIDE_LIMB_MARGIN = MathUtils.degToRad(6);
 const BLEND_SECONDS = 1.4;
 
 // Looking up from the ground.
-/** Wide, as the sky is big; the wheel narrows or widens it within the range. */
-const SKY_FOV = 70;
-const SKY_FOV_RANGE = [20, 100] as const;
 /** How far the sky controls' stand-in sits from the eye. Anything small does. */
 const SKY_PIVOT = 1e-3;
 /**
@@ -361,7 +358,7 @@ export function CameraRig({ world }: { world: World }) {
     // Looking up: the stand-in sits a hair from the pivot and looks through
     // it, so orbiting the pivot turns the view about the eye, and dragging
     // moves the sky along with the pointer. There is nothing to zoom toward,
-    // so the wheel changes the field of view instead.
+    // so the wheel and a pinch change the field of view instead.
     const sky = new OrbitControls(new PerspectiveCamera(), element);
     sky.enabled = false;
     sky.enablePan = false;
@@ -375,19 +372,50 @@ export function CameraRig({ world }: { world: World }) {
     const onWheel = (event: WheelEvent) => {
       if (!sky.enabled) return;
       event.preventDefault();
-      skyFov.current = MathUtils.clamp(
-        skyFov.current * Math.exp(event.deltaY * 0.001),
-        SKY_FOV_RANGE[0],
-        SKY_FOV_RANGE[1],
-      );
+      skyFov.current = zoomFov(skyFov.current, Math.exp(event.deltaY * 0.001));
     };
     element.addEventListener('wheel', onWheel, { passive: false });
+
+    // Two fingers spreading apart narrow the view, as they would enlarge a
+    // photo. The sky controls ignore two-finger gestures, having nothing to
+    // pan or dolly.
+    const touches = new Map<number, { x: number; y: number }>();
+    let spread = 0;
+    const span = () => {
+      const [a, b] = [...touches.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch') return;
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touches.size === 2) spread = span();
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!touches.has(event.pointerId)) return;
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touches.size !== 2 || !sky.enabled) return;
+      const now = span();
+      if (spread > 0 && now > 0) skyFov.current = zoomFov(skyFov.current, spread / now);
+      spread = now;
+    };
+    const onPointerEnd = (event: PointerEvent) => {
+      touches.delete(event.pointerId);
+      spread = 0;
+    };
+    element.addEventListener('pointerdown', onPointerDown);
+    element.addEventListener('pointermove', onPointerMove);
+    element.addEventListener('pointerup', onPointerEnd);
+    element.addEventListener('pointercancel', onPointerEnd);
 
     mode.current = { kind: 'globe' };
     controlsRef.current = { globe, ride, sky };
     return () => {
       globe.removeEventListener('start', cancelFlight);
       element.removeEventListener('wheel', onWheel);
+      element.removeEventListener('pointerdown', onPointerDown);
+      element.removeEventListener('pointermove', onPointerMove);
+      element.removeEventListener('pointerup', onPointerEnd);
+      element.removeEventListener('pointercancel', onPointerEnd);
       globe.dispose();
       ride.dispose();
       sky.dispose();
