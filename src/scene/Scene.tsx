@@ -11,6 +11,7 @@ import { Marker } from './Marker';
 import { ObserverMarker } from './ObserverMarker';
 import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
+import { Planets } from './Planets';
 import { Satellites } from './Satellites';
 import { Sky } from './Sky';
 import { SkyCompass } from './SkyCompass';
@@ -48,6 +49,7 @@ export function Scene({ world }: { world: World }) {
         <Suspense fallback={null}>
           <SunAndMoon />
         </Suspense>
+        <Planets />
         <Suspense fallback={<EarthPlaceholder />}>
           <Earth />
         </Suspense>

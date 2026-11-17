@@ -7,6 +7,7 @@ import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import type { Vec3 } from './kinematics';
 import {
   canBeSeen,
+  directionAngles,
   isObserver,
   LOW_ORBIT_DARK_SUN_ELEVATION,
   lookAngles,
@@ -119,6 +120,29 @@ describe('lookAngles', () => {
     expect(angles.elevation).toBeCloseTo(reference.elevation, 6);
     expect(angles.azimuth).toBeCloseTo(reference.azimuth, 6);
     expect(angles.rangeKm).toBeCloseTo(reference.rangeKm, 3);
+  });
+});
+
+describe('directionAngles', () => {
+  it('agrees with lookAngles for something very far away', () => {
+    const timeMs = epochOf(iss);
+    const frame = observerFrame(sydney, timeMs);
+    const direction = { x: 0.48, y: -0.6, z: 0.64 };
+    const far = 1e12;
+    const target = {
+      x: frame.position.x + direction.x * far,
+      y: frame.position.y + direction.y * far,
+      z: frame.position.z + direction.z * far,
+    };
+    const near = lookAngles(frame, target);
+    const angles = directionAngles(frame, direction);
+    expect(angles.elevation).toBeCloseTo(near.elevation, 6);
+    expect(angles.azimuth).toBeCloseTo(near.azimuth, 6);
+  });
+
+  it('is straight up along the local vertical', () => {
+    const frame = observerFrame(chicago, Date.UTC(2026, 10, 16));
+    expect(directionAngles(frame, frame.up).elevation).toBeCloseTo(90, 6);
   });
 });
 

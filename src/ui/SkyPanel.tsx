@@ -4,6 +4,7 @@ import { useApp } from '../app/store';
 import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
 import { type Observer, parseCoordinates, skyState } from '../core/observer';
+import { brightnessWords, PLANET_NAMES } from '../core/planets';
 import {
   formatCompass,
   formatInteger,
@@ -11,7 +12,7 @@ import {
   formatLocalTime,
   formatPlace,
 } from './format';
-import { useSimTime, useSkyNow, useViewingWindow } from './hooks';
+import { usePlanetsUp, useSimTime, useSkyNow, useViewingWindow } from './hooks';
 import { Panel } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
@@ -182,6 +183,39 @@ function WhenToLook({ observer }: { observer: Observer }) {
   );
 }
 
+/**
+ * The planets in the sky, brightest first. They are the brightest points of
+ * light after the Moon, so they are what a moving satellite is most easily
+ * mistaken for, and the first thing to rule out.
+ */
+function PlanetsUp({ observer }: { observer: Observer }) {
+  const planets = usePlanetsUp(observer);
+  return (
+    <div className="border-t border-white/10 px-2 py-2.5">
+      <div className="px-2">
+        <Heading>Planets</Heading>
+      </div>
+      {planets.length === 0 ? (
+        <p className="px-2 text-xs text-slate-400">None above the horizon right now.</p>
+      ) : (
+        <ul aria-label="Planets above the horizon">
+          {planets.map(({ planet, magnitude, azimuth, elevation }) => (
+            <li key={planet} className="flex items-baseline gap-2.5 px-2 py-0.5 text-xs">
+              <span className="text-slate-100">{PLANET_NAMES[planet]}</span>
+              <span className="min-w-0 flex-1 truncate text-slate-500">
+                {brightnessWords(magnitude)}
+              </span>
+              <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
+                {Math.round(elevation)}° {formatCompass(azimuth)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function UpNow({ world, observer }: { world: World; observer: Observer }) {
   const sky = useSkyNow(world, observer);
   const colorBy = useApp((state) => state.colorBy);
@@ -205,6 +239,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
           {lookingUp ? 'Back to the globe' : 'Look up from here'}
         </button>
       </div>
+      <PlanetsUp observer={observer} />
       <div className="border-t border-white/10 px-2 py-2.5">
         <div className="px-2">
           <Heading>Up now</Heading>

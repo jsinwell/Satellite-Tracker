@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.2",
+    "astronomy-engine": "2.1.19",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "satellite.js": "^7.2.0",
