@@ -22,8 +22,12 @@ const SKY_BRIGHTNESS = '#c8c8c8';
  */
 export function Sky() {
   const maxTextureSize = useThree((state) => state.gl.capabilities.maxTextureSize);
-  // The 8k map is 134 MB on the GPU; keep it for screens that can show the detail.
-  const canUseLarge = maxTextureSize >= 8192 && window.innerWidth >= 1280;
+  // The 8k map is 134 MB on the GPU, so phones and tablets get the 4k one.
+  // Going by the device rather than the window size matters: on a desktop, a
+  // narrow window still shows the sky at full pixel density, and the 4k map
+  // stretched that far turns its faint stars into a visible grid of blobs.
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  const canUseLarge = maxTextureSize >= 8192 && !isTouchDevice;
   const map = useLoader(TextureLoader, canUseLarge ? MAPS.large : MAPS.small);
   useMemo(() => configureSkyMap(map), [map]);
 

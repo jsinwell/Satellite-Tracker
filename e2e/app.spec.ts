@@ -199,3 +199,40 @@ test('explains what to do when there is no catalog', async ({ page }) => {
 
   await expect(page.getByRole('alert')).toContainText('npm run data');
 });
+
+test.describe('on a phone-sized screen', () => {
+  test.use({ viewport: { width: 420, height: 800 } });
+
+  test('keeps the filters reachable behind a button', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+
+    const filters = page.getByRole('region', { name: 'Filters' });
+    const toggle = page.getByRole('button', { name: 'Filters', exact: true });
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+    await expect(filters).toBeHidden();
+
+    await toggle.click();
+    await expect(filters).toBeVisible();
+    await page.getByRole('button', { name: /^Debris/ }).click();
+    await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+
+    await toggle.click();
+    await expect(filters).toBeHidden();
+  });
+
+  test('keeps every control on screen', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    await expect(selection(page)).toContainText('ISS (ZARYA)');
+
+    for (const control of [
+      page.getByRole('combobox'),
+      page.getByRole('button', { name: 'Filters', exact: true }),
+      page.getByRole('button', { name: 'Pause' }),
+      page.getByText(`${FIXTURE_SIZE} objects tracked`),
+    ]) {
+      await expect(control).toBeInViewport({ ratio: 1 });
+    }
+  });
+});

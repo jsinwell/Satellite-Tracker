@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { type Camera, MathUtils, Quaternion, Vector3 } from 'three';
+import { type Camera, MathUtils, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
@@ -13,6 +13,8 @@ import { directionToWorld } from './frame';
 const MIN_DISTANCE = 1.12;
 const MAX_DISTANCE = 40;
 const INITIAL_DISTANCE = 3.6;
+/** The most of the screen's width the globe may fill at the start. */
+const GLOBE_WIDTH_FRACTION = 0.8;
 /** The closest the camera will sit above a satellite it has flown to. */
 const FOCUS_STANDOFF = 2.2;
 const FLIGHT_SECONDS = 1.2;
@@ -24,12 +26,26 @@ const turn = new Quaternion();
 const step = new Quaternion();
 const UP = new Vector3(0, 1, 0);
 
+/**
+ * How far back to start so the whole globe is in view. On a wide screen the
+ * height is the limit and the usual distance does it; on a tall, narrow one
+ * (a phone held upright) the width is, and the camera has to pull back.
+ */
+function initialDistance(camera: Camera): number {
+  if (!(camera instanceof PerspectiveCamera)) return INITIAL_DISTANCE;
+  const halfHeight = MathUtils.degToRad(camera.fov / 2);
+  const halfWidth = Math.atan(Math.tan(halfHeight) * camera.aspect);
+  // The Earth, a unit sphere, should span at most this much of the width.
+  const toFitWidth = 1 / Math.sin(halfWidth * GLOBE_WIDTH_FRACTION);
+  return MathUtils.clamp(Math.max(INITIAL_DISTANCE, toFitWidth), MIN_DISTANCE, MAX_DISTANCE);
+}
+
 /** Starts over the daylit hemisphere, off-axis enough to show the terminator. */
 function placeInitially(camera: Camera): void {
   directionToWorld(sunDirection(currentSimTime(), scratch), direction);
   direction.applyAxisAngle(UP, 0.6);
   direction.y += 0.3;
-  camera.position.copy(direction.normalize().multiplyScalar(INITIAL_DISTANCE));
+  camera.position.copy(direction.normalize().multiplyScalar(initialDistance(camera)));
 }
 
 /** A camera flight in progress; `progress` runs from 0 to 1 over `FLIGHT_SECONDS`. */
