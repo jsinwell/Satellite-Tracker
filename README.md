@@ -31,6 +31,10 @@ computed live in the browser.
   and the Moon shows the right phase.
 - The Earth is lit from where the Sun actually is, and satellites dim when they pass into its
   shadow.
+- Eclipses happen on their own, because the Sun and Moon are where they really are: the
+  Moon's shadow crosses the globe in a solar eclipse, and from inside it the sky goes dark
+  around the corona. In a lunar eclipse the Moon turns dim and red. Try 2 August 2027 at
+  10:06 UTC from Luxor (`?t=2027-08-02T10:06:00Z`, then set your place to 25.5, 33.2).
 - Filter by type (payloads, rocket bodies, debris) or by orbit. The counts and the search
   follow whatever is on screen.
 - Color by constellation to pick out Starlink, OneWeb and Kuiper, or show any one of eight

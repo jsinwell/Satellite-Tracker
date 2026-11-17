@@ -10,9 +10,10 @@ import {
   Vector3,
 } from 'three';
 import { currentSimTime } from '../app/store';
-import { gmst, sunDirection } from '../core/astro';
+import { gmst, moonPosition, sunDirection, sunPosition } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import type { Vec3 } from '../core/kinematics';
+import { ECLIPSE_GLSL } from './eclipseGlsl';
 import { directionToWorld, SPHERE_POLES_TO_Z } from './frame';
 import { DOME_FADE } from './SkyDome';
 
@@ -40,6 +41,11 @@ const surfaceFragmentShader = /* glsl */ `
   uniform sampler2D uDayMap;
   uniform sampler2D uNightMap;
   uniform vec3 uSunDirection;
+  // Where the Sun and Moon really are, for the Moon's shadow in an eclipse.
+  uniform vec3 uSun;
+  uniform vec3 uMoon;
+
+  ${ECLIPSE_GLSL}
 
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -49,8 +55,10 @@ const surfaceFragmentShader = /* glsl */ `
     vec3 normal = normalize(vWorldNormal);
     vec3 toCamera = normalize(cameraPosition - vWorldPosition);
     float sun = dot(normal, uSunDirection);
-    // A soft terminator, roughly the width of civil twilight.
-    float daylight = smoothstep(-0.1, 0.15, sun);
+    // A soft terminator, roughly the width of civil twilight, and in an
+    // eclipse only as much daylight as the Moon leaves: the shadow is dark
+    // enough at its core to bring out the city lights.
+    float daylight = smoothstep(-0.1, 0.15, sun) * (1.0 - sunHiddenByMoon(vWorldPosition, uSun, uMoon));
 
     vec3 day = texture2D(uDayMap, vUv).rgb;
     vec3 night = texture2D(uNightMap, vUv).rgb;
@@ -135,7 +143,13 @@ export function Earth() {
     // One vector shared by both materials, updated in place every frame.
     const uSunDirection = { value: new Vector3(1, 0, 0) };
     return {
-      surface: { uDayMap: { value: dayMap }, uNightMap: { value: nightMap }, uSunDirection },
+      surface: {
+        uDayMap: { value: dayMap },
+        uNightMap: { value: nightMap },
+        uSunDirection,
+        uSun: { value: new Vector3() },
+        uMoon: { value: new Vector3() },
+      },
       atmosphere: { uSunDirection },
     };
   }, [dayMap, nightMap]);
@@ -149,6 +163,9 @@ export function Earth() {
     }
     if (spin.current) spin.current.rotation.z = gmst(simMs);
     directionToWorld(sunDirection(simMs, scratch), uniforms.surface.uSunDirection.value);
+    const { uSun, uMoon } = uniforms.surface;
+    directionToWorld(sunPosition(simMs, scratch), uSun.value).divideScalar(EARTH_RADIUS_KM);
+    directionToWorld(moonPosition(simMs, scratch), uMoon.value).divideScalar(EARTH_RADIUS_KM);
   });
 
   return (

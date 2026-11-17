@@ -12,7 +12,7 @@ import {
   formatLocalTime,
   formatPlace,
 } from './format';
-import { usePlanetsUp, useSimTime, useSkyNow, useViewingWindow } from './hooks';
+import { useEclipse, usePlanetsUp, useSimTime, useSkyNow, useViewingWindow } from './hooks';
 import { Panel } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
@@ -157,6 +157,28 @@ function SkyDarkness({ sunElevation }: { sunElevation: number }) {
   }
 }
 
+/** An eclipse going on overhead, said plainly; nothing when there is none. */
+function EclipseNow({ observer }: { observer: Observer }) {
+  const eclipse = useEclipse(observer);
+  if (!eclipse) return null;
+  if (eclipse.kind === 'solar') {
+    return (
+      <p className="text-amber-200">
+        {eclipse.covered >= 1
+          ? 'Total solar eclipse: the Moon is covering the Sun.'
+          : `Partial solar eclipse: the Moon covers ${Math.max(1, Math.round(eclipse.covered * 100))}% of the Sun.`}
+      </p>
+    );
+  }
+  return (
+    <p className="text-amber-200">
+      {eclipse.inUmbra
+        ? "Lunar eclipse: the Moon is in the Earth's shadow."
+        : "Lunar eclipse: the Moon is passing through the edge of the Earth's shadow."}
+    </p>
+  );
+}
+
 /**
  * When to go out and look: satellites shine by sunlight against a dark sky,
  * which only happens in the hour or two after dusk and before dawn.
@@ -227,6 +249,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
     <>
       <div className="space-y-2.5 border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
         <div className="space-y-1">
+          <EclipseNow observer={observer} />
           <SkyDarkness sunElevation={sky.sunElevation} />
           <WhenToLook observer={observer} />
         </div>

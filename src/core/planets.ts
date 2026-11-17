@@ -1,4 +1,5 @@
 import { Body, GeoVector, Illumination, RotateVector, Rotation_EQJ_EQD } from 'astronomy-engine';
+import { AU_KM } from './astro';
 import type { Vec3 } from './kinematics';
 import { directionAngles, type Observer, observerFrame } from './observer';
 
@@ -48,6 +49,8 @@ export interface PlanetPosition {
    * equinoxes, at most about a hundredth of a degree.
    */
   direction: Vec3;
+  /** How far away it is, km, as its light left it. */
+  distanceKm: number;
   /** Apparent visual magnitude: smaller is brighter, and the eye stops at about 6. */
   magnitude: number;
 }
@@ -67,6 +70,7 @@ export function planetPositions(timeMs: number): PlanetPosition[] {
     return {
       planet,
       direction: { x: v.x / length, y: v.y / length, z: v.z / length },
+      distanceKm: length * AU_KM,
       magnitude: Illumination(body, date).mag,
     };
   });

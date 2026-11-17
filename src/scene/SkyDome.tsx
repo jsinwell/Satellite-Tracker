@@ -2,9 +2,10 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { BackSide, Mesh, ShaderMaterial, SphereGeometry, Vector3 } from 'three';
 import { currentSimTime } from '../app/store';
-import { sunDirection } from '../core/astro';
+import { moonPosition, sunDirection, sunPosition } from '../core/astro';
+import { sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
-import { directionToWorld, OVERLAY_ORDER } from './frame';
+import { directionToWorld, OVERLAY_ORDER, TEME_FROM_WORLD } from './frame';
 
 /**
  * The dome fades in from the first of these heights above the ground (Earth
@@ -38,6 +39,8 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uUp;
   uniform vec3 uSun;
   uniform float uOpacity;
+  /** How much of the Sun the Moon hides from here: 1 in totality. */
+  uniform float uSunHidden;
 
   varying vec3 vDirection;
 
@@ -48,6 +51,12 @@ const fragmentShader = /* glsl */ `
     // Full day with the Sun up; night once it is 12° down; twilight between.
     float day = smoothstep(-0.10, 0.05, sunHeight);
     float twilight = smoothstep(-0.21, -0.03, sunHeight) * (1.0 - day);
+    // In a solar eclipse the sky holds up until the Sun is nearly covered,
+    // then goes dark, with a sunset glow all round the horizon from the
+    // sunlit ground beyond the shadow.
+    float eclipsed = day * (1.0 - smoothstep(0.0, 0.12, 1.0 - uSunHidden));
+    day -= eclipsed;
+    twilight = max(twilight, eclipsed);
     float up = max(height, 0.0);
     float low = pow(1.0 - up, 4.0);
 
@@ -58,7 +67,7 @@ const fragmentShader = /* glsl */ `
     // Twilight: deep blue overhead, warm low down on the Sun's side.
     vec3 level = normalize(uSun - sunHeight * uUp + 1e-6 * uUp);
     float sunward = pow(max(dot(normalize(direction - height * uUp + 1e-6 * uUp), level), 0.0), 3.0);
-    vec3 dusk = mix(vec3(0.01, 0.02, 0.07), vec3(0.45, 0.17, 0.05), sunward * low);
+    vec3 dusk = mix(vec3(0.01, 0.02, 0.07), vec3(0.45, 0.17, 0.05), max(sunward, eclipsed) * low);
     color = mix(color, dusk, twilight);
     alpha = mix(alpha, 0.55 + 0.3 * low, twilight);
 
@@ -83,6 +92,9 @@ const fragmentShader = /* glsl */ `
 `;
 
 const sun: Vec3 = { x: 0, y: 0, z: 0 };
+const sunKm: Vec3 = { x: 0, y: 0, z: 0 };
+const moonKm: Vec3 = { x: 0, y: 0, z: 0 };
+const eye = new Vector3();
 
 /**
  * The sky and ground as seen from the ground: a sphere around the camera,
@@ -102,6 +114,7 @@ export function SkyDome() {
       uUp: { value: new Vector3(0, 1, 0) },
       uSun: { value: new Vector3(1, 0, 0) },
       uOpacity: { value: 0 },
+      uSunHidden: { value: 0 },
     };
     // Inside the closest satellite, outside the near clipping plane.
     const geometry = new SphereGeometry(0.005, 64, 32);
@@ -152,7 +165,14 @@ export function SkyDome() {
     ground.position.copy(camera.position);
     uniforms.uOpacity.value = opacity;
     uniforms.uUp.value.copy(camera.position).normalize();
-    directionToWorld(sunDirection(currentSimTime(), sun), uniforms.uSun.value);
+    const simMs = currentSimTime();
+    directionToWorld(sunDirection(simMs, sun), uniforms.uSun.value);
+    eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
+    uniforms.uSunHidden.value = sunHiddenByMoon(
+      eye,
+      sunPosition(simMs, sunKm),
+      moonPosition(simMs, moonKm),
+    );
   });
 
   return (
