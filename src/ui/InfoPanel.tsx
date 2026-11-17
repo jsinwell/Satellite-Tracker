@@ -60,6 +60,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
   const orbit = world.orbits[index];
   const telemetry = useTelemetry(world, index);
   const riding = useApp((state) => state.riding);
+  const lookingUp = useApp((state) => state.lookingUp);
   const observer = useApp((state) => state.observer);
   const simMs = useSimTime(1000);
   const elementsAgeMs = simMs - Date.parse(satellite.elements.epoch);
@@ -169,8 +170,8 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
         >
           {expanded ? 'Hide details' : 'Show details'}
         </button>
-        {/* During a ride the camera is already on the satellite. */}
-        {!riding && (
+        {/* During a ride the camera is already on the satellite; on the ground it stays put. */}
+        {!riding && !lookingUp && (
           <button
             type="button"
             onClick={() => useApp.getState().focusSelected()}

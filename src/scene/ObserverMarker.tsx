@@ -49,7 +49,9 @@ export function ObserverMarker() {
 
   const placed = useRef<Observer | null>(null);
   useFrame(({ camera, size }) => {
-    const { observer } = useApp.getState();
+    const { lookingUp } = useApp.getState();
+    // Standing there, the viewer needs no telling where they are.
+    const observer = lookingUp ? null : useApp.getState().observer;
     group.visible = observer !== null;
     group.rotation.z = gmst(currentSimTime());
     if (observer && observer !== placed.current) {

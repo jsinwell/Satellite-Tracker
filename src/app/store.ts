@@ -76,6 +76,8 @@ interface AppState {
   pickingObserver: boolean;
   /** Incremented to ask the camera to fly to `observer`. */
   observerFocusRequests: number;
+  /** Whether the camera is standing at `observer`, looking at the sky. */
+  lookingUp: boolean;
 
   colorBy: ColorBy;
   filters: Filters;
@@ -109,6 +111,8 @@ interface AppActions {
   /** Sets or clears where the viewer is, and remembers it for next time. */
   setObserver(observer: Observer | null): void;
   setPickingObserver(picking: boolean): void;
+  /** Stands at the observer to look at the sky, or comes back to the globe. Ends a ride. */
+  setLookingUp(lookingUp: boolean): void;
   /**
    * Switches what color stands for. The legend only shows the filter that
    * matches, so the other one is reset rather than left on out of sight.
@@ -167,6 +171,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     observer: loadObserver(),
     pickingObserver: false,
     observerFocusRequests: 0,
+    lookingUp: false,
     colorBy: 'type',
     ...applyFilters(null, SHOW_EVERYTHING),
 
@@ -182,7 +187,8 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     selectAndFocus: (index) =>
       set((state) => ({ selected: index, focusRequests: state.focusRequests + 1 })),
     setRiding: (riding) => {
-      if (!riding || get().selected !== null) set({ riding });
+      if (!riding) set({ riding });
+      else if (get().selected !== null) set({ riding, lookingUp: false });
     },
     toggleOverlay: (overlay) =>
       set(({ overlays }) => ({ overlays: { ...overlays, [overlay]: !overlays[overlay] } })),
@@ -192,10 +198,15 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
       set((state) => ({
         observer,
         pickingObserver: false,
+        lookingUp: state.lookingUp && observer !== null,
         observerFocusRequests: state.observerFocusRequests + (observer ? 1 : 0),
       }));
     },
     setPickingObserver: (pickingObserver) => set({ pickingObserver }),
+    setLookingUp: (lookingUp) => {
+      if (!lookingUp) set({ lookingUp });
+      else if (get().observer !== null) set({ lookingUp, riding: false });
+    },
 
     setColorBy: (colorBy) => {
       if (get().colorBy === colorBy) return;

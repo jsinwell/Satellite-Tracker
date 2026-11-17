@@ -182,6 +182,27 @@ test.describe('with a catalog', () => {
     await expect(page.getByRole('region', { name: 'Your sky' })).toContainText('41.88° N');
   });
 
+  test('looks up at the sky from the chosen place, and comes back', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await page.getByRole('button', { name: 'Your sky' }).click();
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    const coordinates = sky.getByLabel('Or type its coordinates');
+    await coordinates.fill('41.88, -87.63');
+    await coordinates.press('Enter');
+    const compass = page.locator('[data-compass-point]').filter({ visible: true });
+    await expect(compass).toHaveCount(0);
+
+    await sky.getByRole('button', { name: 'Look up from here' }).click();
+    // The view starts toward the south, with the horizon in sight.
+    await expect(compass.filter({ hasText: /^S$/ })).toBeVisible();
+
+    // Escape comes back up, as the button does.
+    await page.locator('canvas').focus();
+    await page.keyboard.press('Escape');
+    await expect(sky.getByRole('button', { name: 'Look up from here' })).toBeVisible();
+    await expect(compass).toHaveCount(0);
+  });
+
   test('takes a place from a click on the globe', async ({ page }) => {
     await page.goto(`/?t=${FIXTURE_TIME}`);
     await page.getByRole('button', { name: 'Your sky' }).click();

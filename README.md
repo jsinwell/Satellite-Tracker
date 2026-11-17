@@ -20,6 +20,9 @@ computed live in the browser.
   to see what's above you right now and which of those you could spot by eye. Select a
   satellite to see when it next passes over, with the passes you could see marked. Click one
   to jump to it.
+- Look up from where you are: the camera stands on the ground and shows the real sky, with
+  the satellites, stars, Sun and Moon where they'd be. The sky is dark, twilit or blue to
+  match the hour. Drag to look around, and scroll to widen or narrow the view.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the

@@ -16,6 +16,9 @@ import type { Vec3 } from '../core/kinematics';
  */
 const KM_TO_SCENE = 1 / EARTH_RADIUS_KM;
 
+/** The camera's usual vertical field of view, degrees. */
+export const CAMERA_FOV = 35;
+
 /** Rotation taking z-up to y-up: (x, y, z) → (x, z, −y). */
 export const TEME_GROUP_ROTATION = [-Math.PI / 2, 0, 0] as const;
 export const TEME_GROUP_SCALE = KM_TO_SCENE;

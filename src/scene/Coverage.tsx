@@ -91,9 +91,10 @@ export function Coverage({ world }: { world: World }) {
   );
 
   useFrame(() => {
-    const { selected, overlays } = useApp.getState();
+    const { selected, overlays, lookingUp } = useApp.getState();
     const { simulation } = world;
-    const present = selected !== null && hasState(simulation.state, selected);
+    // Drawn just above the ground, which from the ground is overhead.
+    const present = selected !== null && hasState(simulation.state, selected) && !lookingUp;
     shell.visible = present && overlays.coverage;
     drop.visible = present && (overlays.coverage || overlays.groundTrack);
     beneath.visible = drop.visible;

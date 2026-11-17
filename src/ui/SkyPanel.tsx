@@ -187,12 +187,23 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
   const colorBy = useApp((state) => state.colorBy);
   const alone = useApp((state) => soleEnabled(state.filters.constellations));
   const dark = skyState(sky.sunElevation) !== 'day';
+  const lookingUp = useApp((state) => state.lookingUp);
 
   return (
     <>
-      <div className="space-y-1 border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
-        <SkyDarkness sunElevation={sky.sunElevation} />
-        <WhenToLook observer={observer} />
+      <div className="space-y-2.5 border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
+        <div className="space-y-1">
+          <SkyDarkness sunElevation={sky.sunElevation} />
+          <WhenToLook observer={observer} />
+        </div>
+        <button
+          type="button"
+          onClick={() => useApp.getState().setLookingUp(!lookingUp)}
+          aria-pressed={lookingUp}
+          className="w-full rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25"
+        >
+          {lookingUp ? 'Back to the globe' : 'Look up from here'}
+        </button>
       </div>
       <div className="border-t border-white/10 px-2 py-2.5">
         <div className="px-2">
