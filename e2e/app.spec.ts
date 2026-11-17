@@ -132,6 +132,18 @@ test.describe('with a catalog', () => {
     await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
   });
 
+  test('limits the view to what had been launched by a given year', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const slider = page.getByRole('slider', { name: 'Launched by' });
+
+    await slider.fill('2000');
+    await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+
+    // Dragging back to the present lifts the limit entirely.
+    await slider.fill((await slider.getAttribute('max')) ?? '');
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+  });
+
   test('controls simulated time', async ({ page }) => {
     await page.goto('/');
     const live = page.getByRole('button', { name: 'LIVE', exact: true });

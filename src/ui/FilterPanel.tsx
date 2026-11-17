@@ -4,6 +4,7 @@ import type { World } from '../app/world';
 import { OBJECT_TYPES } from '../core/catalog';
 import { ORBIT_REGIMES } from '../core/orbit';
 import { formatInteger } from './format';
+import { LaunchSlider } from './LaunchSlider';
 import { Panel } from './Panel';
 
 interface ToggleProps {
@@ -67,6 +68,8 @@ export function FilterPanel({ world }: { world: World }) {
           onToggle={() => toggleRegime(regime)}
         />
       ))}
+      <hr className="my-1.5 border-white/10" />
+      <LaunchSlider world={world} />
     </Panel>
   );
 }
