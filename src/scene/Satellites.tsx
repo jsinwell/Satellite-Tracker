@@ -40,6 +40,19 @@ const TYPE_SIZES: Record<ObjectType, number> = {
   unknown: 0.8,
 };
 
+/**
+ * How big a satellite is drawn looking up, CSS px: close ones larger. From
+ * `outline` up it is drawn as a satellite; below, there are too few pixels
+ * for that, and it is a diamond.
+ */
+const GLYPH_SIZE = { min: 6, outline: 10.5, max: 16 } as const;
+/**
+ * Looking up, every satellite trails where it was this many simulated seconds
+ * ago, even at real speed or paused: the motion is what gives a satellite
+ * away among the stars. Three seconds is a few degrees for one passing over.
+ */
+const GROUND_TRAIL_SECONDS = 3;
+
 // Both shaders read the same per-satellite attributes; see `buildSatellites`.
 const SHARED_GLSL = /* glsl */ `
   attribute vec3 aPosition;
@@ -65,7 +78,13 @@ const pointVertexShader = /* glsl */ `
   attribute float aSize;
   uniform float uPixelRatio;
   uniform float uMinSize;
+  /** 1 looking up from the ground, 0 out in space; see \`groundView\`. */
+  uniform float uGround;
+  /** The view's width over its height, to turn clip space into screen directions. */
+  uniform float uAspect;
   varying vec3 vColor;
+  varying float vSize;
+  varying vec2 vHeading;
 
   ${SHARED_GLSL}
 
@@ -80,22 +99,73 @@ const pointVertexShader = /* glsl */ `
     vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * viewPosition;
 
-    // Shrink with distance (in Earth radii), but never below a visible dot.
-    float size = clamp(aSize * 9.0 / -viewPosition.z, uMinSize, 6.0);
-    gl_PointSize = size * uPixelRatio;
+    // From space, a dot that shrinks with distance (in Earth radii) but never
+    // below a visible size. From the ground, big enough to show a satellite's
+    // shape: largest for those passing close overhead.
+    float distance = -viewPosition.z;
+    float size = uGround > 0.5
+      ? clamp(aSize * 1.6 / distance, ${GLYPH_SIZE.min.toFixed(1)}, ${GLYPH_SIZE.max.toFixed(1)})
+      : clamp(aSize * 9.0 / distance, uMinSize, 6.0);
+    vSize = size * uPixelRatio;
+    gl_PointSize = vSize;
     // Satellites dim as they pass into the Earth's shadow.
     vColor = aColor * sunlight(p, uSunDirection, uShadowBrightness);
+
+    // Which way it is crossing the screen: where it will be a second from now.
+    vec4 ahead = projectionMatrix * modelViewMatrix * vec4(extrapolate(aPosition, aVelocity, uDt + 1.0), 1.0);
+    vec2 travel = (ahead.xy / ahead.w - gl_Position.xy / gl_Position.w) * vec2(uAspect, 1.0);
+    vHeading = dot(travel, travel) > 0.0 ? normalize(travel) : vec2(1.0, 0.0);
   }
 `;
 
 const pointFragmentShader = /* glsl */ `
+  uniform float uGround;
+  uniform float uPixelRatio;
   varying vec3 vColor;
+  varying float vSize;
+  varying vec2 vHeading;
+
+  // Signed distance from a box of half-size \`extent\` centered at the origin.
+  // (Not \`half\`, which GLSL reserves.)
+  float box(vec2 q, vec2 extent) {
+    vec2 d = abs(q) - extent;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+  }
 
   void main() {
-    float d = length(gl_PointCoord - 0.5);
-    float alpha = 1.0 - smoothstep(0.3, 0.5, d);
+    vec2 c = gl_PointCoord - 0.5;
+    if (uGround < 0.5) {
+      float alpha = 1.0 - smoothstep(0.3, 0.5, length(c));
+      if (alpha <= 0.0) discard;
+      gl_FragColor = vec4(vColor, alpha * 0.9);
+      #include <colorspace_fragment>
+      return;
+    }
+
+    // Looking up, a satellite is drawn as one: a body pointed the way it is
+    // going, with a solar panel out to either side; too far off for that, a
+    // diamond. Stars are round, so the shape, and the trail behind it, are
+    // what set a satellite apart from them.
+    c.y = -c.y; // point coordinates run downward; the heading is upward
+    vec2 q = 2.0 * vec2(dot(c, vHeading), dot(c, vec2(-vHeading.y, vHeading.x)));
+    float pixel = 2.0 / vSize;
+    float shape;
+    vec3 fill = vColor;
+    if (vSize < ${GLYPH_SIZE.outline.toFixed(1)} * uPixelRatio) {
+      shape = (abs(q.x) + abs(q.y) - 0.8) * 0.7071;
+    } else {
+      float body = box(q, vec2(0.26, 0.2));
+      float panels = min(box(q - vec2(0.0, 0.58), vec2(0.17, 0.34)), box(q + vec2(0.0, 0.58), vec2(0.17, 0.34)));
+      float strut = box(q, vec2(0.04, 0.3));
+      shape = min(min(body, panels), strut);
+      if (panels < min(body, strut)) fill *= vec3(0.62, 0.72, 0.95);
+    }
+    // A thin, soft dark rim keeps it readable against a bright sky as well as
+    // a dark one without swallowing the small ones.
+    float alpha = 1.0 - smoothstep(0.0, pixel, shape - 0.6 * pixel);
     if (alpha <= 0.0) discard;
-    gl_FragColor = vec4(vColor, alpha * 0.9);
+    float inside = 1.0 - smoothstep(-pixel, 0.0, shape);
+    gl_FragColor = vec4(mix(vec3(0.02, 0.03, 0.06), fill, inside), alpha * mix(0.6, 1.0, inside));
     #include <colorspace_fragment>
   }
 `;
@@ -175,6 +245,8 @@ function buildSatellites(world: World) {
     uTrailSeconds: { value: 0 },
     uShadowBrightness: { value: SHADOW_BRIGHTNESS.space as number },
     uMinSize: { value: MIN_POINT_SIZE.space as number },
+    uGround: { value: 0 },
+    uAspect: { value: 1 },
   };
 
   const pointGeometry = instanced([0, 0, 0]);
@@ -258,7 +330,7 @@ export function Satellites({ world }: { world: World }) {
   );
 
   const uploadedVersion = useRef(-1);
-  useFrame(({ gl, camera }) => {
+  useFrame(({ gl, camera, size }) => {
     const { simulation } = world;
     const { clock } = useApp.getState();
     simulation.update(clock, wallNow());
@@ -281,7 +353,13 @@ export function Satellites({ world }: { world: World }) {
     );
     uniforms.uMinSize.value = MathUtils.lerp(MIN_POINT_SIZE.space, MIN_POINT_SIZE.ground, ground);
 
-    uniforms.uTrailSeconds.value = trailSeconds(clock.rate);
+    uniforms.uGround.value = ground;
+    uniforms.uAspect.value = size.width / Math.max(1, size.height);
+    // From the ground, always a short trail, behind the way time is running.
+    const groundTrail = ground > 0.5 ? (clock.rate < 0 ? -1 : 1) * GROUND_TRAIL_SECONDS : 0;
+    const fastTrail = trailSeconds(clock.rate);
+    uniforms.uTrailSeconds.value =
+      Math.abs(fastTrail) > Math.abs(groundTrail) ? fastTrail : groundTrail;
     trails.visible = uniforms.uTrailSeconds.value !== 0;
   });
 
