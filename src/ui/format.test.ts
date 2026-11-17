@@ -8,6 +8,8 @@ import {
   formatLongitude,
   formatPeriod,
   formatUtc,
+  fromUtcInput,
+  toUtcInput,
 } from './format';
 
 describe('format', () => {
@@ -72,5 +74,30 @@ describe('formatAgo', () => {
       'N',
       'NW',
     ]);
+  });
+});
+
+describe('toUtcInput and fromUtcInput', () => {
+  const eclipse = Date.UTC(2027, 7, 2, 10, 7, 30);
+
+  it('write and read an instant in UTC, whatever the local time zone', () => {
+    expect(toUtcInput(eclipse)).toBe('2027-08-02T10:07:30');
+    expect(fromUtcInput('2027-08-02T10:07:30')).toBe(eclipse);
+  });
+
+  it('take a time without seconds', () => {
+    expect(fromUtcInput('2027-08-02T10:07')).toBe(Date.UTC(2027, 7, 2, 10, 7));
+  });
+
+  it.each([
+    '',
+    'tomorrow',
+    '2027-08-02',
+    '2027-13-02T10:07',
+    '2027-02-30T10:07',
+    '1956-12-31T23:59',
+    '2101-01-01T00:00',
+  ])('reject %j', (value) => {
+    expect(fromUtcInput(value)).toBeNull();
   });
 });

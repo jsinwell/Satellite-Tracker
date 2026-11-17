@@ -486,6 +486,30 @@ test.describe('with a catalog', () => {
     await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
   });
 
+  test('goes to a chosen date and time', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const timeBar = page.getByRole('region', { name: 'Simulation time' });
+    const openPicker = timeBar.getByRole('button', { name: /UTC$/ });
+    const picker = page.getByRole('region', { name: 'Go to a date and time' });
+    const field = picker.getByLabel('Go to a date and time (UTC)');
+
+    await openPicker.click();
+    await field.fill('2027-08-02T10:07:00');
+    // The planets will be right; the satellites, nine months on, will not.
+    await expect(picker).toContainText('Satellites this far from today are only a guess');
+    await picker.getByRole('button', { name: 'Go' }).click();
+    await expect(picker).toBeHidden();
+    await expect(timeBar.locator('time')).toContainText('Aug 02, 2027, 10:07');
+
+    // Escape puts it away without going anywhere.
+    await openPicker.click();
+    await expect(field).toHaveValue(/^2027-08-02T10:07/);
+    await field.fill('2030-01-01T00:00:00');
+    await field.press('Escape');
+    await expect(picker).toBeHidden();
+    await expect(timeBar.locator('time')).toContainText('Aug 02, 2027');
+  });
+
   test('controls simulated time', async ({ page }) => {
     await page.goto('/');
     const live = page.getByRole('button', { name: 'LIVE', exact: true });
