@@ -144,6 +144,30 @@ test.describe('with a catalog', () => {
     await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
   });
 
+  test('colors by constellation and isolates one', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await page.getByRole('button', { name: 'Constellation', exact: true }).click();
+
+    const starlink = page.getByRole('button', { name: /^Starlink/ });
+    const everythingElse = page.getByRole('button', { name: /^Everything else/ });
+    await expect(starlink).toHaveAttribute('aria-pressed', 'true');
+
+    // The "only" control appears on the row being pointed at.
+    await starlink.hover();
+    await page.getByRole('button', { name: 'Show only Starlink' }).click();
+    await expect(everythingElse).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+
+    // Asking for the same one again brings everything back.
+    await page.getByRole('button', { name: 'Show only Starlink' }).click();
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+
+    // Switching back to coloring by type must not leave a hidden filter behind.
+    await everythingElse.click();
+    await page.getByRole('button', { name: 'Type', exact: true }).click();
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+  });
+
   test('controls simulated time', async ({ page }) => {
     await page.goto('/');
     const live = page.getByRole('button', { name: 'LIVE', exact: true });

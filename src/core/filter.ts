@@ -1,20 +1,33 @@
 import { OBJECT_TYPES, type ObjectType, type SatelliteRecord } from './catalog';
+import { CONSTELLATION_IDS, type ConstellationId } from './constellation';
 import { ORBIT_REGIMES, type OrbitRegime, type OrbitSummary } from './orbit';
 
 export interface Filters {
   types: Readonly<Record<ObjectType, boolean>>;
   regimes: Readonly<Record<OrbitRegime, boolean>>;
+  constellations: Readonly<Record<ConstellationId, boolean>>;
   /** Show only objects launched in or before this year; null shows everything. */
   launchedBy: number | null;
 }
 
-function allEnabled<K extends string>(keys: readonly K[]): Record<K, boolean> {
+/** What the filters are applied to: parallel arrays, one entry per satellite. */
+export interface FilterSubjects {
+  readonly satellites: readonly SatelliteRecord[];
+  readonly orbits: readonly OrbitSummary[];
+  /** `launchYear` for each satellite, with 0 for unknown. */
+  readonly launchYears: ArrayLike<number>;
+  /** Each satellite's constellation, as an index into `CONSTELLATION_IDS`. */
+  readonly constellations: ArrayLike<number>;
+}
+
+export function allEnabled<K extends string>(keys: readonly K[]): Record<K, boolean> {
   return Object.fromEntries(keys.map((key) => [key, true])) as Record<K, boolean>;
 }
 
 export const SHOW_EVERYTHING: Filters = {
   types: allEnabled(OBJECT_TYPES),
   regimes: allEnabled(ORBIT_REGIMES),
+  constellations: allEnabled(CONSTELLATION_IDS),
   launchedBy: null,
 };
 
@@ -34,20 +47,23 @@ export function launchYear(record: SatelliteRecord): number | null {
  * The renderer uploads this as a vertex attribute and the picker reads it, so
  * what is drawn and what can be clicked are the same set by construction.
  *
- * `launchYears` holds `launchYear` for each record, with 0 for unknown; an
- * object of unknown age is only shown when no year limit is set.
+ * An object of unknown launch year is only shown when no year limit is set.
  */
-export function visibilityMask(
-  records: readonly SatelliteRecord[],
-  orbits: readonly OrbitSummary[],
-  launchYears: ArrayLike<number>,
-  filters: Filters,
-): Uint8Array {
+export function visibilityMask(subjects: FilterSubjects, filters: Filters): Uint8Array {
+  const { satellites, orbits, launchYears, constellations } = subjects;
   const { types, regimes, launchedBy } = filters;
-  const mask = new Uint8Array(records.length);
-  for (let i = 0; i < records.length; i++) {
+  const constellationShown = CONSTELLATION_IDS.map((id) => filters.constellations[id]);
+
+  const mask = new Uint8Array(satellites.length);
+  for (let i = 0; i < satellites.length; i++) {
     const launched = launchedBy === null || (launchYears[i] !== 0 && launchYears[i] <= launchedBy);
-    mask[i] = types[records[i].objectType] && regimes[orbits[i].regime] && launched ? 1 : 0;
+    mask[i] =
+      types[satellites[i].objectType] &&
+      regimes[orbits[i].regime] &&
+      constellationShown[constellations[i]] &&
+      launched
+        ? 1
+        : 0;
   }
   return mask;
 }

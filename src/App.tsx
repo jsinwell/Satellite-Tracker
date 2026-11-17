@@ -36,9 +36,13 @@ export function App() {
         <Scene world={world} />
       </div>
 
-      {/* The HUD floats over the globe; only its panels take pointer input. */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col gap-3 p-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {/*
+        The HUD floats over the globe; only its panels take pointer input.
+        The top and bottom rows are anchored separately, so a tall panel in
+        one cannot push the other off the screen.
+      */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-x-3 top-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="w-full sm:w-80">
             <h1 className="sr-only">Satellite Tracker</h1>
             <SearchBox world={world} />
@@ -50,7 +54,7 @@ export function App() {
           )}
         </div>
 
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-3">
+        <div className="absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-3">
           <div className="hidden sm:block">
             <FilterPanel world={world} />
           </div>

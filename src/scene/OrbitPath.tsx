@@ -1,9 +1,10 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import { BufferAttribute, BufferGeometry, DynamicDrawUsage, Line, LineBasicMaterial } from 'three';
-import { ACCENT_COLOR } from '../app/palette';
+import { satelliteColor } from '../app/palette';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
+import { soleEnabled } from '../core/constellation';
 import { sampleOrbit } from '../core/propagator';
 
 const SEGMENTS = 256;
@@ -26,7 +27,8 @@ export function OrbitPath({ world }: { world: World }) {
     positions.setUsage(DynamicDrawUsage);
     const line = new Line(
       new BufferGeometry().setAttribute('position', positions),
-      new LineBasicMaterial({ color: ACCENT_COLOR, transparent: true, opacity: 0.7 }),
+      // The color is set whenever the line is drawn, to match its satellite.
+      new LineBasicMaterial({ transparent: true, opacity: 0.75 }),
     );
     line.frustumCulled = false;
     line.visible = false;
@@ -43,7 +45,7 @@ export function OrbitPath({ world }: { world: World }) {
 
   const drawn = useRef({ index: -1, at: 0 });
   useFrame(() => {
-    const { selected } = useApp.getState();
+    const { selected, colorBy, filters } = useApp.getState();
     if (selected === null) {
       line.visible = false;
       drawn.current.index = -1;
@@ -52,6 +54,10 @@ export function OrbitPath({ world }: { world: World }) {
     const now = performance.now();
     if (drawn.current.index === selected && now - drawn.current.at < REFRESH_INTERVAL_MS) return;
     drawn.current = { index: selected, at: now };
+
+    // The orbit belongs to the satellite, so it wears the satellite's color.
+    const alone = soleEnabled(filters.constellations);
+    line.material.color.set(satelliteColor(world, selected, colorBy, alone));
 
     const sampled = sampleOrbit(world.satellites[selected], currentSimTime(), SEGMENTS, samples);
     positions.needsUpdate = true;
