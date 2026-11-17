@@ -103,3 +103,29 @@ export function moonPosition(timeMs: number, out: Vec3): Vec3 {
     (sinDeg(tilt) * cosDeg(latitude) * sinDeg(longitude) + cosDeg(tilt) * sinDeg(latitude));
   return out;
 }
+
+/** Half-width of the soft edge of the Earth's shadow, km. */
+export const SHADOW_EDGE_KM = 40;
+
+/**
+ * How deep in the Earth's shadow an inertial position (km) is: 0 in full
+ * sunlight, 1 in full shadow, in between across a narrow soft edge.
+ *
+ * Treats the shadow as a cylinder behind the Earth. That ignores the penumbra
+ * and the slight taper of the umbra, which matter by a few kilometers at
+ * satellite altitudes; it is cheap enough to run per satellite on the GPU,
+ * where `ORBIT_GLSL` implements the same test.
+ */
+export function shadowDepth(position: Vec3, sunDirection: Vec3): number {
+  const along =
+    position.x * sunDirection.x + position.y * sunDirection.y + position.z * sunDirection.z;
+  if (along >= 0) return 0; // on the sunward side of the Earth
+  const fromAxis = Math.hypot(
+    position.x - along * sunDirection.x,
+    position.y - along * sunDirection.y,
+    position.z - along * sunDirection.z,
+  );
+  const t = (fromAxis - (EARTH_RADIUS_KM - SHADOW_EDGE_KM)) / (2 * SHADOW_EDGE_KM);
+  const edge = Math.min(1, Math.max(0, t));
+  return 1 - edge * edge * (3 - 2 * edge); // smoothstep, as in GLSL
+}

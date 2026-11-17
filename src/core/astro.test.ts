@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { geostationary, iss } from './__fixtures__/satellites';
-import { gmst, isSunlit, moonPosition, subSatellitePoint, sunDirection } from './astro';
+import {
+  gmst,
+  isSunlit,
+  moonPosition,
+  shadowDepth,
+  subSatellitePoint,
+  sunDirection,
+} from './astro';
 import type { Vec3 } from './kinematics';
 import { Propagator, STATE_STRIDE } from './propagator';
 
@@ -135,5 +142,50 @@ describe('moonPosition', () => {
     const cosine =
       (a.x * b.x + a.y * b.y + a.z * b.z) / (Math.hypot(a.x, a.y, a.z) * Math.hypot(b.x, b.y, b.z));
     expect((Math.acos(Math.min(1, cosine)) * 180) / Math.PI).toBeLessThan(8);
+  });
+});
+
+describe('shadowDepth', () => {
+  const sun = { x: 1, y: 0, z: 0 };
+  const orbit = 6378.137 + 400;
+
+  it('is 0 on the day side and 1 directly behind the Earth', () => {
+    expect(shadowDepth({ x: orbit, y: 0, z: 0 }, sun)).toBe(0);
+    expect(shadowDepth({ x: -orbit, y: 0, z: 0 }, sun)).toBe(1);
+  });
+
+  it('is 0 over the terminator and beside the shadow', () => {
+    expect(shadowDepth({ x: 0, y: orbit, z: 0 }, sun)).toBe(0);
+    expect(shadowDepth({ x: -orbit, y: 0, z: 6378.137 + 500 }, sun)).toBe(0);
+  });
+
+  it('fades across the edge of the shadow rather than switching', () => {
+    const atEdge = shadowDepth({ x: -orbit, y: 6378.137, z: 0 }, sun);
+    expect(atEdge).toBeCloseTo(0.5, 5);
+    expect(shadowDepth({ x: -orbit, y: 6378.137 - 20, z: 0 }, sun)).toBeGreaterThan(atEdge);
+    expect(shadowDepth({ x: -orbit, y: 6378.137 + 20, z: 0 }, sun)).toBeLessThan(atEdge);
+  });
+
+  it('reaches geostationary altitude, where satellites are eclipsed near the equinoxes', () => {
+    expect(shadowDepth({ x: -42_164, y: 0, z: 0 }, sun)).toBe(1);
+    expect(shadowDepth({ x: -42_164, y: 0, z: 8000 }, sun)).toBe(0);
+  });
+
+  it('agrees with the full umbra-and-penumbra model around an orbit', () => {
+    // Follow the ISS for one revolution. The two models may only differ in the
+    // seconds it spends crossing the shadow's edge.
+    const timeMs = Date.parse(iss.elements.epoch);
+    const propagator = new Propagator([iss]);
+    const state = new Float32Array(STATE_STRIDE);
+    let disagreements = 0;
+    const samples = 560; // every 10 s for one 93-minute orbit
+    for (let i = 0; i < samples; i++) {
+      const t = timeMs + i * 10_000;
+      propagator.propagate(t, state);
+      const position = { x: state[0], y: state[1], z: state[2] };
+      const inShadow = shadowDepth(position, sunDirection(t, vec())) > 0.5;
+      if (inShadow === isSunlit(position, t)) disagreements++;
+    }
+    expect(disagreements).toBeLessThanOrEqual(4);
   });
 });
