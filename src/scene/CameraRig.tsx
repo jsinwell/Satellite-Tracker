@@ -1,6 +1,14 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { type Camera, MathUtils, Matrix4, PerspectiveCamera, Quaternion, Vector3 } from 'three';
+import {
+  type Camera,
+  MathUtils,
+  Matrix4,
+  PerspectiveCamera,
+  Quaternion,
+  Spherical,
+  Vector3,
+} from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
@@ -9,6 +17,7 @@ import { EARTH_RADIUS_KM } from '../core/constants';
 import { extrapolatePosition, extrapolateVelocity, hasState, type Vec3 } from '../core/kinematics';
 import { createObserverFrame, type Observer, observerFrame } from '../core/observer';
 import { CAMERA_FOV, directionToWorld } from './frame';
+import { isSteering, type Steer, steerFrom, useSteeringKeys } from './keys';
 import { rideElevation } from './ride';
 import { createStance, SKY_FOV, stand, zoomFov } from './standing';
 
@@ -298,6 +307,45 @@ function fitNearPlane(camera: PerspectiveCamera): void {
   camera.updateProjectionMatrix();
 }
 
+// Steering with the keyboard, per second of real time.
+/** Around the globe or a satellite, radians: about 70°, slowed near the ground like a drag. */
+const KEY_TURN_RATE = 1.2;
+/** Looking up, as a share of the field of view: the sky moves at the same pace at any zoom. */
+const KEY_LOOK_RATE = 0.9;
+/** Zooming: e to this power is how much closer or wider a second takes it. */
+const KEY_ZOOM_RATE = 1.2;
+
+const offset = new Vector3();
+const spherical = new Spherical();
+const POLE_MARGIN = 1e-3;
+
+/**
+ * Moves the camera that `controls` steers around their target: `right`
+ * radians across, `up` radians toward their up axis, and its distance scaled
+ * by `scale`, within the limits the controls set for themselves. The controls
+ * then pick up from the new position on their next update.
+ */
+function orbitBy(controls: OrbitControls, right: number, up: number, scale: number): void {
+  const { object, target } = controls;
+  spherical.setFromVector3(offset.copy(object.position).sub(target));
+  spherical.theta += right;
+  spherical.phi = MathUtils.clamp(
+    spherical.phi - up,
+    Math.max(POLE_MARGIN, controls.minPolarAngle),
+    Math.min(Math.PI - POLE_MARGIN, controls.maxPolarAngle),
+  );
+  spherical.radius = MathUtils.clamp(
+    spherical.radius * scale,
+    controls.minDistance,
+    controls.maxDistance,
+  );
+  object.position.copy(target).add(offset.setFromSpherical(spherical));
+}
+
+/** How much a second of `steer.zoomIn` multiplies a distance or field of view by. */
+const zoomFactor = (steer: Steer, deltaSeconds: number) =>
+  Math.exp(-steer.zoomIn * KEY_ZOOM_RATE * deltaSeconds);
+
 const ridePosition = new Vector3();
 const rideTurn = new Quaternion();
 const lookAtOrigin = new Matrix4();
@@ -324,6 +372,7 @@ export function CameraRig({ world }: { world: World }) {
   } | null>(null);
   /** The field of view while looking up, which the wheel changes. */
   const skyFov = useRef(SKY_FOV);
+  const keys = useSteeringKeys();
   const flight = useRef<Flight | null>(null);
   const mode = useRef<Mode>({ kind: 'globe' });
   const focusRequests = useApp((state) => state.focusRequests);
@@ -507,7 +556,15 @@ export function CameraRig({ world }: { world: World }) {
     }
 
     const now = mode.current;
+    // The keys move the camera as a drag would: around what it is looking at,
+    // and in or out. Looking up there is no moving, so they turn the view.
+    const steer = steerFrom(keys.current);
+    const steering = isSteering(steer);
     if (now.kind === 'riding') {
+      if (steering) {
+        const turn = KEY_TURN_RATE * deltaSeconds;
+        orbitBy(ride, steer.right * turn, steer.up * turn, zoomFactor(steer, deltaSeconds));
+      }
       ride.update();
       locate(world, now.index);
       ridePosition.copy(ride.object.position).applyMatrix4(basis).add(satellite);
@@ -518,6 +575,13 @@ export function CameraRig({ world }: { world: World }) {
     if (now.kind === 'standing' && standing) {
       // Turns the view by about as much as the pointer moves across it.
       sky.rotateSpeed = camera.fov / 360;
+      if (steering) {
+        // The stand-in sits opposite the way the view faces, so it goes
+        // the other way round.
+        const turn = KEY_LOOK_RATE * MathUtils.degToRad(camera.fov) * deltaSeconds;
+        orbitBy(sky, -steer.right * turn, -steer.up * turn, 1);
+        skyFov.current = zoomFov(skyFov.current, zoomFactor(steer, deltaSeconds));
+      }
       sky.update();
       standAt(standing);
       rideTurn.setFromRotationMatrix(basis).multiply(sky.object.quaternion);
@@ -532,13 +596,19 @@ export function CameraRig({ world }: { world: World }) {
       globe.enabled = true;
     }
 
-    if (flight.current && !advanceFlight(camera, world, flight.current, deltaSeconds)) {
-      flight.current = null;
-    }
     // Rotate more gently when close, so a drag moves the ground under the
     // pointer by about the same amount at any zoom.
     const altitude = camera.position.length() - 1;
     globe.rotateSpeed = MathUtils.clamp(altitude * 0.4, 0.05, 1);
+    if (steering) {
+      // Taking hold of the camera cancels any flight, as a drag does.
+      flight.current = null;
+      const turn = KEY_TURN_RATE * globe.rotateSpeed * deltaSeconds;
+      orbitBy(globe, steer.right * turn, steer.up * turn, zoomFactor(steer, deltaSeconds));
+    }
+    if (flight.current && !advanceFlight(camera, world, flight.current, deltaSeconds)) {
+      flight.current = null;
+    }
     globe.update();
   });
 
