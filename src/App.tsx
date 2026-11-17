@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from './app/store';
 import { Scene } from './scene/Scene';
 import { BootScreen } from './ui/BootScreen';
@@ -26,6 +26,8 @@ export function App() {
   const phase = useApp((state) => state.phase);
   const world = useApp((state) => state.world);
   const selected = useApp((state) => state.selected);
+  // Only matters on narrow screens, where the filters are tucked behind a button.
+  const [filtersOpen, setFiltersOpen] = useState(false);
   useEscapeToDeselect();
 
   if (phase !== 'ready' || world === null) return <BootScreen />;
@@ -48,17 +50,34 @@ export function App() {
             <SearchBox world={world} />
           </div>
           {selected !== null && (
-            <div className="w-full sm:w-72">
+            // Capped and scrollable, so on a phone it cannot cover the whole globe.
+            <div className="pointer-events-auto max-h-[42dvh] w-full overflow-y-auto rounded-xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
               <InfoPanel key={selected} world={world} index={selected} />
             </div>
           )}
         </div>
 
-        <div className="absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-3">
-          <div className="hidden sm:block">
+        {/*
+          Wide screens: filters, time and status side by side along the bottom.
+          Narrow screens: the filters open from a button, the status sits beside
+          that button, and the time controls take the full width underneath.
+        */}
+        <div className="absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+          <div id="filters" className={`w-full sm:block sm:w-auto ${filtersOpen ? '' : 'hidden'}`}>
             <FilterPanel world={world} />
           </div>
-          <TimeBar />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            aria-controls="filters"
+            className="pointer-events-auto rounded-xl border border-white/10 bg-slate-950/75 px-3 py-2 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md aria-expanded:border-accent/60 sm:hidden"
+          >
+            Filters
+          </button>
+          <div className="order-last w-full sm:order-none sm:w-auto">
+            <TimeBar />
+          </div>
           <StatusLine world={world} />
         </div>
       </div>

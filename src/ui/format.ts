@@ -43,6 +43,21 @@ export function formatDuration(ms: number): string {
   return `${(hours / 24).toFixed(1)} d`;
 }
 
+/**
+ * How long ago something happened, the way a person would say it: `just now`,
+ * `12 minutes ago`, `1 hour ago`, `3 days ago`. Rounded to the nearest whole
+ * unit, since "68 minutes ago" is precision nobody asked for.
+ */
+export function formatAgo(ms: number): string {
+  const ago = (count: number, unit: string) => `${count} ${unit}${count === 1 ? '' : 's'} ago`;
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return ago(minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return ago(hours, 'hour');
+  return ago(Math.round(hours / 24), 'day');
+}
+
 /** An orbital period: `92.9 min` for low orbits, `23.93 h` for high ones. */
 export function formatPeriod(minutes: number): string {
   return minutes < 600 ? `${minutes.toFixed(1)} min` : `${(minutes / 60).toFixed(2)} h`;

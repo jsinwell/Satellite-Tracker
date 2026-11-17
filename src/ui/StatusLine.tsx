@@ -1,6 +1,6 @@
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
-import { formatDuration, formatInteger } from './format';
+import { formatAgo, formatInteger } from './format';
 import { useWallTime } from './hooks';
 
 /** What is on screen and how fresh it is, plus attribution for the data. */
@@ -16,7 +16,7 @@ export function StatusLine({ world }: { world: World }) {
         ? `${formatInteger(total)} objects tracked`
         : `${formatInteger(visibleCount)} of ${formatInteger(total)} objects shown`}
       <br />
-      Elements from{' '}
+      Data from{' '}
       <a
         href="https://celestrak.org"
         target="_blank"
@@ -25,7 +25,7 @@ export function StatusLine({ world }: { world: World }) {
       >
         CelesTrak
       </a>
-      , fetched {formatDuration(now - world.generatedAtMs)} ago
+      , fetched {formatAgo(now - world.generatedAtMs)}
     </p>
   );
 }

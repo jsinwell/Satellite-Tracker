@@ -53,6 +53,39 @@ function createSunTexture(): CanvasTexture {
   return texture;
 }
 
+/**
+ * The Moon is drawn at its true size, which from here is a disc about a
+ * dozen pixels across: accurate, and nearly impossible to find among the
+ * stars. A small name tag beside it keeps it honest and findable.
+ *
+ * The tag is a sprite that ignores perspective, so these are its width and
+ * height as angles (in radians) rather than distances.
+ */
+const MOON_LABEL_HEIGHT = 0.013;
+/** How far below the Moon the tag hangs, in tag heights. */
+const MOON_LABEL_DROP = 2.6;
+
+function createLabelTexture(text: string): { texture: CanvasTexture; aspect: number } {
+  const fontPx = 44;
+  const font = `500 ${fontPx}px ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif`;
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (context) context.font = font;
+  canvas.width = Math.ceil((context?.measureText(text).width ?? fontPx * text.length) + 16);
+  canvas.height = Math.ceil(fontPx * 1.4);
+  if (context) {
+    // Resizing a canvas resets its state, so the font is set again.
+    context.font = font;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = 'rgba(226, 232, 240, 0.85)';
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+  }
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  return { texture, aspect: canvas.width / canvas.height };
+}
+
 const moonVertexShader = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
@@ -96,6 +129,7 @@ export function SunAndMoon() {
   const moon = useRef<Group>(null);
 
   const sunTexture = useMemo(createSunTexture, []);
+  const moonLabel = useMemo(() => createLabelTexture('Moon'), []);
   const moonUniforms = useMemo(() => {
     moonMap.colorSpace = SRGBColorSpace;
     return { uMap: { value: moonMap }, uSunDirection: { value: new Vector3(1, 0, 0) } };
@@ -144,6 +178,25 @@ export function SunAndMoon() {
             fragmentShader={moonFragmentShader}
           />
         </mesh>
+        {/*
+          Scaled up by the Earth's radius to cancel the enclosing group's
+          kilometers-to-scene scale, which a perspective-free sprite inherits.
+        */}
+        <sprite
+          center={[0.5, MOON_LABEL_DROP]}
+          scale={[
+            MOON_LABEL_HEIGHT * moonLabel.aspect * EARTH_RADIUS_KM,
+            MOON_LABEL_HEIGHT * EARTH_RADIUS_KM,
+            1,
+          ]}
+        >
+          <spriteMaterial
+            map={moonLabel.texture}
+            sizeAttenuation={false}
+            depthWrite={false}
+            transparent
+          />
+        </sprite>
       </group>
     </>
   );

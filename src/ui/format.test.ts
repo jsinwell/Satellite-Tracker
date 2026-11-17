@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatAgo,
   formatDuration,
   formatInteger,
   formatLatitude,
@@ -37,5 +38,23 @@ describe('format', () => {
   it('switches period units between low and high orbits', () => {
     expect(formatPeriod(92.94)).toBe('92.9 min');
     expect(formatPeriod(1436.07)).toBe('23.93 h');
+  });
+});
+
+describe('formatAgo', () => {
+  const minutes = (count: number) => count * 60_000;
+
+  it.each([
+    [minutes(0.2), 'just now'],
+    [minutes(1), '1 minute ago'],
+    [minutes(12), '12 minutes ago'],
+    [minutes(59), '59 minutes ago'],
+    [minutes(68), '1 hour ago'],
+    [minutes(100), '2 hours ago'],
+    [minutes(60 * 23), '23 hours ago'],
+    [minutes(60 * 30), '1 day ago'],
+    [minutes(60 * 24 * 3.2), '3 days ago'],
+  ])('describes %d ms as "%s"', (ms, expected) => {
+    expect(formatAgo(ms)).toBe(expected);
   });
 });
