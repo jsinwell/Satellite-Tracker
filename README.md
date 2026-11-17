@@ -37,6 +37,8 @@ computed live in the browser.
 - Drag the "Launched by" slider to see what was up in a given year, or press play and watch
   orbit fill in. It only covers objects that are still up there.
 - Works on a phone.
+- Move the camera with WASD or the arrow keys, and zoom with Q and E. Looking up, the same
+  keys turn your view.
 - Remembers your filters, color scheme, what's drawn on the globe and your location from one
   visit to the next.
 - Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a

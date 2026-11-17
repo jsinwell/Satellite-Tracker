@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 /**
  * These run against a small committed catalog rather than live data, and pin
@@ -276,6 +276,34 @@ test.describe('with a catalog', () => {
 
       await expect.poll(apart).toBeLessThan(before * 0.8);
     });
+  });
+
+  test('moves with the keyboard', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '41.88, -87.63'); // the globe turns to show it, marked "You"
+    const holdD = async () => {
+      await page.keyboard.down('d');
+      await page.waitForTimeout(500);
+      await page.keyboard.up('d');
+    };
+    const x = async (target: Locator) => (await target.boundingBox())?.x ?? Number.NaN;
+
+    const you = page.getByText('You', { exact: true });
+    await expect(you).toBeVisible();
+    await page.waitForTimeout(1500); // the turn takes 1.2 s
+    const before = await x(you);
+    await holdD();
+    // The camera goes right around the globe, so the ground slides left.
+    await expect.poll(() => x(you)).toBeLessThan(before - 30);
+
+    // Looking up, the same key turns the view right, and south slides left.
+    await page.getByRole('button', { name: 'Look up from here' }).click();
+    const south = page.locator('[data-compass-point="S"]');
+    await expect(south).toBeVisible();
+    await page.waitForTimeout(1600); // the way down takes 1.4 s
+    const facing = await x(south);
+    await holdD();
+    await expect.poll(() => x(south)).toBeLessThan(facing - 30);
   });
 
   test('keeps the sky panel clear of the filters', async ({ page }) => {
