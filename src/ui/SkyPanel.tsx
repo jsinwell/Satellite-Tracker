@@ -282,7 +282,9 @@ export function SkyPanel({ world, onClose }: { world: World; onClose(): void }) 
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold text-white">Your sky</h2>
           {shown ? (
-            <p className="mt-0.5 flex items-center gap-2 font-mono text-xs text-slate-400">
+            // Baselines, not centers: the coordinates are monospaced and the
+            // button is not, and the two fonts sit differently in their boxes.
+            <p className="mt-0.5 flex items-baseline gap-2 font-mono text-xs text-slate-400">
               {formatPlace(shown.latitude, shown.longitude)}
               <button
                 type="button"
