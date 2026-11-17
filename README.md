@@ -7,10 +7,26 @@ computed live in the browser.
 
 ![The ISS selected, with its orbit drawn](docs/screenshot.png)
 
-Search for a satellite by name or NORAD ID, or click one, to see where it is and the orbit
-it's on. You can pause time or run it at up to 1000x, and filter by object type and orbit.
-Add `?sat=25544` to the URL to link straight to a satellite, or `?t=2026-11-16T06:30:00Z` to
-open at a specific time.
+## Features
+
+- Search by name or NORAD ID, or click a satellite, to see where it is, how fast it's moving,
+  whether it's in sunlight, and the orbit it's on.
+- Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
+  see which way everything is going.
+- The background is NASA's star map lined up with the real sky, so the Milky Way and the
+  constellations are where they should be. The Sun and Moon are in their real positions too,
+  and the Moon shows the right phase.
+- The Earth is lit from where the Sun actually is, and satellites dim when they pass into its
+  shadow.
+- Filter by type (payloads, rocket bodies, debris) or by orbit. The counts and the search
+  follow whatever is on screen.
+- Color by constellation to pick out Starlink, OneWeb and Kuiper, or show any one of eight
+  constellations by itself.
+- Drag the "Launched by" slider to see what was up in a given year, or press play and watch
+  orbit fill in. It only covers objects that are still up there.
+- Works on a phone.
+- Link straight to a satellite with `?sat=25544`, or to a moment in time with
+  `?t=2026-11-16T06:30:00Z`.
 
 ## Running it
 
