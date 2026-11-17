@@ -101,3 +101,37 @@ export function localTimeZone(timeMs: number): string {
 export function formatPlace(latitude: number, longitude: number): string {
   return `${formatLatitude(latitude)}, ${formatLongitude(longitude)}`;
 }
+
+/** The earliest and latest instants the time can be set to: the space age, and this century. */
+export const SETTABLE_RANGE_MS = {
+  first: Date.UTC(1957, 0, 1),
+  last: Date.UTC(2100, 11, 31, 23, 59, 59),
+} as const;
+
+const pad = (value: number, width = 2) => String(value).padStart(width, '0');
+
+/**
+ * An instant as a `datetime-local` input wants it, read as UTC:
+ * `2027-08-02T10:07:00`. Milliseconds are dropped.
+ */
+export function toUtcInput(timeMs: number): string {
+  const date = new Date(timeMs);
+  return (
+    `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
+    `T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+  );
+}
+
+/**
+ * The instant a `datetime-local` value names, taking it as UTC, or null if it
+ * is not one or lies outside `SETTABLE_RANGE_MS`. Seconds are optional.
+ */
+export function fromUtcInput(value: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(value)) return null;
+  const timeMs = Date.parse(`${value}Z`);
+  if (Number.isNaN(timeMs)) return null;
+  // Date.parse rolls a day that does not exist, like February 30, into the
+  // next month rather than refusing it; such a date does not come back the same.
+  if (!toUtcInput(timeMs).startsWith(value.slice(0, 16))) return null;
+  return timeMs >= SETTABLE_RANGE_MS.first && timeMs <= SETTABLE_RANGE_MS.last ? timeMs : null;
+}

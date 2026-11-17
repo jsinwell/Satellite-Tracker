@@ -24,7 +24,7 @@ computed live in the browser.
   the satellites, stars, planets, Sun and Moon where they'd be. The sky panel lists which
   planets are up and how bright they are, so you can tell them from satellites. The sky is dark, twilit or blue to
   match the hour. Drag to look around, and scroll or pinch to widen or narrow the view.
-- Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
+- Pause time or run it at up to 1000x, or click the date to go to any moment from 1957 to 2100. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the
   constellations are where they should be. The Sun and Moon are in their real positions too,
