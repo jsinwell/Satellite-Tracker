@@ -74,3 +74,24 @@ export function isOccludedByEarth(eye: Vec3, target: Vec3): boolean {
   const cz = eye.z + t * dz;
   return cx * cx + cy * cy + cz * cz < EARTH_RADIUS_KM * EARTH_RADIUS_KM;
 }
+
+/** A trail shows where a satellite was this long ago, in real seconds. */
+const TRAIL_REAL_SECONDS = 0.12;
+/** Below this many simulated seconds a trail is shorter than the dot it follows. */
+const MIN_TRAIL_SECONDS = 1;
+/**
+ * Long enough to read as motion, short enough that twenty thousand of them do
+ * not bury the globe: about 570 km in low orbit. It also keeps the far end
+ * well within reach of the extrapolation the trails are drawn with.
+ */
+const MAX_TRAIL_SECONDS = 75;
+
+/**
+ * How far back in simulated time a satellite's trail reaches at a given time
+ * rate. Zero at ordinary speeds, where a trail would be invisible; negative
+ * when time runs backwards, so the trail still follows the motion on screen.
+ */
+export function trailSeconds(rate: number): number {
+  const seconds = Math.min(MAX_TRAIL_SECONDS, Math.abs(rate) * TRAIL_REAL_SECONDS);
+  return seconds < MIN_TRAIL_SECONDS ? 0 : Math.sign(rate) * seconds;
+}

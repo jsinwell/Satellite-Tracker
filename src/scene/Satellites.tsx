@@ -2,11 +2,13 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
-  BufferGeometry,
   Color,
   DynamicDrawUsage,
-  InterleavedBuffer,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
+  InstancedInterleavedBuffer,
   InterleavedBufferAttribute,
+  LineSegments,
   Points,
   ShaderMaterial,
   Vector3,
@@ -17,7 +19,7 @@ import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
 import type { ObjectType } from '../core/catalog';
 import { wallNow } from '../core/clock';
-import type { Vec3 } from '../core/kinematics';
+import { trailSeconds, type Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
 import { ORBIT_GLSL } from './orbitGlsl';
 
@@ -29,31 +31,41 @@ const TYPE_SIZES: Record<ObjectType, number> = {
   unknown: 0.8,
 };
 
-const vertexShader = /* glsl */ `
+// Both shaders read the same per-satellite attributes; see `buildSatellites`.
+const SHARED_GLSL = /* glsl */ `
+  attribute vec3 aPosition;
   attribute vec3 aVelocity;
   attribute vec3 aColor;
-  attribute float aSize;
   attribute float aVisible;
 
   uniform float uDt;
-  uniform float uPixelRatio;
   uniform vec3 uSunDirection;
-
-  varying vec3 vColor;
 
   ${ORBIT_GLSL}
 
+  // An all-zero position means "no state"; see Propagator.propagate.
+  bool isHidden() {
+    return aVisible < 0.5 || dot(aPosition, aPosition) == 0.0;
+  }
+
+  const vec4 OUTSIDE_CLIP_VOLUME = vec4(0.0, 0.0, 2.0, 1.0);
+`;
+
+const pointVertexShader = /* glsl */ `
+  attribute float aSize;
+  uniform float uPixelRatio;
+  varying vec3 vColor;
+
+  ${SHARED_GLSL}
+
   void main() {
-    float r2 = dot(position, position);
-    // An all-zero position means "no state"; see Propagator.propagate.
-    if (aVisible < 0.5 || r2 == 0.0) {
-      gl_Position = vec4(0.0, 0.0, 2.0, 1.0); // outside the clip volume
+    if (isHidden()) {
+      gl_Position = OUTSIDE_CLIP_VOLUME;
       gl_PointSize = 0.0;
       return;
     }
 
-    vec3 p = extrapolate(position, aVelocity, uDt);
-
+    vec3 p = extrapolate(aPosition, aVelocity, uDt);
     vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * viewPosition;
 
@@ -65,7 +77,7 @@ const vertexShader = /* glsl */ `
   }
 `;
 
-const fragmentShader = /* glsl */ `
+const pointFragmentShader = /* glsl */ `
   varying vec3 vColor;
 
   void main() {
@@ -77,15 +89,47 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+// Each trail is one line segment whose two ends are the same satellite at two
+// instants: now, and uTrailSeconds ago. `position.x` says which end this is.
+const trailVertexShader = /* glsl */ `
+  uniform float uTrailSeconds;
+  varying vec4 vColor;
+
+  ${SHARED_GLSL}
+
+  void main() {
+    if (isHidden()) {
+      gl_Position = OUTSIDE_CLIP_VOLUME;
+      return;
+    }
+
+    float tail = position.x; // 0 at the satellite, 1 at the far end of its trail
+    vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * uTrailSeconds);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    vColor = vec4(aColor * sunlight(p, uSunDirection), (1.0 - tail) * 0.4);
+  }
+`;
+
+const trailFragmentShader = /* glsl */ `
+  varying vec4 vColor;
+
+  void main() {
+    gl_FragColor = vColor;
+    #include <colorspace_fragment>
+  }
+`;
+
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 
-function buildPoints(world: World) {
+function buildSatellites(world: World) {
   const { simulation, satellites } = world;
   const count = satellites.length;
 
-  // The simulation's state buffer *is* the vertex buffer: position and
-  // velocity interleaved, uploaded as-is whenever a new state arrives.
-  const stateBuffer = new InterleavedBuffer(simulation.state, STATE_STRIDE);
+  // The simulation's state buffer *is* the vertex data: position and velocity
+  // interleaved, uploaded as-is whenever a new state arrives. It is instanced,
+  // one entry per satellite, so the points (one vertex each) and the trails
+  // (two vertices each) read the same GPU buffer.
+  const stateBuffer = new InstancedInterleavedBuffer(simulation.state, STATE_STRIDE);
   stateBuffer.setUsage(DynamicDrawUsage);
 
   const colors = new Float32Array(count * 3);
@@ -96,44 +140,75 @@ function buildPoints(world: World) {
     sizes[i] = TYPE_SIZES[satellite.objectType];
   });
 
-  const visibility = new BufferAttribute(new Uint8Array(count), 1);
+  const visibility = new InstancedBufferAttribute(new Uint8Array(count), 1);
   visibility.setUsage(DynamicDrawUsage);
 
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new InterleavedBufferAttribute(stateBuffer, 3, 0));
-  geometry.setAttribute('aVelocity', new InterleavedBufferAttribute(stateBuffer, 3, 3));
-  geometry.setAttribute('aColor', new BufferAttribute(colors, 3));
-  geometry.setAttribute('aSize', new BufferAttribute(sizes, 1));
-  geometry.setAttribute('aVisible', visibility);
+  const perSatellite = {
+    aPosition: new InterleavedBufferAttribute(stateBuffer, 3, 0),
+    aVelocity: new InterleavedBufferAttribute(stateBuffer, 3, 3),
+    aColor: new InstancedBufferAttribute(colors, 3),
+    aVisible: visibility,
+  };
+  const instanced = (vertices: number[]) => {
+    const geometry = new InstancedBufferGeometry();
+    geometry.instanceCount = count;
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(vertices), 3));
+    for (const [name, attribute] of Object.entries(perSatellite)) {
+      geometry.setAttribute(name, attribute);
+    }
+    return geometry;
+  };
 
-  const material = new ShaderMaterial({
-    uniforms: {
-      uDt: { value: 0 },
-      uPixelRatio: { value: 1 },
-      // In the TEME frame, like the positions it is compared with.
-      uSunDirection: { value: new Vector3(1, 0, 0) },
-    },
-    vertexShader,
-    fragmentShader,
-    transparent: true,
-    depthWrite: false,
-  });
+  // Shared, so one assignment per frame updates both materials.
+  const uniforms = {
+    uDt: { value: 0 },
+    // In the TEME frame, like the positions it is compared with.
+    uSunDirection: { value: new Vector3(1, 0, 0) },
+    uPixelRatio: { value: 1 },
+    uTrailSeconds: { value: 0 },
+  };
 
-  const points = new Points(geometry, material);
-  // Positions change on the GPU every frame, so a CPU bounding sphere would be wrong.
+  const pointGeometry = instanced([0, 0, 0]);
+  pointGeometry.setAttribute('aSize', new InstancedBufferAttribute(sizes, 1));
+  const points = new Points(
+    pointGeometry,
+    new ShaderMaterial({
+      uniforms,
+      vertexShader: pointVertexShader,
+      fragmentShader: pointFragmentShader,
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+
+  const trails = new LineSegments(
+    instanced([0, 0, 0, 1, 0, 0]),
+    new ShaderMaterial({
+      uniforms,
+      vertexShader: trailVertexShader,
+      fragmentShader: trailFragmentShader,
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  trails.visible = false;
+
+  // Positions change on the GPU every frame, so CPU bounding volumes would be wrong.
   points.frustumCulled = false;
+  trails.frustumCulled = false;
 
-  return { points, geometry, material, stateBuffer, visibility };
+  return { points, trails, uniforms, stateBuffer, visibility };
 }
 
 /**
- * Every satellite as one draw call. Also drives the simulation: each frame it
- * lets the simulation request a fresh state if needed, uploads the state when
- * one has arrived, and tells the shader how far to extrapolate from it.
+ * Every satellite in one draw call, plus one more for their trails when time
+ * is running fast. Also drives the simulation: each frame it lets the
+ * simulation request a fresh state if needed, uploads the state when one has
+ * arrived, and tells the shaders how far to extrapolate from it.
  */
 export function Satellites({ world }: { world: World }) {
-  const { points, geometry, material, stateBuffer, visibility } = useMemo(
-    () => buildPoints(world),
+  const { points, trails, uniforms, stateBuffer, visibility } = useMemo(
+    () => buildSatellites(world),
     [world],
   );
   const visible = useApp((state) => state.visible);
@@ -145,26 +220,38 @@ export function Satellites({ world }: { world: World }) {
 
   useEffect(
     () => () => {
-      geometry.dispose();
-      material.dispose();
+      for (const object of [points, trails]) {
+        object.geometry.dispose();
+        object.material.dispose();
+      }
     },
-    [geometry, material],
+    [points, trails],
   );
 
   const uploadedVersion = useRef(-1);
   useFrame(({ gl }) => {
     const { simulation } = world;
-    simulation.update(useApp.getState().clock, wallNow());
+    const { clock } = useApp.getState();
+    simulation.update(clock, wallNow());
     if (uploadedVersion.current !== simulation.version) {
       uploadedVersion.current = simulation.version;
       stateBuffer.needsUpdate = true;
     }
+
     const simMs = currentSimTime();
-    material.uniforms.uDt.value = simulation.dtSeconds(simMs);
+    uniforms.uDt.value = simulation.dtSeconds(simMs);
     const sun = sunDirection(simMs, scratch);
-    material.uniforms.uSunDirection.value.set(sun.x, sun.y, sun.z);
-    material.uniforms.uPixelRatio.value = gl.getPixelRatio();
+    uniforms.uSunDirection.value.set(sun.x, sun.y, sun.z);
+    uniforms.uPixelRatio.value = gl.getPixelRatio();
+
+    uniforms.uTrailSeconds.value = trailSeconds(clock.rate);
+    trails.visible = uniforms.uTrailSeconds.value !== 0;
   });
 
-  return <primitive object={points} />;
+  return (
+    <>
+      <primitive object={trails} />
+      <primitive object={points} />
+    </>
+  );
 }
