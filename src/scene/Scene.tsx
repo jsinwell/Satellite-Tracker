@@ -3,8 +3,8 @@ import { Suspense } from 'react';
 import { ACCENT_COLOR } from '../app/palette';
 import type { World } from '../app/world';
 import { CameraRig } from './CameraRig';
+import { Coverage } from './Coverage';
 import { Earth, EarthPlaceholder } from './Earth';
-import { Footprint } from './Footprint';
 import { TEME_GROUP_ROTATION, TEME_GROUP_SCALE } from './frame';
 import { GroundTrack } from './GroundTrack';
 import { Marker } from './Marker';
@@ -48,8 +48,8 @@ export function Scene({ world }: { world: World }) {
         </Suspense>
         <Satellites world={world} />
         <OrbitPath world={world} />
+        <Coverage world={world} />
         <GroundTrack world={world} />
-        <Footprint world={world} />
         <Marker world={world} target="hovered" color="#ffffff" size={18} />
         <Marker world={world} target="selected" color={ACCENT_COLOR} size={26} />
       </group>

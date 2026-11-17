@@ -13,8 +13,9 @@ computed live in the browser.
   whether it's in sunlight, and the orbit it's on.
 - Ride along with a satellite. The camera sits just behind it and follows it around its orbit,
   with the horizon ahead and the ground going by underneath. Drag to look around.
-- A selected satellite shows its ground track for the next orbit, and a circle around the
-  part of the Earth that can see it right now.
+- A selected satellite shows its ground track for the next orbit, marked with the times it'll
+  pass over each place, and its coverage: the part of the Earth that has it above the horizon
+  right now. Either one, and the orbit, can be switched off.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the

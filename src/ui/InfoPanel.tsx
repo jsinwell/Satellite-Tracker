@@ -10,6 +10,7 @@ import {
   formatPeriod,
 } from './format';
 import { useSimTime, useTelemetry } from './hooks';
+import { OverlayLegend } from './OverlayLegend';
 import { Panel } from './Panel';
 
 /**
@@ -118,7 +119,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
               <Row label="Altitude">{formatInteger(telemetry.altitudeKm)} km</Row>
               <Row label="Speed">{telemetry.speedKmS.toFixed(2)} km/s</Row>
               <Row label="Lighting">{telemetry.sunlit ? 'Sunlit' : 'In eclipse'}</Row>
-              <Row label="Footprint">{formatInteger(telemetry.footprintKm)} km across</Row>
+              <Row label="Coverage">{formatInteger(telemetry.footprintKm)} km across</Row>
             </>
           ) : (
             <p className="py-1 text-slate-400">
@@ -149,6 +150,8 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
             </p>
           )}
         </Section>
+
+        <OverlayLegend world={world} index={index} />
       </div>
 
       {/* Stays in reach at the bottom of the panel while the details scroll behind it. */}

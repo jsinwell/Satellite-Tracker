@@ -55,6 +55,16 @@ const CONSTELLATION_COLORS: Record<ConstellationId, string> = {
 export const ACCENT_COLOR = '#5eead4';
 
 /**
+ * The selected satellite's orbit wears its own color, but what it is drawn on
+ * the ground gets colors of its own, the same for every satellite, so the
+ * three are never mistaken for each other. White for the ground track, which
+ * has to read over every kind of terrain; a lime for the coverage, a hue no
+ * satellite is drawn in.
+ */
+export const GROUND_TRACK_COLOR = '#ffffff';
+export const COVERAGE_COLOR = '#bef264';
+
+/**
  * The color a constellation is drawn in. `alone` says it is the only group
  * being shown: then it is the subject of the view rather than its backdrop,
  * so a group that would otherwise be muted takes the accent color instead.

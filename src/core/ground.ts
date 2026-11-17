@@ -1,7 +1,6 @@
 import { gmst } from './astro';
 import type { OrbitalElements, SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
-import type { Vec3 } from './kinematics';
 import { samplePositions } from './propagator';
 
 const TWO_PI = 2 * Math.PI;
@@ -107,45 +106,36 @@ export function footprintWidthKm(radiusKm: number): number {
   return 2 * EARTH_RADIUS_KM * horizonAngle(radiusKm);
 }
 
-/**
- * The edge of the footprint of a satellite at `position` (km): `segments`
- * points around a circle, `radiusKm` from the Earth's center, in the same axes
- * as `position`.
- */
-export function footprintCircle(
-  position: Vec3,
-  segments: number,
-  radiusKm: number,
-  out: Float32Array = new Float32Array(segments * 3),
-): Float32Array {
-  const distance = Math.hypot(position.x, position.y, position.z);
-  const ux = position.x / distance;
-  const uy = position.y / distance;
-  const uz = position.z / distance;
-  // Two axes at right angles to the satellite's direction and to each other.
-  // Crossing with z fails over the poles, so cross with x there instead.
-  const overPole = Math.abs(uz) > 0.9;
-  let ax = overPole ? 0 : -uy;
-  let ay = overPole ? uz : ux;
-  let az = overPole ? -uy : 0;
-  const length = Math.hypot(ax, ay, az);
-  ax /= length;
-  ay /= length;
-  az /= length;
-  const bx = uy * az - uz * ay;
-  const by = uz * ax - ux * az;
-  const bz = ux * ay - uy * ax;
+/** Round clock intervals, minutes, to mark along a ground track. All divide a day. */
+const MARK_STEPS_MINUTES = [5, 10, 15, 20, 30, 60, 120, 180, 240, 360, 720];
+/** More marks than this on one revolution crowd each other. */
+export const MAX_MARKS_PER_REVOLUTION = 12;
+const MS_PER_MINUTE = 60_000;
 
-  const angle = horizonAngle(distance);
-  const along = radiusKm * Math.cos(angle);
-  const across = radiusKm * Math.sin(angle);
-  for (let i = 0; i < segments; i++) {
-    const turn = (i / segments) * TWO_PI;
-    const a = across * Math.cos(turn);
-    const b = across * Math.sin(turn);
-    out[i * 3] = along * ux + a * ax + b * bx;
-    out[i * 3 + 1] = along * uy + a * ay + b * by;
-    out[i * 3 + 2] = along * uz + a * az + b * bz;
+/**
+ * How often to mark the time along the ground track of an orbit with period
+ * `periodMs`: the shortest round interval that leaves no more than
+ * `MAX_MARKS_PER_REVOLUTION` marks on a revolution. Every ten minutes in low
+ * orbit, every hour or two further out.
+ */
+export function markStepMs(periodMs: number): number {
+  const minutes =
+    MARK_STEPS_MINUTES.find(
+      (step) => periodMs / (step * MS_PER_MINUTE) <= MAX_MARKS_PER_REVOLUTION,
+    ) ?? MARK_STEPS_MINUTES[MARK_STEPS_MINUTES.length - 1];
+  return minutes * MS_PER_MINUTE;
+}
+
+/**
+ * The instants after `fromMs`, up to and including `toMs`, that are whole
+ * multiples of `stepMs` since midnight UTC: 11:10, 11:20, 11:30 rather than
+ * 11:07, 11:17, 11:27. No more than `limit` of them.
+ */
+export function markTimes(fromMs: number, toMs: number, stepMs: number, limit: number): number[] {
+  const times: number[] = [];
+  for (let t = (Math.floor(fromMs / stepMs) + 1) * stepMs; t <= toMs; t += stepMs) {
+    if (times.length === limit) break;
+    times.push(t);
   }
-  return out;
+  return times;
 }

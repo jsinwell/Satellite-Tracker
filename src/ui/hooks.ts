@@ -41,7 +41,7 @@ export interface Telemetry {
   altitudeKm: number;
   speedKmS: number;
   sunlit: boolean;
-  /** How wide a stretch of the ground can see the satellite, km. */
+  /** How wide its coverage is, km: the stretch of ground that has it above the horizon. */
   footprintKm: number;
 }
 

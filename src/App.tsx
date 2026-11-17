@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from './app/store';
+import { setLabelLayer } from './scene/labelLayer';
 import { Scene } from './scene/Scene';
 import { BootScreen } from './ui/BootScreen';
 import { FilterPanel } from './ui/FilterPanel';
@@ -51,6 +52,12 @@ export function App() {
       <div className="absolute inset-0">
         <Scene world={world} />
       </div>
+      {/* Text the scene pins to places on the globe; under the HUD, over the canvas. */}
+      <div
+        ref={setLabelLayer}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      />
 
       {/*
         The HUD floats over the globe; only its panels take pointer input.

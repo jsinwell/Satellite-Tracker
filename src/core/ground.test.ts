@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { geostationary, highlyElliptical, iss } from './__fixtures__/satellites';
+import { geostationary, gps, highlyElliptical, iss } from './__fixtures__/satellites';
 import { subSatellitePoint } from './astro';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import {
   eccentricAnomaly,
-  footprintCircle,
   footprintWidthKm,
   groundTrack,
   horizonAngle,
+  MAX_MARKS_PER_REVOLUTION,
+  markStepMs,
+  markTimes,
   sweepTimes,
 } from './ground';
 import { samplePositions } from './propagator';
@@ -158,47 +160,40 @@ describe('footprintWidthKm', () => {
   });
 });
 
-describe('footprintCircle', () => {
-  const overEquator = { x: EARTH_RADIUS_KM + 800, y: 0, z: 0 };
-  const overPole = { x: 0, y: 0, z: -(EARTH_RADIUS_KM + 20_000) };
-  const somewhere = { x: 3000, y: -5200, z: 4100 };
+describe('markStepMs', () => {
+  const minutes = (ms: number) => ms / 60_000;
 
-  it.each([
-    ['over the equator', overEquator],
-    ['over a pole', overPole],
-    ['somewhere in between', somewhere],
-  ])('puts the satellite on the horizon of every point, %s', (_, satellite) => {
-    const segments = 24;
-    const circle = footprintCircle(satellite, segments, EARTH_RADIUS_KM);
+  it('marks every ten minutes in low orbit and every hour or two further out', () => {
+    expect(minutes(markStepMs(periodMs(iss)))).toBe(10);
+    expect(minutes(markStepMs(periodMs(gps)))).toBe(60);
+    expect(minutes(markStepMs(periodMs(geostationary)))).toBe(120);
+  });
 
-    for (let i = 0; i < segments; i++) {
-      const [x, y, z] = circle.subarray(i * 3, i * 3 + 3);
-      expect(Math.hypot(x, y, z)).toBeCloseTo(EARTH_RADIUS_KM, 1);
-      // On the horizon, the line of sight is at right angles to straight up.
-      const sight = { x: satellite.x - x, y: satellite.y - y, z: satellite.z - z };
-      const cosine =
-        (sight.x * x + sight.y * y + sight.z * z) /
-        (Math.hypot(sight.x, sight.y, sight.z) * EARTH_RADIUS_KM);
-      expect(cosine).toBeCloseTo(0, 4);
+  it('never leaves more than the limit on a revolution, down to the shortest orbits', () => {
+    for (const period of [85, 93, 128, 300, 718, 1436, 4000].map((m) => m * 60_000)) {
+      expect(period / markStepMs(period)).toBeLessThanOrEqual(MAX_MARKS_PER_REVOLUTION);
     }
   });
 
-  it('goes all the way around the point beneath the satellite', () => {
-    const segments = 24;
-    const circle = footprintCircle(somewhere, segments, EARTH_RADIUS_KM);
-    const center = { x: 0, y: 0, z: 0 };
-    for (let i = 0; i < segments; i++) {
-      center.x += circle[i * 3] / segments;
-      center.y += circle[i * 3 + 1] / segments;
-      center.z += circle[i * 3 + 2] / segments;
-    }
+  it('settles for its longest step on very long orbits', () => {
+    expect(minutes(markStepMs(30 * MS_PER_DAY))).toBe(720);
+  });
+});
 
-    // Points spread evenly around a circle average out to its center, which
-    // lies on the line from the Earth's center to the satellite.
-    const distance = Math.hypot(somewhere.x, somewhere.y, somewhere.z);
-    const depth = EARTH_RADIUS_KM * Math.cos(horizonAngle(distance));
-    expect(center.x).toBeCloseTo((somewhere.x / distance) * depth, 2);
-    expect(center.y).toBeCloseTo((somewhere.y / distance) * depth, 2);
-    expect(center.z).toBeCloseTo((somewhere.z / distance) * depth, 2);
+describe('markTimes', () => {
+  const at = (time: string) => Date.parse(`2026-11-17T${time}Z`);
+  const step = 10 * 60_000;
+
+  it('falls on round times after the start, up to and including the end', () => {
+    const times = markTimes(at('10:54:46'), at('11:30:00'), step, 12);
+    expect(times).toEqual([at('11:00:00'), at('11:10:00'), at('11:20:00'), at('11:30:00')]);
+  });
+
+  it('skips a mark at the very start, which is where the satellite already is', () => {
+    expect(markTimes(at('11:00:00'), at('11:15:00'), step, 12)).toEqual([at('11:10:00')]);
+  });
+
+  it('stops at the limit', () => {
+    expect(markTimes(at('00:00:00'), at('23:00:00'), step, 3)).toHaveLength(3);
   });
 });

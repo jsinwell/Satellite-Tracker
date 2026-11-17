@@ -125,6 +125,30 @@ test.describe('with a catalog', () => {
     await expect(selection(page)).toContainText('ISS (ZARYA)');
   });
 
+  test('turns what is drawn for a satellite on and off', async ({ page }) => {
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const panel = selection(page);
+    const groundTrack = panel.getByRole('switch', { name: 'Ground track' });
+    // Times along the ground track are labeled on the globe.
+    const timeLabels = page.locator('[data-track-label]').filter({ visible: true });
+    await expect(groundTrack).toHaveAttribute('aria-checked', 'true');
+    await expect(timeLabels.first()).toHaveText(/^\d\d:\d0$/);
+
+    await groundTrack.click();
+    await expect(groundTrack).toHaveAttribute('aria-checked', 'false');
+    await expect(timeLabels).toHaveCount(0);
+
+    // The choice holds for the next satellite.
+    await page.getByRole('combobox').fill('goes 16');
+    await page.getByRole('option', { name: /GOES 16/ }).click();
+    await expect(panel).toContainText('GOES 16');
+    await expect(groundTrack).toHaveAttribute('aria-checked', 'false');
+    await expect(panel.getByRole('switch', { name: 'Coverage' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
   test('picks the satellite under the pointer', async ({ page }) => {
     // The camera flies to look straight down on a linked satellite, which
     // leaves it at the exact center of the view: a known place to point at.
