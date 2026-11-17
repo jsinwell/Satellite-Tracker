@@ -3,6 +3,7 @@ import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { isSunlit, subSatellitePoint } from '../core/astro';
 import { wallNow } from '../core/clock';
+import { type EclipseView, eclipseFrom } from '../core/eclipse';
 import { footprintWidthKm } from '../core/ground';
 import { extrapolatePosition, hasState, speed, type Vec3 } from '../core/kinematics';
 import {
@@ -208,5 +209,11 @@ export function useViewingWindow(observer: Observer): ViewingWindow | null {
 /** The planets above `observer`'s horizon that the eye can see, brightest first. */
 export function usePlanetsUp(observer: Observer): PlanetInSky[] {
   const read = useCallback(() => planetsUp(observer, currentSimTime()), [observer]);
+  return usePolled(read, SKY_INTERVAL_MS);
+}
+
+/** The eclipse `observer` could see now, if any; see `eclipseFrom`. */
+export function useEclipse(observer: Observer): EclipseView | null {
+  const read = useCallback(() => eclipseFrom(observer, currentSimTime()), [observer]);
   return usePolled(read, SKY_INTERVAL_MS);
 }

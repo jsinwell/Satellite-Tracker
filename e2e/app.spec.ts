@@ -242,6 +242,24 @@ test.describe('with a catalog', () => {
     await expect(planets.getByText('Jupiter')).toBeVisible();
   });
 
+  test('says when an eclipse is happening overhead', async ({ page }) => {
+    // NASA's greatest eclipse of 2 August 2027, near Luxor: totality lasts
+    // over six minutes there.
+    await page.goto('/?t=2027-08-02T10:06:00Z');
+    await setPlace(page, '25.505, 33.183');
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    await expect(sky).toContainText('Total solar eclipse: the Moon is covering the Sun.');
+
+    // The total lunar eclipse of 3 March 2026, from Honolulu. The place is
+    // remembered and the panel opens with it, so it is changed from there.
+    await page.goto('/?t=2026-03-03T11:34:00Z');
+    await sky.getByRole('button', { name: 'Change' }).click();
+    const field = sky.getByLabel('Or type its coordinates');
+    await field.fill('21.31, -157.86');
+    await field.press('Enter');
+    await expect(sky).toContainText("Lunar eclipse: the Moon is in the Earth's shadow.");
+  });
+
   test('takes a place from a click on the globe', async ({ page }) => {
     await page.goto(`/?t=${FIXTURE_TIME}`);
     await page.getByRole('button', { name: 'Your sky' }).click();

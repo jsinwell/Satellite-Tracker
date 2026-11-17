@@ -24,9 +24,9 @@ import { TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
 import { labelLayer } from './labelLayer';
 
 /**
- * The planets are drawn at a stand-in distance inside the sky sphere, like
- * the Sun; only their directions are real. Seen from the ground, the stand-in
- * shifts them by under a tenth of a degree.
+ * The planets are drawn at a stand-in distance from the camera, inside the
+ * sky sphere, like the Sun: in the direction they really are from the camera,
+ * which near the Earth is not quite their direction from its center.
  */
 const PLANET_DISTANCE_KM = 750 * EARTH_RADIUS_KM;
 /** Planets move slowly against the stars: placed afresh after this much simulated time. */
@@ -147,16 +147,27 @@ export function Planets() {
     const simMs = currentSimTime();
     if (!(Math.abs(simMs - placed.current.atMs) < REFRESH_SIM_MS)) {
       const planets = planetPositions(simMs);
-      planets.forEach(({ direction, magnitude }, i) => {
-        positions[i * 3] = direction.x * PLANET_DISTANCE_KM;
-        positions[i * 3 + 1] = direction.y * PLANET_DISTANCE_KM;
-        positions[i * 3 + 2] = direction.z * PLANET_DISTANCE_KM;
+      planets.forEach(({ magnitude }, i) => {
         sizes[i] = dotSize(magnitude);
       });
-      dots.geometry.getAttribute('position').needsUpdate = true;
       dots.geometry.getAttribute('size').needsUpdate = true;
       placed.current = { atMs: simMs, planets };
     }
+
+    // Each frame, as the camera moves: the true position less the camera's,
+    // scaled down to the stand-in distance.
+    camera.updateMatrixWorld();
+    eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
+    placed.current.planets.forEach(({ direction, distanceKm }, i) => {
+      const x = direction.x * distanceKm - eye.x;
+      const y = direction.y * distanceKm - eye.y;
+      const z = direction.z * distanceKm - eye.z;
+      const scale = PLANET_DISTANCE_KM / Math.hypot(x, y, z);
+      positions[i * 3] = eye.x + x * scale;
+      positions[i * 3 + 1] = eye.y + y * scale;
+      positions[i * 3 + 2] = eye.z + z * scale;
+    });
+    dots.geometry.getAttribute('position').needsUpdate = true;
 
     const layer = labelLayer();
     if (layer && labels.current.length === 0) {
@@ -174,8 +185,6 @@ export function Planets() {
     // screen. Too faint to see by eye, the name is dimmer. Planets do pass
     // close by each other, so names keep clear of the other planets and of
     // each other, the brightest placed first.
-    camera.updateMatrixWorld();
-    eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
     tempEye.x = eye.x;
     tempEye.y = eye.y;
     tempEye.z = eye.z;
