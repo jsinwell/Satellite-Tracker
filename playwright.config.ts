@@ -24,8 +24,13 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         // Set PW_CHANNEL=chrome to use an installed Chrome instead of downloading one.
         channel: process.env.PW_CHANNEL,
-        // Headless machines have no GPU; render WebGL in software.
-        launchOptions: { args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'] },
+        // Headless machines have no GPU, so WebGL renders in software, which
+        // keeps every core busy. Set PW_GPU=1 on a machine that has one.
+        launchOptions: {
+          args: process.env.PW_GPU
+            ? ['--enable-gpu', '--ignore-gpu-blocklist']
+            : ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
+        },
       },
     },
   ],

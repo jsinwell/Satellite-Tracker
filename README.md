@@ -42,7 +42,9 @@ Other scripts:
 
 - `npm run check` runs the type checker, linter, and unit tests
 - `npm run e2e` builds the app and runs the Playwright tests. It needs a browser, so either
-  run `npx playwright install chromium` first or set `PW_CHANNEL=chrome` to use your own Chrome
+  run `npx playwright install chromium` first or set `PW_CHANNEL=chrome` to use your own Chrome.
+  They render in software by default, which is hard on the CPU. If the machine has a GPU, set
+  `PW_GPU=1`
 - `npm run bench` times SGP4 over the full catalog
 
 ## How it works

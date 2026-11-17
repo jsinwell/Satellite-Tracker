@@ -221,6 +221,24 @@ test.describe('on a phone-sized screen', () => {
     await expect(filters).toBeHidden();
   });
 
+  test('shows a summary of the selection until asked for more', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const panel = selection(page);
+    await expect(panel.getByText(/^4\d\d km up/)).toBeVisible();
+    await expect(panel.getByText('Inclination')).toBeHidden();
+    // Short enough to leave the globe in view.
+    const box = await panel.boundingBox();
+    expect(box?.height).toBeLessThan(800 * 0.3);
+
+    await page.getByRole('button', { name: 'Show details' }).click();
+    await expect(panel.getByText('Inclination')).toBeVisible();
+
+    // There is not room for both, so opening the filters folds the details away.
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
+    await expect(panel.getByText('Inclination')).toBeHidden();
+  });
+
   test('keeps every control on screen', async ({ page }) => {
     await serveFixture(page);
     await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
@@ -235,4 +253,22 @@ test.describe('on a phone-sized screen', () => {
       await expect(control).toBeInViewport({ ratio: 1 });
     }
   });
+});
+
+test('lays the bottom row out by screen width, not by what happens to fit', async ({ page }) => {
+  await serveFixture(page);
+  // Two widths in the same tier that used to wrap differently.
+  for (const width of [766, 776]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const status = await page.getByText(`${FIXTURE_SIZE} objects tracked`).boundingBox();
+    const time = await page.getByRole('region', { name: 'Simulation time' }).boundingBox();
+    const filters = await page.getByRole('region', { name: 'Filters' }).boundingBox();
+    if (!status || !time || !filters) throw new Error('Part of the bottom row is missing.');
+
+    // Filters on the left and status on the right, both above the time bar.
+    expect(filters.y + filters.height).toBeLessThanOrEqual(time.y);
+    expect(status.y + status.height).toBeLessThanOrEqual(time.y);
+    expect(status.x).toBeGreaterThan(filters.x + filters.width);
+  }
 });

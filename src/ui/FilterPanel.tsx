@@ -88,8 +88,10 @@ export function FilterPanel({ world }: { world: World }) {
   return (
     <Panel
       aria-label="Filters"
-      // Scrolls rather than running under the search box on a short window.
-      className="max-h-[42dvh] w-56 overflow-y-auto p-1.5 sm:max-h-[calc(100dvh-5.5rem)]"
+      // Scrolls rather than running under the search box on a short window. The
+      // allowance is for what shares its column: the search box above and, on
+      // tablet widths, the time bar below.
+      className="thin-scrollbar max-h-[42dvh] w-56 overflow-y-auto p-1.5 sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]"
     >
       <fieldset className="mb-1.5 flex gap-0.5 rounded-md bg-white/5 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>

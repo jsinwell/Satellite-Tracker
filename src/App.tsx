@@ -22,12 +22,22 @@ function useEscapeToDeselect() {
   }, []);
 }
 
+const BOTTOM_ROW = [
+  'absolute inset-x-3 bottom-3 grid items-end gap-x-3 gap-y-2',
+  "grid-cols-[auto_1fr] [grid-template-areas:'filters_filters'_'toggle_status'_'time_time']",
+  "sm:[grid-template-areas:'filters_status'_'time_time']",
+  "lg:grid-cols-[1fr_auto_1fr] lg:[grid-template-areas:'filters_time_status']",
+].join(' ');
+
 export function App() {
   const phase = useApp((state) => state.phase);
   const world = useApp((state) => state.world);
   const selected = useApp((state) => state.selected);
-  // Only matters on narrow screens, where the filters are tucked behind a button.
+  // Both only matter on narrow screens, where the filters are tucked behind a
+  // button and the selected satellite shows a summary until asked for the rest.
+  // Opening one closes the other: there is not room for both and the globe.
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   useEscapeToDeselect();
 
   if (phase !== 'ready' || world === null) return <BootScreen />;
@@ -50,35 +60,55 @@ export function App() {
             <SearchBox world={world} />
           </div>
           {selected !== null && (
-            // Capped and scrollable, so on a phone it cannot cover the whole globe.
-            <div className="pointer-events-auto max-h-[42dvh] w-full overflow-y-auto rounded-xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
-              <InfoPanel key={selected} world={world} index={selected} />
+            // Capped and scrollable, so it can never run under the bottom row.
+            <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
+              <InfoPanel
+                key={selected}
+                world={world}
+                index={selected}
+                expanded={detailsOpen}
+                onToggleExpanded={() => {
+                  setDetailsOpen((open) => !open);
+                  setFiltersOpen(false);
+                }}
+              />
             </div>
           )}
         </div>
 
         {/*
-          Wide screens: filters, time and status side by side along the bottom.
-          Narrow screens: the filters open from a button, the status sits beside
-          that button, and the time controls take the full width underneath.
+          Placed by named grid areas that change at fixed breakpoints, so the
+          layout depends on the width of the screen and not on whether the
+          panels happen to fit side by side.
+            phone:   filters (when open) / [Filters] status / time, full width
+            tablet:  filters, status / time, centered
+            desktop: filters, time, status in one row
         */}
-        <div className="absolute inset-x-3 bottom-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
-          <div id="filters" className={`w-full sm:block sm:w-auto ${filtersOpen ? '' : 'hidden'}`}>
+        <div className={BOTTOM_ROW}>
+          <div
+            id="filters"
+            className={`[grid-area:filters] sm:block ${filtersOpen ? '' : 'hidden'}`}
+          >
             <FilterPanel world={world} />
           </div>
           <button
             type="button"
-            onClick={() => setFiltersOpen((open) => !open)}
+            onClick={() => {
+              setFiltersOpen((open) => !open);
+              setDetailsOpen(false);
+            }}
             aria-expanded={filtersOpen}
             aria-controls="filters"
-            className="pointer-events-auto rounded-xl border border-white/10 bg-slate-950/75 px-3 py-2 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md aria-expanded:border-accent/60 sm:hidden"
+            className="pointer-events-auto rounded-xl border border-white/10 bg-slate-950/75 px-3 py-2 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md [grid-area:toggle] aria-expanded:border-accent/60 sm:hidden"
           >
             Filters
           </button>
-          <div className="order-last w-full sm:order-none sm:w-auto">
+          <div className="[grid-area:time] sm:justify-self-center">
             <TimeBar />
           </div>
-          <StatusLine world={world} />
+          <div className="justify-self-end [grid-area:status]">
+            <StatusLine world={world} />
+          </div>
         </div>
       </div>
 
