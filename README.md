@@ -39,6 +39,8 @@ computed live in the browser.
 - Works on a phone.
 - Move the camera with WASD or the arrow keys, and zoom with Q and E. Looking up, the same
   keys turn your view.
+- Remembers your filters, color scheme, what's drawn on the globe and your location from one
+  visit to the next.
 - Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
   moment in time with `?t=2026-11-16T06:30:00Z`.
 
