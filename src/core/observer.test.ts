@@ -8,8 +8,10 @@ import type { Vec3 } from './kinematics';
 import {
   canBeSeen,
   isObserver,
+  LOW_ORBIT_DARK_SUN_ELEVATION,
   lookAngles,
   MIN_PASS_ELEVATION,
+  nextViewingWindow,
   type Observer,
   observerFrame,
   type Pass,
@@ -18,6 +20,7 @@ import {
   skyNow,
   skyState,
   sunElevation,
+  sunElevationAt,
 } from './observer';
 import { createSatRec, Propagator, STATE_STRIDE } from './propagator';
 
@@ -195,6 +198,40 @@ describe('skyNow', () => {
   it('leaves out GOES 16 from the far side of the world, where it is below the horizon', () => {
     const sky = skyNow(observerFrame(farFromGoes, timeMs), timeMs, state, 2, 0, all, all);
     expect(sky.above.some((entry) => entry.index === 1)).toBe(false);
+  });
+});
+
+describe('nextViewingWindow', () => {
+  const losAngeles: Observer = { latitude: 34.05, longitude: -118.44 };
+  const atMidnight = Date.parse('2026-11-17T08:33:00Z'); // 12:33 AM there
+
+  it('puts low orbit in the dark at about 500 km', () => {
+    expect(LOW_ORBIT_DARK_SUN_ELEVATION).toBeCloseTo(-22, 1);
+  });
+
+  it('finds the hour before dawn, from the middle of the night', () => {
+    const window = nextViewingWindow(losAngeles, atMidnight);
+    if (!window) throw new Error('expected a window');
+    // Sunrise is about 6:30 AM, 14:30 UTC: the window ends at civil dawn,
+    // around 6:05, and starts an hour or so before that.
+    expect(window.startMs).toBeGreaterThan(Date.parse('2026-11-17T12:30:00Z'));
+    expect(window.endMs).toBeLessThan(Date.parse('2026-11-17T14:20:00Z'));
+    expect(sunElevationAt(losAngeles, window.startMs)).toBeCloseTo(LOW_ORBIT_DARK_SUN_ELEVATION, 0);
+    expect(sunElevationAt(losAngeles, window.endMs)).toBeCloseTo(-6, 0);
+  });
+
+  it('starts now when now is already a good time', () => {
+    const first = nextViewingWindow(losAngeles, atMidnight);
+    if (!first) throw new Error('expected a window');
+    const during = (first.startMs + first.endMs) / 2;
+    const window = nextViewingWindow(losAngeles, during);
+    expect(window?.startMs).toBe(during);
+    expect(Math.abs((window?.endMs ?? 0) - first.endMs)).toBeLessThan(60_000);
+  });
+
+  it('finds none where the Sun never sets', () => {
+    const arcticSummer = Date.parse('2026-06-21T00:00:00Z');
+    expect(nextViewingWindow({ latitude: 80, longitude: 0 }, arcticSummer)).toBeNull();
   });
 });
 

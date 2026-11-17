@@ -165,6 +165,8 @@ test.describe('with a catalog', () => {
     await coordinates.press('Enter');
     await expect(sky).toContainText('41.88° N, 87.63° W');
     await expect(sky.getByText(/^[\d,]+ above the horizon/)).toBeVisible();
+    // Half past midnight there: it says when to come back.
+    await expect(sky.getByText(/^Best time to look: /)).toBeVisible();
 
     const passes = selection(page).getByRole('list', { name: 'Next passes' });
     await expect(passes.getByRole('listitem').first()).toContainText(/\d+° high · \d+ min/);
