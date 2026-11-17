@@ -9,6 +9,7 @@ import {
   InstancedInterleavedBuffer,
   InterleavedBufferAttribute,
   LineSegments,
+  MathUtils,
   Points,
   ShaderMaterial,
   Vector3,
@@ -22,7 +23,14 @@ import { wallNow } from '../core/clock';
 import { type ConstellationId, soleEnabled } from '../core/constellation';
 import { trailSeconds, type Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
-import { ORBIT_GLSL } from './orbitGlsl';
+import { ORBIT_GLSL, SHADOW_BRIGHTNESS } from './orbitGlsl';
+import { groundView } from './SkyDome';
+
+/**
+ * The smallest a satellite is drawn, CSS px. From the ground the far ones,
+ * navigation and geostationary satellites, would otherwise be specks.
+ */
+const MIN_POINT_SIZE = { space: 1.6, ground: 2.6 } as const;
 
 /** Relative point size by object type; debris is drawn smaller so payloads read first. */
 const TYPE_SIZES: Record<ObjectType, number> = {
@@ -41,6 +49,7 @@ const SHARED_GLSL = /* glsl */ `
 
   uniform float uDt;
   uniform vec3 uSunDirection;
+  uniform float uShadowBrightness;
 
   ${ORBIT_GLSL}
 
@@ -55,6 +64,7 @@ const SHARED_GLSL = /* glsl */ `
 const pointVertexShader = /* glsl */ `
   attribute float aSize;
   uniform float uPixelRatio;
+  uniform float uMinSize;
   varying vec3 vColor;
 
   ${SHARED_GLSL}
@@ -71,10 +81,10 @@ const pointVertexShader = /* glsl */ `
     gl_Position = projectionMatrix * viewPosition;
 
     // Shrink with distance (in Earth radii), but never below a visible dot.
-    float size = clamp(aSize * 9.0 / -viewPosition.z, 1.6, 6.0);
+    float size = clamp(aSize * 9.0 / -viewPosition.z, uMinSize, 6.0);
     gl_PointSize = size * uPixelRatio;
     // Satellites dim as they pass into the Earth's shadow.
-    vColor = aColor * sunlight(p, uSunDirection);
+    vColor = aColor * sunlight(p, uSunDirection, uShadowBrightness);
   }
 `;
 
@@ -107,7 +117,7 @@ const trailVertexShader = /* glsl */ `
     float tail = position.x; // 0 at the satellite, 1 at the far end of its trail
     vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * uTrailSeconds);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-    vColor = vec4(aColor * sunlight(p, uSunDirection), (1.0 - tail) * 0.4);
+    vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), (1.0 - tail) * 0.4);
   }
 `;
 
@@ -163,6 +173,8 @@ function buildSatellites(world: World) {
     uSunDirection: { value: new Vector3(1, 0, 0) },
     uPixelRatio: { value: 1 },
     uTrailSeconds: { value: 0 },
+    uShadowBrightness: { value: SHADOW_BRIGHTNESS.space as number },
+    uMinSize: { value: MIN_POINT_SIZE.space as number },
   };
 
   const pointGeometry = instanced([0, 0, 0]);
@@ -246,7 +258,7 @@ export function Satellites({ world }: { world: World }) {
   );
 
   const uploadedVersion = useRef(-1);
-  useFrame(({ gl }) => {
+  useFrame(({ gl, camera }) => {
     const { simulation } = world;
     const { clock } = useApp.getState();
     simulation.update(clock, wallNow());
@@ -260,6 +272,14 @@ export function Satellites({ world }: { world: World }) {
     const sun = sunDirection(simMs, scratch);
     uniforms.uSunDirection.value.set(sun.x, sun.y, sun.z);
     uniforms.uPixelRatio.value = gl.getPixelRatio();
+    // Brighter and bigger from the ground, eased in on the way down.
+    const ground = groundView(camera.position.length() - 1);
+    uniforms.uShadowBrightness.value = MathUtils.lerp(
+      SHADOW_BRIGHTNESS.space,
+      SHADOW_BRIGHTNESS.ground,
+      ground,
+    );
+    uniforms.uMinSize.value = MathUtils.lerp(MIN_POINT_SIZE.space, MIN_POINT_SIZE.ground, ground);
 
     uniforms.uTrailSeconds.value = trailSeconds(clock.rate);
     trails.visible = uniforms.uTrailSeconds.value !== 0;
