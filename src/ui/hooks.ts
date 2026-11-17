@@ -3,6 +3,7 @@ import { currentSimTime } from '../app/store';
 import type { World } from '../app/world';
 import { isSunlit, subSatellitePoint } from '../core/astro';
 import { wallNow } from '../core/clock';
+import { footprintWidthKm } from '../core/ground';
 import { extrapolatePosition, hasState, speed, type Vec3 } from '../core/kinematics';
 
 /**
@@ -40,6 +41,8 @@ export interface Telemetry {
   altitudeKm: number;
   speedKmS: number;
   sunlit: boolean;
+  /** How wide its coverage is, km: the stretch of ground that has it above the horizon. */
+  footprintKm: number;
 }
 
 const TELEMETRY_INTERVAL_MS = 250;
@@ -59,6 +62,7 @@ function readTelemetry(world: World, index: number): Telemetry | null {
     ...subSatellitePoint(position, simMs),
     speedKmS: speed(simulation.state, index),
     sunlit: isSunlit(position, simMs),
+    footprintKm: footprintWidthKm(Math.hypot(position.x, position.y, position.z)),
   };
 }
 

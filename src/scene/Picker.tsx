@@ -86,7 +86,11 @@ export function Picker({ world }: { world: World }) {
       pressedAt = null;
       if (traveled > CLICK_SLOP) return;
       const radius = event.pointerType === 'mouse' ? PICK_RADIUS.mouse : PICK_RADIUS.touch;
-      useApp.getState().select(pick(world, camera, element, released, radius));
+      const hit = pick(world, camera, element, released, radius);
+      // A click on nothing clears the selection, except during a ride, where
+      // the camera is dragged about constantly and a slip would end the trip.
+      const { riding, select } = useApp.getState();
+      if (hit !== null || !riding) select(hit);
     };
     const onPointerLeave = () => {
       hoverPoint.current = null;

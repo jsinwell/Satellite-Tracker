@@ -11,6 +11,11 @@ computed live in the browser.
 
 - Search by name or NORAD ID, or click a satellite, to see where it is, how fast it's moving,
   whether it's in sunlight, and the orbit it's on.
+- Ride along with a satellite. The camera sits just behind it and follows it around its orbit,
+  with the horizon ahead and the ground going by underneath. Drag to look around.
+- A selected satellite shows its ground track for the next orbit, marked with the times it'll
+  pass over each place, and its coverage: the part of the Earth that has it above the horizon
+  right now. Either one, and the orbit, can be switched off.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the
@@ -25,8 +30,8 @@ computed live in the browser.
 - Drag the "Launched by" slider to see what was up in a given year, or press play and watch
   orbit fill in. It only covers objects that are still up there.
 - Works on a phone.
-- Link straight to a satellite with `?sat=25544`, or to a moment in time with
-  `?t=2026-11-16T06:30:00Z`.
+- Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
+  moment in time with `?t=2026-11-16T06:30:00Z`.
 
 ## Running it
 

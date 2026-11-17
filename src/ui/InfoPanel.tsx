@@ -10,6 +10,7 @@ import {
   formatPeriod,
 } from './format';
 import { useSimTime, useTelemetry } from './hooks';
+import { OverlayLegend } from './OverlayLegend';
 import { Panel } from './Panel';
 
 /**
@@ -57,6 +58,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
   const satellite = world.satellites[index];
   const orbit = world.orbits[index];
   const telemetry = useTelemetry(world, index);
+  const riding = useApp((state) => state.riding);
   const simMs = useSimTime(1000);
   const elementsAgeMs = simMs - Date.parse(satellite.elements.epoch);
   const stale = Math.abs(elementsAgeMs) > STALE_ELEMENTS_MS;
@@ -117,6 +119,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
               <Row label="Altitude">{formatInteger(telemetry.altitudeKm)} km</Row>
               <Row label="Speed">{telemetry.speedKmS.toFixed(2)} km/s</Row>
               <Row label="Lighting">{telemetry.sunlit ? 'Sunlit' : 'In eclipse'}</Row>
+              <Row label="Coverage">{formatInteger(telemetry.footprintKm)} km across</Row>
             </>
           ) : (
             <p className="py-1 text-slate-400">
@@ -147,6 +150,8 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
             </p>
           )}
         </Section>
+
+        <OverlayLegend world={world} index={index} />
       </div>
 
       {/* Stays in reach at the bottom of the panel while the details scroll behind it. */}
@@ -160,13 +165,26 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
         >
           {expanded ? 'Hide details' : 'Show details'}
         </button>
-        <button
-          type="button"
-          onClick={() => useApp.getState().focusSelected()}
-          className={actionClass}
-        >
-          Center view<span className="max-sm:hidden"> on satellite</span>
-        </button>
+        {/* During a ride the camera is already on the satellite. */}
+        {!riding && (
+          <button
+            type="button"
+            onClick={() => useApp.getState().focusSelected()}
+            className={actionClass}
+          >
+            Center view
+          </button>
+        )}
+        {/* Nothing to ride along with until the satellite has a position. */}
+        {(telemetry || riding) && (
+          <button
+            type="button"
+            onClick={() => useApp.getState().setRiding(!riding)}
+            className={actionClass}
+          >
+            {riding ? 'Stop riding' : 'Ride along'}
+          </button>
+        )}
       </div>
     </Panel>
   );

@@ -124,6 +124,26 @@ export class Propagator {
 }
 
 /**
+ * The TEME position (km) of a satellite at each of `timesMs`, three floats per
+ * instant. Returns null if any sample fails.
+ */
+export function samplePositions(
+  record: SatelliteRecord,
+  timesMs: ArrayLike<number>,
+  out: Float32Array = new Float32Array(timesMs.length * 3),
+): Float32Array | null {
+  const satrec = createSatRec(record);
+  if (!satrec) return null;
+  const satrecEpochMs = epochMs(satrec);
+  const state = new Float32Array(STATE_STRIDE);
+  for (let i = 0; i < timesMs.length; i++) {
+    if (!writeState(satrec, satrecEpochMs, timesMs[i], state, 0)) return null;
+    out.set(state.subarray(0, 3), i * 3);
+  }
+  return out;
+}
+
+/**
  * Samples one full revolution of a satellite's orbit, centered on `timeMs`, as
  * `segments + 1` TEME positions (km). Returns null if any sample fails.
  */
@@ -133,15 +153,10 @@ export function sampleOrbit(
   segments: number,
   out: Float32Array = new Float32Array((segments + 1) * 3),
 ): Float32Array | null {
-  const satrec = createSatRec(record);
-  if (!satrec) return null;
-  const satrecEpochMs = epochMs(satrec);
   const periodMs = MS_PER_DAY / record.elements.meanMotion;
-  const state = new Float32Array(STATE_STRIDE);
-  for (let i = 0; i <= segments; i++) {
-    const sampleMs = timeMs + (i / segments - 0.5) * periodMs;
-    if (!writeState(satrec, satrecEpochMs, sampleMs, state, 0)) return null;
-    out.set(state.subarray(0, 3), i * 3);
-  }
-  return out;
+  const timesMs = Float64Array.from(
+    { length: segments + 1 },
+    (_, i) => timeMs + (i / segments - 0.5) * periodMs,
+  );
+  return samplePositions(record, timesMs, out);
 }

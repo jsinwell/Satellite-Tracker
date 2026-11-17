@@ -5,6 +5,7 @@ import { createWorld, type World } from './world';
 
 const CATALOG_URL = `${import.meta.env.BASE_URL}data/catalog.json`;
 const SATELLITE_PARAM = 'sat';
+const RIDE_PARAM = 'ride';
 const TIME_PARAM = 't';
 
 async function fetchCatalog(): Promise<unknown> {
@@ -20,20 +21,28 @@ async function fetchCatalog(): Promise<unknown> {
   return response.json();
 }
 
-/** Keeps `?sat=<NORAD ID>` in step with the selection, so a view can be linked to. */
+/**
+ * Keeps `?sat=<NORAD ID>` in step with the selection, and `&ride=1` with
+ * whether the camera is riding along with it, so a view can be linked to.
+ */
 function syncSelectionWithUrl(world: World): void {
-  const requested = Number(new URLSearchParams(window.location.search).get(SATELLITE_PARAM));
-  const index = world.indexByNoradId.get(requested);
-  if (index !== undefined) useApp.getState().selectAndFocus(index);
+  const params = new URLSearchParams(window.location.search);
+  const index = world.indexByNoradId.get(Number(params.get(SATELLITE_PARAM)));
+  if (index !== undefined) {
+    useApp.getState().selectAndFocus(index);
+    if (params.get(RIDE_PARAM) === '1') useApp.getState().setRiding(true);
+  }
 
   useApp.subscribe((state, previous) => {
-    if (state.selected === previous.selected) return;
+    if (state.selected === previous.selected && state.riding === previous.riding) return;
     const url = new URL(window.location.href);
     if (state.selected === null) {
       url.searchParams.delete(SATELLITE_PARAM);
     } else {
       url.searchParams.set(SATELLITE_PARAM, String(world.satellites[state.selected].noradId));
     }
+    if (state.riding) url.searchParams.set(RIDE_PARAM, '1');
+    else url.searchParams.delete(RIDE_PARAM);
     window.history.replaceState(null, '', url);
   });
 }

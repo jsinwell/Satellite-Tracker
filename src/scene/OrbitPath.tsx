@@ -1,11 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { BufferAttribute, BufferGeometry, DynamicDrawUsage, Line, LineBasicMaterial } from 'three';
 import { satelliteColor } from '../app/palette';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
 import { sampleOrbit } from '../core/propagator';
+import { OVERLAY_ORDER } from './frame';
+import { ScreenLine } from './ScreenLine';
 
 const SEGMENTS = 256;
 /**
@@ -21,32 +22,20 @@ const REFRESH_INTERVAL_MS = 200;
  * Earth turns underneath it.
  */
 export function OrbitPath({ world }: { world: World }) {
-  const { line, positions, samples } = useMemo(() => {
-    const samples = new Float32Array((SEGMENTS + 1) * 3);
-    const positions = new BufferAttribute(samples, 3);
-    positions.setUsage(DynamicDrawUsage);
-    const line = new Line(
-      new BufferGeometry().setAttribute('position', positions),
-      // The color is set whenever the line is drawn, to match its satellite.
-      new LineBasicMaterial({ transparent: true, opacity: 0.75 }),
-    );
-    line.frustumCulled = false;
+  const line = useMemo(() => {
+    // The color is set whenever the line is drawn, to match its satellite.
+    const line = new ScreenLine({ capacity: SEGMENTS + 1, width: 1.5, opacity: 0.75 });
+    line.renderOrder = OVERLAY_ORDER.orbit;
     line.visible = false;
-    return { line, positions, samples };
+    return line;
   }, []);
 
-  useEffect(
-    () => () => {
-      line.geometry.dispose();
-      line.material.dispose();
-    },
-    [line],
-  );
+  useEffect(() => () => line.dispose(), [line]);
 
   const drawn = useRef({ index: -1, at: 0 });
   useFrame(() => {
-    const { selected, colorBy, filters } = useApp.getState();
-    if (selected === null) {
+    const { selected, colorBy, filters, overlays } = useApp.getState();
+    if (selected === null || !overlays.orbit) {
       line.visible = false;
       drawn.current.index = -1;
       return;
@@ -57,11 +46,11 @@ export function OrbitPath({ world }: { world: World }) {
 
     // The orbit belongs to the satellite, so it wears the satellite's color.
     const alone = soleEnabled(filters.constellations);
-    line.material.color.set(satelliteColor(world, selected, colorBy, alone));
+    line.color.set(satelliteColor(world, selected, colorBy, alone));
 
-    const sampled = sampleOrbit(world.satellites[selected], currentSimTime(), SEGMENTS, samples);
-    positions.needsUpdate = true;
-    line.visible = sampled !== null;
+    const record = world.satellites[selected];
+    line.visible = sampleOrbit(record, currentSimTime(), SEGMENTS, line.positions) !== null;
+    line.update(SEGMENTS + 1);
   });
 
   return <primitive object={line} />;

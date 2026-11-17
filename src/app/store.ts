@@ -18,6 +18,10 @@ import type { World } from './world';
 /** What a satellite's color stands for. */
 export type ColorBy = 'type' | 'constellation';
 
+/** What can be drawn for the selected satellite, each of which can be turned off. */
+export const OVERLAYS = ['orbit', 'groundTrack', 'coverage'] as const;
+export type Overlay = (typeof OVERLAYS)[number];
+
 interface AppState {
   phase: 'loading' | 'ready' | 'error';
   error: string | null;
@@ -30,6 +34,10 @@ interface AppState {
   hovered: number | null;
   /** Incremented to ask the camera to fly to the selected satellite. */
   focusRequests: number;
+  /** Whether the camera is traveling with the selected satellite. */
+  riding: boolean;
+  /** Which drawings accompany the selected satellite. Kept from one selection to the next. */
+  overlays: Readonly<Record<Overlay, boolean>>;
 
   colorBy: ColorBy;
   filters: Filters;
@@ -53,6 +61,13 @@ interface AppActions {
   focusSelected(): void;
   /** Selects a satellite that may be anywhere, and brings it into view. */
   selectAndFocus(index: number): void;
+  /**
+   * Starts or stops riding along with the selected satellite. Choosing another
+   * satellite during the ride carries on with that one; clearing the selection
+   * ends it.
+   */
+  setRiding(riding: boolean): void;
+  toggleOverlay(overlay: Overlay): void;
   /**
    * Switches what color stands for. The legend only shows the filter that
    * matches, so the other one is reset rather than left on out of sight.
@@ -104,19 +119,27 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     selected: null,
     hovered: null,
     focusRequests: 0,
+    riding: false,
+    overlays: { orbit: true, groundTrack: true, coverage: true },
     colorBy: 'type',
     ...applyFilters(null, SHOW_EVERYTHING),
 
     ready: (world) => set({ phase: 'ready', world, ...applyFilters(world, get().filters) }),
     fail: (message) => set({ phase: 'error', error: message }),
 
-    select: (index) => set({ selected: index }),
+    select: (index) =>
+      set(index === null ? { selected: null, riding: false } : { selected: index }),
     hover: (index) => {
       if (get().hovered !== index) set({ hovered: index });
     },
     focusSelected: () => set((state) => ({ focusRequests: state.focusRequests + 1 })),
     selectAndFocus: (index) =>
       set((state) => ({ selected: index, focusRequests: state.focusRequests + 1 })),
+    setRiding: (riding) => {
+      if (!riding || get().selected !== null) set({ riding });
+    },
+    toggleOverlay: (overlay) =>
+      set(({ overlays }) => ({ overlays: { ...overlays, [overlay]: !overlays[overlay] } })),
 
     setColorBy: (colorBy) => {
       if (get().colorBy === colorBy) return;

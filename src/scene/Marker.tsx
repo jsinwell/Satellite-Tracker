@@ -4,6 +4,7 @@ import { BufferAttribute, BufferGeometry, Color, Points, ShaderMaterial } from '
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { extrapolatePosition, hasState, type Vec3 } from '../core/kinematics';
+import { OVERLAY_ORDER } from './frame';
 
 const vertexShader = /* glsl */ `
   uniform float uSize;
@@ -56,6 +57,7 @@ export function Marker({ world, target, color, size }: MarkerProps) {
     });
     const points = new Points(geometry, material);
     points.frustumCulled = false;
+    points.renderOrder = OVERLAY_ORDER.marker;
     points.visible = false;
     return { points, position, material };
   }, [color, size]);

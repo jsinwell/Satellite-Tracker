@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useApp } from './app/store';
+import { setLabelLayer } from './scene/labelLayer';
 import { Scene } from './scene/Scene';
 import { BootScreen } from './ui/BootScreen';
 import { FilterPanel } from './ui/FilterPanel';
@@ -9,13 +10,17 @@ import { SearchBox } from './ui/SearchBox';
 import { StatusLine } from './ui/StatusLine';
 import { TimeBar } from './ui/TimeBar';
 
-/** Escape clears the selection, unless a text field wants the key. */
+/**
+ * Escape backs out one step: off the ride if the camera is on one, otherwise
+ * out of the selection. Not while a text field wants the key.
+ */
 function useEscapeToDeselect() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !(event.target instanceof HTMLInputElement)) {
-        useApp.getState().select(null);
-      }
+      if (event.key !== 'Escape' || event.target instanceof HTMLInputElement) return;
+      const { riding, setRiding, select } = useApp.getState();
+      if (riding) setRiding(false);
+      else select(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -47,6 +52,12 @@ export function App() {
       <div className="absolute inset-0">
         <Scene world={world} />
       </div>
+      {/* Text the scene pins to places on the globe; under the HUD, over the canvas. */}
+      <div
+        ref={setLabelLayer}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+      />
 
       {/*
         The HUD floats over the globe; only its panels take pointer input.
