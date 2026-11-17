@@ -80,4 +80,5 @@ instead. You can force a real download with `npm run data -- --fresh`, but don't
 
 Orbital data from [CelesTrak](https://celestrak.org), propagation by
 [satellite.js](https://github.com/shashwatak/satellite-js), Earth textures from the
-[three.js](https://github.com/mrdoob/three.js) examples.
+[three.js](https://github.com/mrdoob/three.js) examples, star map from
+[NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851).

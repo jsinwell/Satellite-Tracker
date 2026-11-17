@@ -9,7 +9,7 @@ import { Marker } from './Marker';
 import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
 import { Satellites } from './Satellites';
-import { Stars } from './Stars';
+import { Sky } from './Sky';
 
 const UnsupportedNotice = (
   <p className="p-6 text-center text-slate-300">
@@ -29,11 +29,14 @@ export function Scene({ world }: { world: World }) {
       aria-label="3D view of the Earth and the satellites orbiting it"
     >
       <color attach="background" args={['#05070d']} />
-      <Stars />
       <CameraRig world={world} />
       <Picker world={world} />
 
       <group rotation={[...TEME_GROUP_ROTATION]} scale={TEME_GROUP_SCALE}>
+        {/* Loads after everything else; the plain background stands in until then. */}
+        <Suspense fallback={null}>
+          <Sky />
+        </Suspense>
         <Suspense fallback={<EarthPlaceholder />}>
           <Earth />
         </Suspense>
