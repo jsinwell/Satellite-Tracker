@@ -8,6 +8,7 @@ import { Earth, EarthPlaceholder } from './Earth';
 import { TEME_GROUP_ROTATION, TEME_GROUP_SCALE } from './frame';
 import { GroundTrack } from './GroundTrack';
 import { Marker } from './Marker';
+import { ObserverMarker } from './ObserverMarker';
 import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
 import { Satellites } from './Satellites';
@@ -50,6 +51,7 @@ export function Scene({ world }: { world: World }) {
         <OrbitPath world={world} />
         <Coverage world={world} />
         <GroundTrack world={world} />
+        <ObserverMarker />
         <Marker world={world} target="hovered" color="#ffffff" size={18} />
         <Marker world={world} target="selected" color={ACCENT_COLOR} size={26} />
       </group>

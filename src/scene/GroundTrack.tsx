@@ -15,7 +15,7 @@ import {
 } from '../core/ground';
 import { GROUND_LINE_RADIUS_KM, OVERLAY_ORDER } from './frame';
 import { GroundDots } from './GroundDots';
-import { labelLayer } from './labelLayer';
+import { labelLayer, screenPosition } from './labelLayer';
 import { ScreenLine } from './ScreenLine';
 
 // A little of where the satellite has just been, and its whole next revolution.
@@ -54,12 +54,8 @@ function trackFade(line: ScreenLine): void {
 }
 
 const point = new Vector3();
-const eye = new Vector3();
 
-/**
- * Where on the screen a point in the track's Earth-fixed frame is, in CSS
- * pixels, or null if the Earth hides it or it is off screen.
- */
+/** Where on the screen a point in the track's Earth-fixed frame is; see `screenPosition`. */
 function toScreen(
   group: Group,
   camera: Camera,
@@ -69,12 +65,7 @@ function toScreen(
   offset: number,
 ): { x: number; y: number } | null {
   point.set(local[offset], local[offset + 1], local[offset + 2]).applyMatrix4(group.matrixWorld);
-  // On the far side of the Earth if the camera is below its local horizon.
-  eye.copy(camera.position).sub(point);
-  if (eye.dot(point) <= 0) return null;
-  point.project(camera);
-  if (point.z > 1 || Math.abs(point.x) > 1 || Math.abs(point.y) > 1) return null;
-  return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height };
+  return screenPosition(point, camera, width, height);
 }
 
 /** One label per mark, created in the label layer on first use. */

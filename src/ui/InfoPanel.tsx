@@ -12,6 +12,7 @@ import {
 import { useSimTime, useTelemetry } from './hooks';
 import { OverlayLegend } from './OverlayLegend';
 import { Panel } from './Panel';
+import { PassList } from './PassList';
 
 /**
  * SGP4 loses roughly a kilometer or more of accuracy per day away from the
@@ -59,6 +60,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
   const orbit = world.orbits[index];
   const telemetry = useTelemetry(world, index);
   const riding = useApp((state) => state.riding);
+  const observer = useApp((state) => state.observer);
   const simMs = useSimTime(1000);
   const elementsAgeMs = simMs - Date.parse(satellite.elements.epoch);
   const stale = Math.abs(elementsAgeMs) > STALE_ELEMENTS_MS;
@@ -127,6 +129,8 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
             </p>
           )}
         </Section>
+
+        {observer && <PassList world={world} index={index} observer={observer} />}
 
         <Section title="Orbit">
           <Row label="Period">{formatPeriod(orbit.periodMinutes)}</Row>

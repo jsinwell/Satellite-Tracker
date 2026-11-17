@@ -7,24 +7,43 @@ import { FilterPanel } from './ui/FilterPanel';
 import { HoverLabel } from './ui/HoverLabel';
 import { InfoPanel } from './ui/InfoPanel';
 import { SearchBox } from './ui/SearchBox';
+import { SkyPanel } from './ui/SkyPanel';
 import { StatusLine } from './ui/StatusLine';
 import { TimeBar } from './ui/TimeBar';
 
 /**
- * Escape backs out one step: off the ride if the camera is on one, otherwise
- * out of the selection. Not while a text field wants the key.
+ * Escape backs out one step: out of choosing a place on the globe, off the
+ * ride if the camera is on one, otherwise out of the selection. Not while a
+ * text field wants the key.
  */
 function useEscapeToDeselect() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.target instanceof HTMLInputElement) return;
-      const { riding, setRiding, select } = useApp.getState();
-      if (riding) setRiding(false);
+      const { pickingObserver, setPickingObserver, riding, setRiding, select } = useApp.getState();
+      if (pickingObserver) setPickingObserver(false);
+      else if (riding) setRiding(false);
       else select(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+}
+
+/** A crescent and a star: the night sky. */
+function SkyIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path
+        d="M11.5 3.2a6.8 6.8 0 1 0 5.3 9.9 5.6 5.6 0 0 1-5.3-9.9Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="m15 2.5.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6Z" fill="currentColor" />
+    </svg>
+  );
 }
 
 const BOTTOM_ROW = [
@@ -43,6 +62,8 @@ export function App() {
   // Opening one closes the other: there is not room for both and the globe.
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // Open from the start for anyone who has said where they are before.
+  const [skyOpen, setSkyOpen] = useState(() => useApp.getState().observer !== null);
   useEscapeToDeselect();
 
   if (phase !== 'ready' || world === null) return <BootScreen />;
@@ -66,9 +87,36 @@ export function App() {
       */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-x-3 top-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="w-full sm:w-80">
+          <div className="flex w-full flex-col gap-3 sm:w-80">
             <h1 className="sr-only">Satellite Tracker</h1>
-            <SearchBox world={world} />
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <SearchBox world={world} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setSkyOpen((open) => !open)}
+                aria-expanded={skyOpen}
+                aria-controls="your-sky"
+                aria-label="Your sky"
+                title="What's over you"
+                className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white aria-expanded:border-accent/60 aria-expanded:text-accent"
+              >
+                <SkyIcon />
+              </button>
+            </div>
+            {skyOpen && (
+              // On a phone the selected satellite takes this spot; the sky
+              // comes back when it is closed.
+              <div
+                id="your-sky"
+                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-xl sm:block sm:max-h-[50dvh] ${
+                  selected === null ? '' : 'hidden'
+                }`}
+              >
+                <SkyPanel world={world} onClose={() => setSkyOpen(false)} />
+              </div>
+            )}
           </div>
           {selected !== null && (
             // Capped and scrollable, so it can never run under the bottom row.

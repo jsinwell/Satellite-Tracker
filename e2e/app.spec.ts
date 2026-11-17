@@ -149,6 +149,73 @@ test.describe('with a catalog', () => {
     );
   });
 
+  test('shows what is over a chosen place, and when a satellite passes over it', async ({
+    page,
+  }) => {
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    await page.getByRole('button', { name: 'Your sky' }).click();
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    const coordinates = sky.getByLabel('Or type its coordinates');
+
+    await coordinates.fill('Chicago');
+    await coordinates.press('Enter');
+    await expect(sky.getByText(/doesn't look like a latitude and longitude/)).toBeVisible();
+
+    await coordinates.fill('41.88, -87.63');
+    await coordinates.press('Enter');
+    await expect(sky).toContainText('41.88° N, 87.63° W');
+    await expect(sky.getByText(/^[\d,]+ above the horizon/)).toBeVisible();
+
+    const passes = selection(page).getByRole('list', { name: 'Next passes' });
+    await expect(passes.getByRole('listitem').first()).toContainText(/\d+° high · \d+ min/);
+
+    // Choosing a pass sets the clock to just before it.
+    const clock = page.getByRole('region', { name: 'Simulation time' }).locator('time');
+    const before = await clock.textContent();
+    await passes.getByRole('button').first().click();
+    await expect(clock).not.toHaveText(before ?? '');
+
+    // The place is remembered for next time, and the panel opens with it.
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Your sky' })).toContainText('41.88° N');
+  });
+
+  test('takes a place from a click on the globe', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await page.getByRole('button', { name: 'Your sky' }).click();
+    const sky = page.getByRole('region', { name: 'Your sky' });
+
+    // Escape thinks better of it.
+    await sky.getByRole('button', { name: 'Pick on the globe' }).click();
+    await expect(sky.getByText('Click where you are on the globe.')).toBeVisible();
+    await page.locator('canvas').focus();
+    await page.keyboard.press('Escape');
+    await expect(sky.getByRole('button', { name: 'Pick on the globe' })).toBeVisible();
+
+    // The Earth fills the middle of the view at the start.
+    await sky.getByRole('button', { name: 'Pick on the globe' }).click();
+    const viewport = page.viewportSize();
+    if (!viewport) throw new Error('The page has no viewport.');
+    await page.mouse.click(viewport.width / 2, viewport.height / 2);
+    await expect(sky).toContainText(/\d+\.\d+° [NS], \d+\.\d+° [EW]/);
+  });
+
+  test.describe('with location access', () => {
+    test.use({
+      geolocation: { latitude: -33.8688, longitude: 151.2093 },
+      permissions: ['geolocation'],
+    });
+
+    test('finds where you are', async ({ page }) => {
+      await page.goto(`/?t=${FIXTURE_TIME}`);
+      await page.getByRole('button', { name: 'Your sky' }).click();
+      const sky = page.getByRole('region', { name: 'Your sky' });
+      await sky.getByRole('button', { name: 'Use my location' }).click();
+      // Rounded to about a kilometer before it is kept.
+      await expect(sky).toContainText('33.87° S, 151.21° E');
+    });
+  });
+
   test('picks the satellite under the pointer', async ({ page }) => {
     // The camera flies to look straight down on a linked satellite, which
     // leaves it at the exact center of the view: a known place to point at.

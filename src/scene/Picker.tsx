@@ -1,8 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { type Camera, Matrix4, Vector3 } from 'three';
+import { type Camera, Matrix4, Raycaster, Sphere, Vector2, Vector3 } from 'three';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
+import { subSatellitePoint } from '../core/astro';
+import type { Observer } from '../core/observer';
 import { pickSatellite } from '../core/picking';
 import { TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
 
@@ -52,8 +54,33 @@ function pick(
   return index === -1 ? null : index;
 }
 
+const raycaster = new Raycaster();
+const pointerNdc = new Vector2();
+/** The Earth, in world units. */
+const globe = new Sphere(new Vector3(), 1);
+const hit = new Vector3();
+
+/** The place on the Earth under the pointer, or null if it points past it. */
+function placeAt(camera: Camera, element: HTMLElement, pointer: Point): Observer | null {
+  camera.updateMatrixWorld();
+  pointerNdc.set(
+    (pointer.x / element.clientWidth) * 2 - 1,
+    1 - (pointer.y / element.clientHeight) * 2,
+  );
+  raycaster.setFromCamera(pointerNdc, camera);
+  if (!raycaster.ray.intersectSphere(globe, hit)) return null;
+  const { latitude, longitude } = subSatellitePoint(
+    hit.applyMatrix4(TEME_FROM_WORLD),
+    currentSimTime(),
+  );
+  // Two decimals, about a kilometer: finer than a click can aim.
+  const round = (degrees: number) => Math.round(degrees * 100) / 100;
+  return { latitude: round(latitude), longitude: round(longitude) };
+}
+
 /**
- * Turns pointer input on the canvas into hover and selection.
+ * Turns pointer input on the canvas into hover and selection, or, while the
+ * viewer is choosing where they are, into a place on the Earth.
  *
  * Hover is re-evaluated every frame, not just on pointer movement, because
  * the satellites move under a stationary pointer.
@@ -85,6 +112,12 @@ export function Picker({ world }: { world: World }) {
       const traveled = Math.hypot(released.x - pressedAt.x, released.y - pressedAt.y);
       pressedAt = null;
       if (traveled > CLICK_SLOP) return;
+      const { pickingObserver, setObserver } = useApp.getState();
+      if (pickingObserver) {
+        const place = placeAt(camera, element, released);
+        if (place) setObserver(place);
+        return;
+      }
       const radius = event.pointerType === 'mouse' ? PICK_RADIUS.mouse : PICK_RADIUS.touch;
       const hit = pick(world, camera, element, released, radius);
       // A click on nothing clears the selection, except during a ride, where
@@ -110,9 +143,15 @@ export function Picker({ world }: { world: World }) {
   }, [world, camera, element]);
 
   useFrame(() => {
+    const { pickingObserver, hover } = useApp.getState();
+    if (pickingObserver) {
+      hover(null);
+      element.style.cursor = 'crosshair';
+      return;
+    }
     const point = hoverPoint.current;
     const hovered = point ? pick(world, camera, element, point, PICK_RADIUS.mouse) : null;
-    useApp.getState().hover(hovered);
+    hover(hovered);
     element.style.cursor = hovered === null ? 'grab' : 'pointer';
   });
 

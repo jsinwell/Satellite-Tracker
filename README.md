@@ -16,6 +16,10 @@ computed live in the browser.
 - A selected satellite shows its ground track for the next orbit, marked with the times it'll
   pass over each place, and its coverage: the part of the Earth that has it above the horizon
   right now. Either one, and the orbit, can be switched off.
+- Tell it where you are (your device's location, a click on the globe, or typed coordinates)
+  to see what's above you right now and which of those you could spot by eye. Select a
+  satellite to see when it next passes over, with the passes you could see marked. Click one
+  to jump to it.
 - Pause time or run it at up to 1000x. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the
