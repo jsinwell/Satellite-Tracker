@@ -1,6 +1,7 @@
 import { json2satrec, type OMMJsonObject, type SatRec, sgp4 } from 'satellite.js';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY, UNIX_EPOCH_JD } from './constants';
+import type { Vec3 } from './kinematics';
 
 /**
  * Floats per satellite in a state buffer: position (km) then velocity (km/s),
@@ -121,6 +122,27 @@ export class Propagator {
     }
     return propagated;
   }
+}
+
+/** A satellite's TEME position (km) at any instant: null where SGP4 fails. */
+export type PositionAt = (timeMs: number, out: Vec3) => Vec3 | null;
+
+/**
+ * Prepares one satellite for propagation to many instants in turn, as a
+ * search over time needs. Null if its elements are unusable.
+ */
+export function positionFunction(record: SatelliteRecord): PositionAt | null {
+  const satrec = createSatRec(record);
+  if (!satrec) return null;
+  const satrecEpochMs = epochMs(satrec);
+  const state = new Float32Array(STATE_STRIDE);
+  return (timeMs, out) => {
+    if (!writeState(satrec, satrecEpochMs, timeMs, state, 0)) return null;
+    out.x = state[0];
+    out.y = state[1];
+    out.z = state[2];
+    return out;
+  };
 }
 
 /**

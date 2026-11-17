@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAgo,
+  formatCompass,
   formatDuration,
   formatInteger,
   formatLatitude,
@@ -56,5 +57,20 @@ describe('formatAgo', () => {
     [minutes(60 * 24 * 3.2), '3 days ago'],
   ])('describes %d ms as "%s"', (ms, expected) => {
     expect(formatAgo(ms)).toBe(expected);
+  });
+
+  it('names the nearest compass point', () => {
+    expect([0, 22, 23, 90, 181, 292, 337.4, 337.6, 359, -45].map(formatCompass)).toEqual([
+      'N',
+      'N',
+      'NE',
+      'E',
+      'S',
+      'W',
+      'NW',
+      'N',
+      'N',
+      'NW',
+    ]);
   });
 });

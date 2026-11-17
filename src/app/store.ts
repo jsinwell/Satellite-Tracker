@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { OBJECT_TYPES, type ObjectType } from '../core/catalog';
-import { type Clock, realTimeClock, simTimeAt, wallNow, withRate } from '../core/clock';
+import {
+  type Clock,
+  realTimeClock,
+  simTimeAt,
+  wallNow,
+  withRate,
+  withSimTime,
+} from '../core/clock';
 import { CONSTELLATION_IDS, type ConstellationId, soleEnabled } from '../core/constellation';
 import {
   allEnabled,
@@ -12,11 +19,36 @@ import {
   SHOW_EVERYTHING,
   visibilityMask,
 } from '../core/filter';
+import { isObserver, type Observer } from '../core/observer';
 import type { OrbitRegime } from '../core/orbit';
 import type { World } from './world';
 
 /** What a satellite's color stands for. */
 export type ColorBy = 'type' | 'constellation';
+
+const OBSERVER_KEY = 'satellite-tracker.observer';
+
+/**
+ * Where the viewer said they are, from a previous visit. Kept in this browser
+ * only; storage can be unavailable or hold anything, so both are tolerated.
+ */
+function loadObserver(): Observer | null {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(OBSERVER_KEY) ?? 'null');
+    return isObserver(saved) ? { latitude: saved.latitude, longitude: saved.longitude } : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveObserver(observer: Observer | null): void {
+  try {
+    if (observer) localStorage.setItem(OBSERVER_KEY, JSON.stringify(observer));
+    else localStorage.removeItem(OBSERVER_KEY);
+  } catch {
+    // Not remembered next time, which is all that is lost.
+  }
+}
 
 /** What can be drawn for the selected satellite, each of which can be turned off. */
 export const OVERLAYS = ['orbit', 'groundTrack', 'coverage'] as const;
@@ -38,6 +70,12 @@ interface AppState {
   riding: boolean;
   /** Which drawings accompany the selected satellite. Kept from one selection to the next. */
   overlays: Readonly<Record<Overlay, boolean>>;
+  /** Where the viewer is, for what is in their sky; null until they say. */
+  observer: Observer | null;
+  /** True while the next click on the Earth is to set `observer`. */
+  pickingObserver: boolean;
+  /** Incremented to ask the camera to fly to `observer`. */
+  observerFocusRequests: number;
 
   colorBy: ColorBy;
   filters: Filters;
@@ -68,6 +106,9 @@ interface AppActions {
    */
   setRiding(riding: boolean): void;
   toggleOverlay(overlay: Overlay): void;
+  /** Sets or clears where the viewer is, and remembers it for next time. */
+  setObserver(observer: Observer | null): void;
+  setPickingObserver(picking: boolean): void;
   /**
    * Switches what color stands for. The legend only shows the filter that
    * matches, so the other one is reset rather than left on out of sight.
@@ -84,6 +125,8 @@ interface AppActions {
   setRate(rate: number): void;
   /** Returns to the present, running in real time. */
   goLive(): void;
+  /** Moves simulated time to `simMs`, keeping the rate. */
+  jumpTo(simMs: number): void;
 }
 
 /** Stands in for the world before the catalog has loaded. */
@@ -121,6 +164,9 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     focusRequests: 0,
     riding: false,
     overlays: { orbit: true, groundTrack: true, coverage: true },
+    observer: loadObserver(),
+    pickingObserver: false,
+    observerFocusRequests: 0,
     colorBy: 'type',
     ...applyFilters(null, SHOW_EVERYTHING),
 
@@ -140,6 +186,16 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     },
     toggleOverlay: (overlay) =>
       set(({ overlays }) => ({ overlays: { ...overlays, [overlay]: !overlays[overlay] } })),
+    setObserver: (observer) => {
+      saveObserver(observer);
+      // Turn the globe to show the place, so the viewer sees they got it right.
+      set((state) => ({
+        observer,
+        pickingObserver: false,
+        observerFocusRequests: state.observerFocusRequests + (observer ? 1 : 0),
+      }));
+    },
+    setPickingObserver: (pickingObserver) => set({ pickingObserver }),
 
     setColorBy: (colorBy) => {
       if (get().colorBy === colorBy) return;
@@ -177,6 +233,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
 
     setRate: (rate) => set((state) => ({ clock: withRate(state.clock, wallNow(), rate) })),
     goLive: () => set({ clock: realTimeClock(wallNow()) }),
+    jumpTo: (simMs) => set((state) => ({ clock: withSimTime(state.clock, wallNow(), simMs) })),
   };
 });
 

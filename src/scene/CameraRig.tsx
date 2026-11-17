@@ -7,6 +7,7 @@ import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { extrapolatePosition, extrapolateVelocity, hasState, type Vec3 } from '../core/kinematics';
+import { createObserverFrame, observerFrame } from '../core/observer';
 import { directionToWorld } from './frame';
 import { rideElevation } from './ride';
 
@@ -59,22 +60,53 @@ function placeInitially(camera: Camera): void {
   camera.position.copy(direction.normalize().multiplyScalar(initialDistance(camera)));
 }
 
-/** A camera flight in progress; `progress` runs from 0 to 1 over `FLIGHT_SECONDS`. */
+/**
+ * A camera flight in progress, to look straight down on the selected
+ * satellite or on the viewer's place. `progress` runs from 0 to 1 over
+ * `FLIGHT_SECONDS`.
+ */
 interface Flight {
+  target: 'selected' | 'observer';
   progress: number;
 }
 
 const easeInOut = (x: number) => x * x * (3 - 2 * x);
+const observerScratch = createObserverFrame();
 
 /**
- * Moves the camera one frame along a flight to look straight down on the
- * selected satellite. Returns whether the flight is still under way.
+ * Points `goal` at where a flight is headed and returns how far from the
+ * Earth's center that is, in Earth radii: null if there is nothing to fly to
+ * any more, NaN if it is not known yet.
+ */
+function aim(world: World, target: Flight['target']): number | null {
+  const { selected, observer } = useApp.getState();
+  if (target === 'observer') {
+    if (!observer) return null;
+    const { position } = observerFrame(observer, currentSimTime(), observerScratch);
+    directionToWorld(position, goal).normalize();
+    return 1;
+  }
+
+  const { simulation } = world;
+  if (selected === null) return null;
+  // A satellite linked to in the URL is selected before the first state lands.
+  if (Number.isNaN(simulation.stateTimeMs)) return Number.NaN;
+  if (!hasState(simulation.state, selected)) return null;
+  const dt = simulation.dtSeconds(currentSimTime());
+  const position = extrapolatePosition(simulation.state, selected, dt, scratch);
+  directionToWorld(position, goal).normalize();
+  return Math.hypot(position.x, position.y, position.z) / EARTH_RADIUS_KM;
+}
+
+/**
+ * Moves the camera one frame along a flight. Returns whether the flight is
+ * still under way.
  *
  * The target moves — quickly, at high time rates — so the flight cannot follow
  * a path fixed at the start. Instead each frame covers a share of whatever
  * distance *remains*, with the shares chosen so they add up to an eased curve
  * and the last one is the whole remainder. The flight therefore always ends
- * exactly on the satellite, after exactly `FLIGHT_SECONDS`, however it moved.
+ * exactly on target, after exactly `FLIGHT_SECONDS`, however it moved.
  */
 function advanceFlight(
   camera: Camera,
@@ -82,21 +114,13 @@ function advanceFlight(
   flight: Flight,
   deltaSeconds: number,
 ): boolean {
-  const { selected } = useApp.getState();
-  const { simulation } = world;
-  if (selected === null) return false;
-  // A satellite linked to in the URL is selected before the first state lands.
-  if (Number.isNaN(simulation.stateTimeMs)) return true;
-  if (!hasState(simulation.state, selected)) return false;
-
-  const dt = simulation.dtSeconds(currentSimTime());
-  const position = extrapolatePosition(simulation.state, selected, dt, scratch);
-  const radius = Math.hypot(position.x, position.y, position.z) / EARTH_RADIUS_KM;
-  directionToWorld(position, goal).normalize();
+  const radius = aim(world, flight.target);
+  if (radius === null) return false;
+  if (Number.isNaN(radius)) return true;
 
   const distance = camera.position.length();
   direction.copy(camera.position).divideScalar(distance);
-  // Pull back if the satellite is too close to see in context; never push in.
+  // Pull back if the target is too close to see in context; never push in.
   const goalDistance = Math.min(Math.max(distance, radius + FOCUS_STANDOFF), MAX_DISTANCE);
 
   const covered = easeInOut(flight.progress);
@@ -233,6 +257,7 @@ export function CameraRig({ world }: { world: World }) {
   const flight = useRef<Flight | null>(null);
   const mode = useRef<Mode>({ kind: 'globe' });
   const focusRequests = useApp((state) => state.focusRequests);
+  const observerFocusRequests = useApp((state) => state.observerFocusRequests);
 
   useEffect(() => {
     placeInitially(camera);
@@ -272,8 +297,16 @@ export function CameraRig({ world }: { world: World }) {
 
   useEffect(() => {
     // During a ride the camera is on the satellite already.
-    if (focusRequests > 0 && !useApp.getState().riding) flight.current = { progress: 0 };
+    if (focusRequests > 0 && !useApp.getState().riding) {
+      flight.current = { target: 'selected', progress: 0 };
+    }
   }, [focusRequests]);
+
+  useEffect(() => {
+    if (observerFocusRequests > 0 && !useApp.getState().riding) {
+      flight.current = { target: 'observer', progress: 0 };
+    }
+  }, [observerFocusRequests]);
 
   useFrame((_, deltaSeconds) => {
     const controls = controlsRef.current;

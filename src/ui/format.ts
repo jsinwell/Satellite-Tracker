@@ -62,3 +62,42 @@ export function formatAgo(ms: number): string {
 export function formatPeriod(minutes: number): string {
   return minutes < 600 ? `${minutes.toFixed(1)} min` : `${(minutes / 60).toFixed(2)} h`;
 }
+
+const COMPASS_POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+
+/** The nearest of the eight compass points to an azimuth in degrees: `NE`. */
+export function formatCompass(azimuth: number): string {
+  const sector = Math.round((((azimuth % 360) + 360) % 360) / 45) % 8;
+  return COMPASS_POINTS[sector];
+}
+
+// The viewer's own time zone: passes are planned by the clock on the wall.
+const localTimeFormat = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+const localClockFormat = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
+const timeZoneFormat = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' });
+
+/** A time in the viewer's time zone, with the day of the week: `Tue 9:42 PM`. */
+export function formatLocalTime(timeMs: number): string {
+  return localTimeFormat.format(timeMs);
+}
+
+/** A time of day in the viewer's time zone: `5:58 AM`. */
+export function formatLocalClock(timeMs: number): string {
+  return localClockFormat.format(timeMs);
+}
+
+/** The viewer's time zone as it is written at `timeMs`, for a footnote: `CST`. */
+export function localTimeZone(timeMs: number): string {
+  return (
+    timeZoneFormat.formatToParts(timeMs).find((part) => part.type === 'timeZoneName')?.value ?? ''
+  );
+}
+
+/** A latitude and longitude together: `41.88° N, 87.63° W`. */
+export function formatPlace(latitude: number, longitude: number): string {
+  return `${formatLatitude(latitude)}, ${formatLongitude(longitude)}`;
+}
