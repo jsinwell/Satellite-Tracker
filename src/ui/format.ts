@@ -77,11 +77,17 @@ const localTimeFormat = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
 });
+const localClockFormat = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' });
 const timeZoneFormat = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' });
 
 /** A time in the viewer's time zone, with the day of the week: `Tue 9:42 PM`. */
 export function formatLocalTime(timeMs: number): string {
   return localTimeFormat.format(timeMs);
+}
+
+/** A time of day in the viewer's time zone: `5:58 AM`. */
+export function formatLocalClock(timeMs: number): string {
+  return localClockFormat.format(timeMs);
 }
 
 /** The viewer's time zone as it is written at `timeMs`, for a footnote: `CST`. */

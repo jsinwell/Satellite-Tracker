@@ -1,7 +1,7 @@
 import { geodeticToEcf } from 'satellite.js';
 import { gmst, shadowDepth, sunDirection } from './astro';
 import type { SatelliteRecord } from './catalog';
-import { MS_PER_DAY } from './constants';
+import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import { extrapolatePosition, hasState, type Vec3 } from './kinematics';
 import { positionFunction } from './propagator';
 
@@ -199,6 +199,12 @@ export interface SkyNow {
   above: SkyEntry[];
   /** How many of `above` can be seen. */
   seeable: number;
+  /**
+   * How many of `above` are big enough, close enough and high enough to see,
+   * sunlit or not. The difference from `seeable` is the ones that would be
+   * seen but for the Earth's shadow, or the sky being too bright.
+   */
+  withinReach: number;
 }
 
 const position = vec();
@@ -223,6 +229,7 @@ export function skyNow(
   const sunHeight = sunElevation(frame, sun);
   const above: SkyEntry[] = [];
   let seen = 0;
+  let withinReach = 0;
   for (let index = 0; index < count; index++) {
     if (!shown[index] || !hasState(state, index)) continue;
     extrapolatePosition(state, index, dtSeconds, position);
@@ -236,10 +243,77 @@ export function skyNow(
       seeable: seeable[index] === 1 && canBeSeen(angles, lit, sunHeight),
     };
     if (entry.seeable) seen++;
+    if (seeable[index] === 1 && canBeSeen(angles, true, DARK_SKY_SUN_ELEVATION)) withinReach++;
     above.push(entry);
   }
   above.sort((a, b) => Number(b.seeable) - Number(a.seeable) || b.elevation - a.elevation);
-  return { sunElevation: sunHeight, above, seeable: seen };
+  return { sunElevation: sunHeight, above, seeable: seen, withinReach };
+}
+
+/**
+ * Satellites in low orbit are only lit while the Sun is less than this far
+ * below the horizon: any lower and the Earth's shadow reaches past them, even
+ * straight overhead. This is the figure for 500 km up, about where most of
+ * them are; higher ones stay lit a little longer.
+ */
+export const LOW_ORBIT_DARK_SUN_ELEVATION =
+  -Math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + 500)) / DEG;
+
+export interface ViewingWindow {
+  startMs: number;
+  endMs: number;
+}
+
+/** How high the Sun is for `observer` at `timeMs`, degrees. */
+export function sunElevationAt(observer: Observer, timeMs: number): number {
+  return sunElevation(observerFrame(observer, timeMs, sunFrame), sunDirection(timeMs, sunScratch));
+}
+
+const sunFrame = createObserverFrame();
+const sunScratch = vec();
+const WINDOW_STEP_MS = 120_000;
+const WINDOW_TOLERANCE_MS = 30_000;
+/** Far enough ahead to always reach the next dusk or dawn, wherever there is one. */
+const WINDOW_SEARCH_MS = 36 * 3_600_000;
+
+/**
+ * The next stretch of time, from `fromMs` on, that is good for spotting
+ * satellites from `observer`: the sky dark, but low orbit still in sunlight.
+ * That is the hour or two after dusk and before dawn. If `fromMs` is already
+ * in one, it starts at `fromMs`. Null if there is none within a day and a
+ * half, as near the poles in summer.
+ */
+export function nextViewingWindow(observer: Observer, fromMs: number): ViewingWindow | null {
+  const good = (timeMs: number) => {
+    const elevation = sunElevationAt(observer, timeMs);
+    return elevation <= DARK_SKY_SUN_ELEVATION && elevation >= LOW_ORBIT_DARK_SUN_ELEVATION;
+  };
+  /** The instant between `before` and `after`, where `good` changes, to within the tolerance. */
+  const edge = (before: number, after: number): number => {
+    const wanted = good(after);
+    let low = before;
+    let high = after;
+    while (high - low > WINDOW_TOLERANCE_MS) {
+      const middle = (low + high) / 2;
+      if (good(middle) === wanted) high = middle;
+      else low = middle;
+    }
+    return high;
+  };
+
+  const until = fromMs + WINDOW_SEARCH_MS;
+  let startMs = good(fromMs) ? fromMs : Number.NaN;
+  let previous = fromMs;
+  for (let t = fromMs + WINDOW_STEP_MS; t <= until; t += WINDOW_STEP_MS) {
+    const now = good(t);
+    if (Number.isNaN(startMs)) {
+      if (now) startMs = edge(previous, t);
+    } else if (!now) {
+      return { startMs, endMs: edge(previous, t) };
+    }
+    previous = t;
+  }
+  return null;
 }
 
 export interface Pass {

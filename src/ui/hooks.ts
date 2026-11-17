@@ -7,12 +7,14 @@ import { footprintWidthKm } from '../core/ground';
 import { extrapolatePosition, hasState, speed, type Vec3 } from '../core/kinematics';
 import {
   createObserverFrame,
+  nextViewingWindow,
   type Observer,
   observerFrame,
   type PassPrediction,
   predictPasses,
   type SkyNow,
   skyNow,
+  type ViewingWindow,
 } from '../core/observer';
 
 /**
@@ -163,4 +165,41 @@ export function usePasses(world: World, index: number, observer: Observer): Pass
     return fresh.prediction;
   }
   return cache.prediction;
+}
+
+interface WindowCache {
+  observer: Observer;
+  fromMs: number;
+  window: ViewingWindow | null;
+}
+
+/** With no window to wait for, the search is redone after this much simulated time. */
+const WINDOW_STALE_MS = 6 * 3_600_000;
+
+function findWindow(observer: Observer, simMs: number): WindowCache {
+  return { observer, fromMs: simMs, window: nextViewingWindow(observer, simMs) };
+}
+
+/**
+ * The next good time to look for satellites from `observer`; see
+ * `nextViewingWindow`. Searched for again once it is over, or when simulated
+ * time jumps back before it was found.
+ */
+export function useViewingWindow(observer: Observer): ViewingWindow | null {
+  const [cache, setCache] = useState(() => findWindow(observer, currentSimTime()));
+  useEffect(() => {
+    const check = () => {
+      const simMs = currentSimTime();
+      setCache((current) => {
+        const until = current.window ? current.window.endMs : current.fromMs + WINDOW_STALE_MS;
+        return current.observer === observer && simMs >= current.fromMs && simMs <= until
+          ? current
+          : findWindow(observer, simMs);
+      });
+    };
+    check();
+    const timer = setInterval(check, SKY_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [observer]);
+  return cache.observer === observer ? cache.window : null;
 }

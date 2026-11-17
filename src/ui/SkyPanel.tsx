@@ -3,14 +3,15 @@ import { satelliteColor } from '../app/palette';
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
+import { type Observer, parseCoordinates, skyState } from '../core/observer';
 import {
-  DARK_SKY_SUN_ELEVATION,
-  type Observer,
-  parseCoordinates,
-  skyState,
-} from '../core/observer';
-import { formatCompass, formatInteger, formatPlace } from './format';
-import { useSkyNow } from './hooks';
+  formatCompass,
+  formatInteger,
+  formatLocalClock,
+  formatLocalTime,
+  formatPlace,
+} from './format';
+import { useSimTime, useSkyNow, useViewingWindow } from './hooks';
 import { Panel } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
@@ -149,15 +150,36 @@ function SkyDarkness({ sunElevation }: { sunElevation: number }) {
     case 'dark':
       return <p>Dark sky: the Sun is {degrees}° below the horizon.</p>;
     case 'twilight':
-      return (
-        <p>
-          Twilight: the Sun is {degrees}° below the horizon. Satellites show once it's{' '}
-          {-DARK_SKY_SUN_ELEVATION}° down.
-        </p>
-      );
+      return <p>Twilight: the Sun is {degrees}° below the horizon.</p>;
     case 'day':
-      return <p>Daylight: the Sun is {degrees}° up. Satellites only show in a dark sky.</p>;
+      return <p>Daylight: the Sun is {degrees}° up.</p>;
   }
+}
+
+/**
+ * When to go out and look: satellites shine by sunlight against a dark sky,
+ * which only happens in the hour or two after dusk and before dawn.
+ */
+function WhenToLook({ observer }: { observer: Observer }) {
+  const window = useViewingWindow(observer);
+  const simMs = useSimTime(10_000);
+  if (!window) {
+    return <p className="text-slate-400">The sky doesn't get dark enough here for a while.</p>;
+  }
+  if (window.startMs <= simMs) {
+    return (
+      <p className="text-emerald-300">
+        A good time to look: low satellites are lit against a dark sky until{' '}
+        {formatLocalClock(window.endMs)}.
+      </p>
+    );
+  }
+  return (
+    <p>
+      Best time to look: {formatLocalTime(window.startMs)} to {formatLocalClock(window.endMs)}, when
+      the sky is dark but low satellites are still in sunlight.
+    </p>
+  );
 }
 
 function UpNow({ world, observer }: { world: World; observer: Observer }) {
@@ -168,8 +190,9 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
 
   return (
     <>
-      <div className="border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
+      <div className="space-y-1 border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
         <SkyDarkness sunElevation={sky.sunElevation} />
+        <WhenToLook observer={observer} />
       </div>
       <div className="border-t border-white/10 px-2 py-2.5">
         <div className="px-2">
@@ -185,6 +208,12 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
               </>
             )}
           </p>
+          {skyState(sky.sunElevation) === 'dark' && sky.seeable === 0 && sky.withinReach > 0 && (
+            <p className="mb-1.5 text-xs text-slate-400">
+              The {formatInteger(sky.withinReach)} close enough to see are all in the Earth's shadow
+              at this hour.
+            </p>
+          )}
         </div>
         <ul aria-label="Satellites above the horizon">
           {sky.above.slice(0, LISTED).map((entry) => (
