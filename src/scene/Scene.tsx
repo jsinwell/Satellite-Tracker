@@ -10,6 +10,7 @@ import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
 import { Satellites } from './Satellites';
 import { Sky } from './Sky';
+import { SunAndMoon } from './SunAndMoon';
 
 const UnsupportedNotice = (
   <p className="p-6 text-center text-slate-300">
@@ -36,6 +37,9 @@ export function Scene({ world }: { world: World }) {
         {/* Loads after everything else; the plain background stands in until then. */}
         <Suspense fallback={null}>
           <Sky />
+        </Suspense>
+        <Suspense fallback={null}>
+          <SunAndMoon />
         </Suspense>
         <Suspense fallback={<EarthPlaceholder />}>
           <Earth />

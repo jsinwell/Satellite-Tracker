@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { geostationary, iss } from './__fixtures__/satellites';
-import { gmst, isSunlit, subSatellitePoint, sunDirection } from './astro';
+import { gmst, isSunlit, moonPosition, subSatellitePoint, sunDirection } from './astro';
 import type { Vec3 } from './kinematics';
 import { Propagator, STATE_STRIDE } from './propagator';
 
@@ -91,5 +91,49 @@ describe('isSunlit', () => {
 
   it('is true above the pole, clear of the shadow', () => {
     expect(isSunlit({ x: 0, y: 0, z: lowOrbit }, timeMs)).toBe(true);
+  });
+});
+
+describe('moonPosition', () => {
+  const angleToSun = (timeMs: number) => {
+    const moon = moonPosition(timeMs, vec());
+    const sun = sunDirection(timeMs, vec());
+    const cosine =
+      (moon.x * sun.x + moon.y * sun.y + moon.z * sun.z) / Math.hypot(moon.x, moon.y, moon.z);
+    return (Math.acos(cosine) * 180) / Math.PI;
+  };
+
+  it('stays between perigee and apogee distance all year', () => {
+    for (let day = 0; day < 365; day += 3) {
+      const moon = moonPosition(Date.UTC(2026, 0, 1) + day * 86_400_000, vec());
+      const distance = Math.hypot(moon.x, moon.y, moon.z);
+      expect(distance).toBeGreaterThan(356_000);
+      expect(distance).toBeLessThan(407_000);
+    }
+  });
+
+  // Eclipses pin the Moon's direction independently of this code: during a
+  // solar eclipse it is in front of the Sun, during a lunar one directly opposite.
+  it.each([
+    ['2024-04-08T18:18:00Z', 'total solar eclipse over North America'],
+    ['2026-08-12T17:46:00Z', 'total solar eclipse over Spain'],
+  ])('is in line with the Sun at %s (%s)', (instant) => {
+    expect(angleToSun(Date.parse(instant))).toBeLessThan(1.5);
+  });
+
+  it.each([
+    ['2025-03-14T06:59:00Z', 'total lunar eclipse'],
+    ['2025-09-07T18:12:00Z', 'total lunar eclipse'],
+  ])('is opposite the Sun at %s (%s)', (instant) => {
+    expect(angleToSun(Date.parse(instant))).toBeGreaterThan(178.5);
+  });
+
+  it('circles the sky once a sidereal month', () => {
+    const start = Date.UTC(2026, 4, 1);
+    const a = moonPosition(start, vec());
+    const b = moonPosition(start + 27.321661 * 86_400_000, { x: 0, y: 0, z: 0 });
+    const cosine =
+      (a.x * b.x + a.y * b.y + a.z * b.z) / (Math.hypot(a.x, a.y, a.z) * Math.hypot(b.x, b.y, b.z));
+    expect((Math.acos(Math.min(1, cosine)) * 180) / Math.PI).toBeLessThan(8);
   });
 });
