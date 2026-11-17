@@ -67,29 +67,45 @@ const surfaceFragmentShader = /* glsl */ `
 `;
 
 const atmosphereVertexShader = /* glsl */ `
-  varying vec3 vViewNormal;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
 
   void main() {
-    vViewNormal = normalize(normalMatrix * normal);
     vWorldNormal = normalize(mat3(modelMatrix) * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
 `;
 
 // Drawn on the shell's back faces, so only the part beyond the Earth's limb
-// survives the depth test. Facing-ness runs from 0 at the shell's silhouette
-// to LIMB at the Earth's edge; the glow fades across that band.
+// survives the depth test. The glow depends on how low each line of sight
+// dips: brightest grazing the Earth's edge, gone where it only clips the top
+// of the atmosphere. World units are Earth radii, so the Earth's edge is at 1.
+//
+// The shell is far deeper than the real atmosphere, which from a distance
+// would be a hairline. Up close that depth would fill the sky, so the glow
+// stops lower as the camera comes down: never above a third of the camera's own
+// altitude. The camera is then always above it, looking at a band along the
+// horizon, as from orbit.
 const atmosphereFragmentShader = /* glsl */ `
   uniform vec3 uSunDirection;
 
-  varying vec3 vViewNormal;
   varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
 
-  const float LIMB = ${Math.sqrt(1 - 1 / ATMOSPHERE_SCALE ** 2).toFixed(4)};
+  const float SHELL = ${ATMOSPHERE_SCALE.toFixed(4)};
 
   void main() {
-    float facing = clamp(-normalize(vViewNormal).z / LIMB, 0.0, 1.0);
+    vec3 ray = normalize(vWorldPosition - cameraPosition);
+    float height = length(cameraPosition);
+    float top = 1.0 + clamp((height - 1.0) / 3.0, 0.001, SHELL - 1.0);
+    // How far along the ray it passes closest to the Earth's center, and how
+    // close that is. Looking upward, the camera is itself the lowest point.
+    float along = -dot(cameraPosition, ray);
+    float lowest = along > 0.0 ? length(cameraPosition + along * ray) : height;
+    // From 1 for a ray grazing the Earth to 0 for one grazing the top.
+    float facing = sqrt(clamp((1.0 - pow(lowest / top, 2.0)) / (1.0 - 1.0 / (top * top)), 0.0, 1.0));
     float glow = pow(facing, 3.0);
     float sunward = smoothstep(-0.4, 0.5, dot(normalize(vWorldNormal), uSunDirection));
     gl_FragColor = vec4(vec3(0.3, 0.55, 1.0) * glow * (0.12 + 0.7 * sunward), 1.0);

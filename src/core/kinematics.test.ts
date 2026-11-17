@@ -4,6 +4,7 @@ import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM } from './constants';
 import {
   extrapolatePosition,
+  extrapolateVelocity,
   hasState,
   isOccludedByEarth,
   speed,
@@ -65,6 +66,45 @@ describe('extrapolatePosition', () => {
     );
     expect(linearError).toBeGreaterThan(10);
     expect(extrapolationError(iss, 60)).toBeLessThan(linearError / 20);
+  });
+});
+
+/** Difference (km/s) between extrapolating the velocity and asking SGP4 directly. */
+function velocityError(record: SatelliteRecord, dtSeconds: number): number {
+  const propagator = new Propagator([record]);
+  const t0 = Date.parse(record.elements.epoch);
+  const start = new Float32Array(STATE_STRIDE);
+  const truth = new Float32Array(STATE_STRIDE);
+  propagator.propagate(t0, start);
+  propagator.propagate(t0 + dtSeconds * 1000, truth);
+
+  const estimate = extrapolateVelocity(start, 0, dtSeconds, origin());
+  return Math.hypot(estimate.x - truth[3], estimate.y - truth[4], estimate.z - truth[5]);
+}
+
+describe('extrapolateVelocity', () => {
+  it('returns the stored velocity when dt is zero', () => {
+    const state = Float32Array.of(7000, 100, -200, 1, 7, 2);
+    expect(extrapolateVelocity(state, 0, 0, origin())).toEqual({ x: 1, y: 7, z: 2 });
+  });
+
+  it('tracks SGP4 over the times the renderer extrapolates across', () => {
+    expect(velocityError(iss, 1)).toBeLessThan(1e-4);
+    expect(velocityError(iss, 10)).toBeLessThan(1e-3);
+    expect(velocityError(highlyElliptical, 10)).toBeLessThan(1e-3);
+  });
+
+  it('turns with the orbit, where the stored velocity would point the old way', () => {
+    const state = new Float32Array(STATE_STRIDE);
+    const truth = new Float32Array(STATE_STRIDE);
+    const propagator = new Propagator([iss]);
+    const t0 = Date.parse(iss.elements.epoch);
+    propagator.propagate(t0, state);
+    propagator.propagate(t0 + 60_000, truth);
+
+    const staleError = Math.hypot(state[3] - truth[3], state[4] - truth[4], state[5] - truth[5]);
+    expect(staleError).toBeGreaterThan(0.4);
+    expect(velocityError(iss, 60)).toBeLessThan(staleError / 20);
   });
 });
 

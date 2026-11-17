@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtures, geostationary, iss } from './__fixtures__/satellites';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM } from './constants';
-import { Propagator, STATE_STRIDE, sampleOrbit, toOmm } from './propagator';
+import { Propagator, STATE_STRIDE, sampleOrbit, samplePositions, toOmm } from './propagator';
 
 const epochOf = (record: SatelliteRecord) => Date.parse(record.elements.epoch);
 
@@ -83,6 +83,27 @@ describe('Propagator', () => {
     expect(() => propagator.propagate(epochOf(iss), new Float32Array(STATE_STRIDE))).toThrow(
       RangeError,
     );
+  });
+});
+
+describe('samplePositions', () => {
+  it('gives the position at each instant asked for', () => {
+    const times = [epochOf(iss), epochOf(iss) + 90_000, epochOf(iss) - 3_600_000];
+    const points = samplePositions(iss, times);
+    if (!points) throw new Error('expected positions');
+
+    const propagator = new Propagator([iss]);
+    const state = new Float32Array(STATE_STRIDE);
+    times.forEach((timeMs, i) => {
+      propagator.propagate(timeMs, state);
+      expect(Array.from(points.subarray(i * 3, i * 3 + 3))).toEqual(
+        Array.from(state.subarray(0, 3)),
+      );
+    });
+  });
+
+  it('returns null for elements that cannot be propagated', () => {
+    expect(samplePositions(unusable, [epochOf(iss)])).toBeNull();
   });
 });
 

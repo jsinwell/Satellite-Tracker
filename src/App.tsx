@@ -9,13 +9,17 @@ import { SearchBox } from './ui/SearchBox';
 import { StatusLine } from './ui/StatusLine';
 import { TimeBar } from './ui/TimeBar';
 
-/** Escape clears the selection, unless a text field wants the key. */
+/**
+ * Escape backs out one step: off the ride if the camera is on one, otherwise
+ * out of the selection. Not while a text field wants the key.
+ */
 function useEscapeToDeselect() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !(event.target instanceof HTMLInputElement)) {
-        useApp.getState().select(null);
-      }
+      if (event.key !== 'Escape' || event.target instanceof HTMLInputElement) return;
+      const { riding, setRiding, select } = useApp.getState();
+      if (riding) setRiding(false);
+      else select(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);

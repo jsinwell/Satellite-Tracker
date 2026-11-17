@@ -20,6 +20,12 @@ const KM_TO_SCENE = 1 / EARTH_RADIUS_KM;
 export const TEME_GROUP_ROTATION = [-Math.PI / 2, 0, 0] as const;
 export const TEME_GROUP_SCALE = KM_TO_SCENE;
 
+/**
+ * Lines drawn on the ground sit this far from the Earth's center (km): just
+ * clear of the surface, so they neither sink into it nor flicker against it.
+ */
+export const GROUND_LINE_RADIUS_KM = EARTH_RADIUS_KM * 1.003;
+
 export const WORLD_FROM_TEME = new Matrix4()
   .makeRotationX(TEME_GROUP_ROTATION[0])
   .multiply(new Matrix4().makeScale(KM_TO_SCENE, KM_TO_SCENE, KM_TO_SCENE));

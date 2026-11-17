@@ -89,6 +89,42 @@ test.describe('with a catalog', () => {
     ).toBeVisible();
   });
 
+  test('rides along with a satellite, and gets off again', async ({ page }) => {
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const panel = selection(page);
+    await expect(panel.getByText(/^4,\d\d\d km across$/)).toBeVisible();
+
+    await panel.getByRole('button', { name: 'Ride along' }).click();
+    await expect(page).toHaveURL(/ride=1/);
+    await expect(panel.getByRole('button', { name: 'Stop riding' })).toBeVisible();
+    // The camera is on the satellite already, so there is nothing to center on.
+    await expect(panel.getByRole('button', { name: 'Center view' })).toBeHidden();
+
+    // Choosing another satellite carries on the ride with that one.
+    await page.getByRole('combobox').fill('goes 16');
+    await page.getByRole('option', { name: /GOES 16/ }).click();
+    await expect(panel).toContainText('GOES 16');
+    await expect(page).toHaveURL(/sat=41866.*ride=1/);
+
+    // Escape backs out a step at a time: off the ride first, then out of the selection.
+    await page.locator('canvas').focus();
+    await page.keyboard.press('Escape');
+    await expect(page).not.toHaveURL(/ride=1/);
+    await expect(panel.getByRole('button', { name: 'Ride along' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+  });
+
+  test('opens a linked ride', async ({ page }) => {
+    await page.goto(`/?sat=25544&ride=1&t=${FIXTURE_TIME}`);
+
+    await expect(selection(page).getByRole('button', { name: 'Stop riding' })).toBeVisible();
+    await expect(page).toHaveURL(/sat=25544.*ride=1/);
+    // A click on empty sky deselects, but not in the middle of a ride.
+    await page.locator('canvas').click({ position: { x: 20, y: 300 } });
+    await expect(selection(page)).toContainText('ISS (ZARYA)');
+  });
+
   test('picks the satellite under the pointer', async ({ page }) => {
     // The camera flies to look straight down on a linked satellite, which
     // leaves it at the exact center of the view: a known place to point at.

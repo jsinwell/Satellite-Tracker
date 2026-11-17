@@ -51,6 +51,30 @@ export function extrapolatePosition(
   return out;
 }
 
+/**
+ * Velocity (km/s, TEME) of satellite `index`, `dtSeconds` after the instant
+ * the state buffer was propagated to: v + a·dt, to go with the position above.
+ * Writes into and returns `out`.
+ */
+export function extrapolateVelocity(
+  state: Float32Array,
+  index: number,
+  dtSeconds: number,
+  out: Vec3,
+): Vec3 {
+  const o = index * STATE_STRIDE;
+  const px = state[o];
+  const py = state[o + 1];
+  const pz = state[o + 2];
+  const r2 = px * px + py * py + pz * pz;
+  // a·dt = k·p, with k = −μ·dt / |p|³
+  const k = r2 > 0 ? (-EARTH_MU * dtSeconds) / (r2 * Math.sqrt(r2)) : 0;
+  out.x = state[o + 3] + k * px;
+  out.y = state[o + 4] + k * py;
+  out.z = state[o + 5] + k * pz;
+  return out;
+}
+
 /** Speed (km/s) of satellite `index` in the inertial frame. */
 export function speed(state: Float32Array, index: number): number {
   const o = index * STATE_STRIDE;
