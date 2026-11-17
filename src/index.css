@@ -25,3 +25,9 @@ canvas {
   /* Pointer gestures on the canvas belong to the camera, not the browser. */
   touch-action: none;
 }
+
+/* For panels that scroll inside the HUD: a full-width scrollbar is heavier than the panel. */
+@utility thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-600) transparent;
+}
