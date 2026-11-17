@@ -316,6 +316,26 @@ test.describe('with a catalog', () => {
     });
   });
 
+  test('remembers how the view was set up', async ({ page }) => {
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const colorByConstellation = page.getByRole('button', { name: 'Constellation', exact: true });
+    const lowOrbit = page.getByRole('button', { name: /^LEO/ });
+    const slider = page.getByRole('slider', { name: 'Launched by' });
+    const groundTrack = () => selection(page).getByRole('switch', { name: 'Ground track' });
+
+    await colorByConstellation.click();
+    await lowOrbit.click();
+    await slider.fill('2010');
+    await groundTrack().click();
+    await expect(groundTrack()).toHaveAttribute('aria-checked', 'false');
+
+    await page.reload();
+    await expect(colorByConstellation).toHaveAttribute('aria-pressed', 'true');
+    await expect(lowOrbit).toHaveAttribute('aria-pressed', 'false');
+    await expect(slider).toHaveValue('2010');
+    await expect(groundTrack()).toHaveAttribute('aria-checked', 'false');
+  });
+
   test('picks the satellite under the pointer', async ({ page }) => {
     // The camera flies to look straight down on a linked satellite, which
     // leaves it at the exact center of the view: a known place to point at.

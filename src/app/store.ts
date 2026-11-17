@@ -16,43 +16,21 @@ import {
   type FilterSubjects,
   type Filters,
   facetCounts,
-  SHOW_EVERYTHING,
   visibilityMask,
 } from '../core/filter';
-import { isObserver, type Observer } from '../core/observer';
+import type { Observer } from '../core/observer';
 import type { OrbitRegime } from '../core/orbit';
+import {
+  type ColorBy,
+  loadObserver,
+  loadSettings,
+  type Overlay,
+  saveObserver,
+  saveSettings,
+} from './settings';
 import type { World } from './world';
 
-/** What a satellite's color stands for. */
-export type ColorBy = 'type' | 'constellation';
-
-const OBSERVER_KEY = 'satellite-tracker.observer';
-
-/**
- * Where the viewer said they are, from a previous visit. Kept in this browser
- * only; storage can be unavailable or hold anything, so both are tolerated.
- */
-function loadObserver(): Observer | null {
-  try {
-    const saved: unknown = JSON.parse(localStorage.getItem(OBSERVER_KEY) ?? 'null');
-    return isObserver(saved) ? { latitude: saved.latitude, longitude: saved.longitude } : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveObserver(observer: Observer | null): void {
-  try {
-    if (observer) localStorage.setItem(OBSERVER_KEY, JSON.stringify(observer));
-    else localStorage.removeItem(OBSERVER_KEY);
-  } catch {
-    // Not remembered next time, which is all that is lost.
-  }
-}
-
-/** What can be drawn for the selected satellite, each of which can be turned off. */
-export const OVERLAYS = ['orbit', 'groundTrack', 'coverage'] as const;
-export type Overlay = (typeof OVERLAYS)[number];
+export { type ColorBy, OVERLAYS, type Overlay } from './settings';
 
 interface AppState {
   phase: 'loading' | 'ready' | 'error';
@@ -152,6 +130,9 @@ function applyFilters(world: World | null, filters: Filters) {
   };
 }
 
+/** How the view was set up on the last visit, or the defaults. */
+const saved = loadSettings();
+
 export const useApp = create<AppState & AppActions>()((set, get) => {
   const changeFilters = (change: Partial<Filters>) => {
     const { world, filters } = get();
@@ -167,13 +148,13 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     hovered: null,
     focusRequests: 0,
     riding: false,
-    overlays: { orbit: true, groundTrack: true, coverage: true },
+    overlays: saved.overlays,
     observer: loadObserver(),
     pickingObserver: false,
     observerFocusRequests: 0,
     lookingUp: false,
-    colorBy: 'type',
-    ...applyFilters(null, SHOW_EVERYTHING),
+    colorBy: saved.colorBy,
+    ...applyFilters(null, saved.filters),
 
     ready: (world) => set({ phase: 'ready', world, ...applyFilters(world, get().filters) }),
     fail: (message) => set({ phase: 'error', error: message }),
@@ -246,6 +227,17 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     goLive: () => set({ clock: realTimeClock(wallNow()) }),
     jumpTo: (simMs) => set((state) => ({ clock: withSimTime(state.clock, wallNow(), simMs) })),
   };
+});
+
+// Remember the view as it changes, for the next visit.
+useApp.subscribe((state, previous) => {
+  if (
+    state.colorBy !== previous.colorBy ||
+    state.filters !== previous.filters ||
+    state.overlays !== previous.overlays
+  ) {
+    saveSettings({ colorBy: state.colorBy, filters: state.filters, overlays: state.overlays });
+  }
 });
 
 /**
