@@ -129,8 +129,9 @@ export function GroundTrack({ world }: { world: World }) {
     const simMs = currentSimTime();
     group.rotation.z = gmst(simMs);
 
-    const { selected, overlays } = useApp.getState();
-    const shown = selected !== null && overlays.groundTrack;
+    const { selected, overlays, lookingUp } = useApp.getState();
+    // Drawn just above the ground, which from the ground is overhead.
+    const shown = selected !== null && overlays.groundTrack && !lookingUp;
     if (!shown) {
       group.visible = false;
       drawn.current.index = -1;

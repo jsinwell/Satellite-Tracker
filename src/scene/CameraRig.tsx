@@ -7,9 +7,10 @@ import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { extrapolatePosition, extrapolateVelocity, hasState, type Vec3 } from '../core/kinematics';
-import { createObserverFrame, observerFrame } from '../core/observer';
-import { directionToWorld } from './frame';
+import { createObserverFrame, type Observer, observerFrame } from '../core/observer';
+import { CAMERA_FOV, directionToWorld } from './frame';
 import { rideElevation } from './ride';
+import { createStance, stand } from './standing';
 
 // Distances from the Earth's center, in Earth radii.
 const MIN_DISTANCE = 1.12;
@@ -28,6 +29,20 @@ const RIDE_MAX_DISTANCE = 12;
 const RIDE_LIMB_MARGIN = MathUtils.degToRad(6);
 /** How long the camera takes to join a satellite, or to come back from one. */
 const BLEND_SECONDS = 1.4;
+
+// Looking up from the ground.
+/** Wide, as the sky is big; the wheel narrows or widens it within the range. */
+const SKY_FOV = 70;
+const SKY_FOV_RANGE = [20, 100] as const;
+/** How far the sky controls' stand-in sits from the eye. Anything small does. */
+const SKY_PIVOT = 1e-3;
+/**
+ * The view starts this high, toward the equator: low enough to keep the
+ * horizon and its compass points in sight above the time bar.
+ */
+const SKY_START_ELEVATION = MathUtils.degToRad(25);
+/** How far below the horizon the view may tip, to keep the ground in sight. */
+const SKY_BELOW_HORIZON = MathUtils.degToRad(5);
 
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 const direction = new Vector3();
@@ -138,20 +153,28 @@ function advanceFlight(
 interface Blend {
   position: Vector3;
   quaternion: Quaternion;
+  fov: number;
   /** From 0 to 1 over `BLEND_SECONDS`. */
   progress: number;
 }
 
-const leaving = (camera: Camera): Blend => ({
+const leaving = (camera: PerspectiveCamera): Blend => ({
   position: camera.position.clone(),
   quaternion: camera.quaternion.clone(),
+  fov: camera.fov,
   progress: 0,
 });
 
+function setFov(camera: PerspectiveCamera, fov: number): void {
+  if (Math.abs(camera.fov - fov) < 1e-3) return;
+  camera.fov = fov;
+  camera.updateProjectionMatrix();
+}
+
 /**
- * Puts the camera at `position`, facing `quaternion`, or, while a blend is
- * running, part of the way there from where the blend began. Returns the
- * blend if it still has further to go.
+ * Puts the camera at `position`, facing `quaternion`, with a field of view of
+ * `fov`, or, while a blend is running, part of the way there from where the
+ * blend began. Returns the blend if it still has further to go.
  *
  * Unlike a flight, this owns the whole pose, so it can simply mix the starting
  * pose with the destination, which is free to keep moving. The position swings
@@ -159,16 +182,18 @@ const leaving = (camera: Camera): Blend => ({
  * outside the Earth even when the destination is on the far side.
  */
 function approach(
-  camera: Camera,
+  camera: PerspectiveCamera,
   blend: Blend | null,
   position: Vector3,
   quaternion: Quaternion,
+  fov: number,
   deltaSeconds: number,
 ): Blend | null {
   if (blend) blend.progress = Math.min(1, blend.progress + deltaSeconds / BLEND_SECONDS);
   if (!blend || blend.progress === 1) {
     camera.position.copy(position);
     camera.quaternion.copy(quaternion);
+    setFov(camera, fov);
     return null;
   }
   const share = easeInOut(blend.progress);
@@ -179,16 +204,19 @@ function approach(
   direction.applyQuaternion(step.identity().slerp(turn, share));
   camera.position.copy(direction).multiplyScalar(from + (to - from) * share);
   camera.quaternion.slerpQuaternions(blend.quaternion, quaternion, share);
+  setFov(camera, blend.fov + (fov - blend.fov) * share);
   return blend;
 }
 
-/** The camera is in one of three states. */
+/** The camera is in one of four states. */
 type Mode =
   /** Orbiting the Earth's center under the user's control. */
   | { kind: 'globe' }
   /** Traveling with satellite `index`; `blend` runs while it is catching up with it. */
   | { kind: 'riding'; index: number; blend: Blend | null }
-  /** On the way back from a ride to a pose the globe controls can take over from. */
+  /** On the ground at the observer, looking at the sky; `blend` runs on the way down. */
+  | { kind: 'standing'; blend: Blend | null }
+  /** On the way back from a ride or the ground, to a pose the globe controls can take over from. */
   | { kind: 'returning'; blend: Blend; position: Vector3; quaternion: Quaternion };
 
 const satellite = new Vector3();
@@ -235,6 +263,44 @@ function placeBehind(rideCamera: Camera, radius: number): void {
   rideCamera.position.set(0, distance * Math.sin(elevation), distance * Math.cos(elevation));
 }
 
+const stance = createStance();
+const south = new Vector3();
+
+/**
+ * Finds the observer's eye (in `stance`) and their local axes (written to
+ * `basis`): x east, y up, z south.
+ */
+function standAt(observer: Observer): void {
+  stand(observer, currentSimTime(), stance);
+  basis.makeBasis(stance.east, stance.up, south.copy(stance.north).negate());
+}
+
+/**
+ * Turns the stand-in for the sky controls to look toward the equator, partway
+ * up: where the sky has most to show from most places.
+ */
+function faceTheSky(skyCamera: Camera, observer: Observer): void {
+  // In the observer's axes, the equator is to the south (+z) from the north.
+  const toward = observer.latitude >= 0 ? 1 : -1;
+  // The stand-in looks at the pivot from the opposite side.
+  skyCamera.position
+    .set(0, -Math.sin(SKY_START_ELEVATION), -toward * Math.cos(SKY_START_ELEVATION))
+    .multiplyScalar(SKY_PIVOT);
+}
+
+/**
+ * Keeps the near clipping plane in proportion to the camera's height above
+ * the ground. Standing on it, the ground at the eye's feet must not be cut
+ * away; far out, a near plane that close would leave too little depth
+ * precision to tell the ground from what is drawn just above it.
+ */
+function fitNearPlane(camera: PerspectiveCamera): void {
+  const near = MathUtils.clamp((camera.position.length() - 1) * 0.25, 5e-5, 0.05);
+  if (Math.abs(camera.near - near) <= near * 0.01) return;
+  camera.near = near;
+  camera.updateProjectionMatrix();
+}
+
 const ridePosition = new Vector3();
 const rideTurn = new Quaternion();
 const lookAtOrigin = new Matrix4();
@@ -251,9 +317,16 @@ const lookAtOrigin = new Matrix4();
  * satellite has got to. Only one set of controls listens at a time.
  */
 export function CameraRig({ world }: { world: World }) {
-  const camera = useThree((state) => state.camera);
+  // The canvas is given a perspective camera; see `Scene`.
+  const camera = useThree((state) => state.camera) as PerspectiveCamera;
   const element = useThree((state) => state.gl.domElement);
-  const controlsRef = useRef<{ globe: OrbitControls; ride: OrbitControls } | null>(null);
+  const controlsRef = useRef<{
+    globe: OrbitControls;
+    ride: OrbitControls;
+    sky: OrbitControls;
+  } | null>(null);
+  /** The field of view while looking up, which the wheel changes. */
+  const skyFov = useRef(SKY_FOV);
   const flight = useRef<Flight | null>(null);
   const mode = useRef<Mode>({ kind: 'globe' });
   const focusRequests = useApp((state) => state.focusRequests);
@@ -285,25 +358,55 @@ export function CameraRig({ world }: { world: World }) {
     // Never from underneath: that way lies the ground.
     ride.maxPolarAngle = Math.PI / 2;
 
+    // Looking up: the stand-in sits a hair from the pivot and looks through
+    // it, so orbiting the pivot turns the view about the eye, and dragging
+    // moves the sky along with the pointer. There is nothing to zoom toward,
+    // so the wheel changes the field of view instead.
+    const sky = new OrbitControls(new PerspectiveCamera(), element);
+    sky.enabled = false;
+    sky.enablePan = false;
+    sky.enableZoom = false;
+    sky.enableDamping = true;
+    sky.dampingFactor = 0.08;
+    // From just below the horizon (the stand-in level with the pivot) to the
+    // zenith (the stand-in straight below it).
+    sky.minPolarAngle = Math.PI / 2 - SKY_BELOW_HORIZON;
+    sky.maxPolarAngle = Math.PI - 1e-3;
+    const onWheel = (event: WheelEvent) => {
+      if (!sky.enabled) return;
+      event.preventDefault();
+      skyFov.current = MathUtils.clamp(
+        skyFov.current * Math.exp(event.deltaY * 0.001),
+        SKY_FOV_RANGE[0],
+        SKY_FOV_RANGE[1],
+      );
+    };
+    element.addEventListener('wheel', onWheel, { passive: false });
+
     mode.current = { kind: 'globe' };
-    controlsRef.current = { globe, ride };
+    controlsRef.current = { globe, ride, sky };
     return () => {
       globe.removeEventListener('start', cancelFlight);
+      element.removeEventListener('wheel', onWheel);
       globe.dispose();
       ride.dispose();
+      sky.dispose();
       controlsRef.current = null;
     };
   }, [camera, element]);
 
   useEffect(() => {
-    // During a ride the camera is on the satellite already.
-    if (focusRequests > 0 && !useApp.getState().riding) {
+    // During a ride the camera is on the satellite already, and from the
+    // ground there is nowhere to fly.
+    const { riding, lookingUp } = useApp.getState();
+    if (focusRequests > 0 && !riding && !lookingUp) {
       flight.current = { target: 'selected', progress: 0 };
     }
   }, [focusRequests]);
 
   useEffect(() => {
-    if (observerFocusRequests > 0 && !useApp.getState().riding) {
+    const { riding, lookingUp } = useApp.getState();
+    if (observerFocusRequests > 0 && !riding && !lookingUp) {
       flight.current = { target: 'observer', progress: 0 };
     }
   }, [observerFocusRequests]);
@@ -311,9 +414,11 @@ export function CameraRig({ world }: { world: World }) {
   useFrame((_, deltaSeconds) => {
     const controls = controlsRef.current;
     if (!controls) return;
-    const { globe, ride } = controls;
+    fitNearPlane(camera);
+    const { globe, ride, sky } = controls;
     const { simulation } = world;
-    const { riding, selected, setRiding } = useApp.getState();
+    const { riding, selected, setRiding, lookingUp, observer } = useApp.getState();
+    const standing = lookingUp ? observer : null;
 
     // Which satellite to be riding with this frame, if any.
     let wanted = riding ? selected : null;
@@ -335,7 +440,26 @@ export function CameraRig({ world }: { world: World }) {
       mode.current = { kind: 'riding', index: wanted, blend: leaving(camera) };
       flight.current = null;
       globe.enabled = false;
+      sky.enabled = false;
       ride.enabled = true;
+    } else if (wanted === null && standing && current.kind !== 'standing') {
+      // Down to the ground, facing the sky.
+      faceTheSky(sky.object, standing);
+      sky.target.set(0, 0, 0);
+      sky.update();
+      mode.current = { kind: 'standing', blend: leaving(camera) };
+      flight.current = null;
+      globe.enabled = false;
+      ride.enabled = false;
+      sky.enabled = true;
+    } else if (!standing && current.kind === 'standing') {
+      // Back up to where the globe controls can take over, over the same place.
+      const position = camera.position.clone().setLength(1 + FOCUS_STANDOFF);
+      const quaternion = new Quaternion().setFromRotationMatrix(
+        lookAtOrigin.lookAt(position, ORIGIN, UP),
+      );
+      mode.current = { kind: 'returning', blend: leaving(camera), position, quaternion };
+      sky.enabled = false;
     } else if (wanted === null && current.kind === 'riding') {
       // Getting off: pull straight back until the satellite can be seen in
       // context again, turning to face the Earth as the globe controls will.
@@ -360,11 +484,22 @@ export function CameraRig({ world }: { world: World }) {
       locate(world, now.index);
       ridePosition.copy(ride.object.position).applyMatrix4(basis).add(satellite);
       rideTurn.setFromRotationMatrix(basis).multiply(ride.object.quaternion);
-      now.blend = approach(camera, now.blend, ridePosition, rideTurn, deltaSeconds);
+      now.blend = approach(camera, now.blend, ridePosition, rideTurn, CAMERA_FOV, deltaSeconds);
+      return;
+    }
+    if (now.kind === 'standing' && standing) {
+      // Turns the view by about as much as the pointer moves across it.
+      sky.rotateSpeed = camera.fov / 360;
+      sky.update();
+      standAt(standing);
+      rideTurn.setFromRotationMatrix(basis).multiply(sky.object.quaternion);
+      now.blend = approach(camera, now.blend, stance.eye, rideTurn, skyFov.current, deltaSeconds);
       return;
     }
     if (now.kind === 'returning') {
-      if (approach(camera, now.blend, now.position, now.quaternion, deltaSeconds)) return;
+      if (approach(camera, now.blend, now.position, now.quaternion, CAMERA_FOV, deltaSeconds)) {
+        return;
+      }
       mode.current = { kind: 'globe' };
       globe.enabled = true;
     }

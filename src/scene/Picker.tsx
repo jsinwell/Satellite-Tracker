@@ -120,10 +120,11 @@ export function Picker({ world }: { world: World }) {
       }
       const radius = event.pointerType === 'mouse' ? PICK_RADIUS.mouse : PICK_RADIUS.touch;
       const hit = pick(world, camera, element, released, radius);
-      // A click on nothing clears the selection, except during a ride, where
-      // the camera is dragged about constantly and a slip would end the trip.
-      const { riding, select } = useApp.getState();
-      if (hit !== null || !riding) select(hit);
+      // A click on nothing clears the selection, except during a ride or
+      // while looking up, where the view is dragged about constantly and a
+      // slip would lose the satellite being watched.
+      const { riding, lookingUp, select } = useApp.getState();
+      if (hit !== null || !(riding || lookingUp)) select(hit);
     };
     const onPointerLeave = () => {
       hoverPoint.current = null;

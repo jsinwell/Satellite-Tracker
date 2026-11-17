@@ -4,6 +4,7 @@ import {
   AdditiveBlending,
   BackSide,
   type Group,
+  type Mesh,
   SRGBColorSpace,
   TextureLoader,
   Vector3,
@@ -13,6 +14,7 @@ import { gmst, sunDirection } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import type { Vec3 } from '../core/kinematics';
 import { directionToWorld, SPHERE_POLES_TO_Z } from './frame';
+import { DOME_FADE } from './SkyDome';
 
 const DAY_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_day_4096.jpg`;
 const NIGHT_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_night_4096.jpg`;
@@ -123,6 +125,7 @@ const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 export function Earth() {
   const [dayMap, nightMap] = useLoader(TextureLoader, [DAY_MAP_URL, NIGHT_MAP_URL]);
   const spin = useRef<Group>(null);
+  const atmosphere = useRef<Mesh>(null);
 
   const uniforms = useMemo(() => {
     for (const map of [dayMap, nightMap]) {
@@ -137,8 +140,13 @@ export function Earth() {
     };
   }, [dayMap, nightMap]);
 
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const simMs = currentSimTime();
+    // Within a few kilometers of the ground the camera is inside the glow,
+    // which would fill the whole sky; the sky dome draws the sky there instead.
+    if (atmosphere.current) {
+      atmosphere.current.visible = camera.position.length() - 1 > DOME_FADE.full;
+    }
     if (spin.current) spin.current.rotation.z = gmst(simMs);
     directionToWorld(sunDirection(simMs, scratch), uniforms.surface.uSunDirection.value);
   });
@@ -156,7 +164,7 @@ export function Earth() {
           />
         </mesh>
       </group>
-      <mesh>
+      <mesh ref={atmosphere}>
         <sphereGeometry args={[EARTH_RADIUS_KM * ATMOSPHERE_SCALE, 64, 32]} />
         <shaderMaterial
           uniforms={uniforms.atmosphere}

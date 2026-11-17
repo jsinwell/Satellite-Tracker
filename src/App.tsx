@@ -12,18 +12,19 @@ import { StatusLine } from './ui/StatusLine';
 import { TimeBar } from './ui/TimeBar';
 
 /**
- * Escape backs out one step: out of choosing a place on the globe, off the
- * ride if the camera is on one, otherwise out of the selection. Not while a
- * text field wants the key.
+ * Escape backs out one step: out of choosing a place on the globe, off a
+ * ride, up from the ground, and last of all out of the selection. Not while
+ * a text field wants the key.
  */
 function useEscapeToDeselect() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.target instanceof HTMLInputElement) return;
-      const { pickingObserver, setPickingObserver, riding, setRiding, select } = useApp.getState();
-      if (pickingObserver) setPickingObserver(false);
-      else if (riding) setRiding(false);
-      else select(null);
+      const state = useApp.getState();
+      if (state.pickingObserver) state.setPickingObserver(false);
+      else if (state.riding) state.setRiding(false);
+      else if (state.lookingUp) state.setLookingUp(false);
+      else state.select(null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
