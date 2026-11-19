@@ -1,7 +1,32 @@
-import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { currentSimTime, useApp } from '../app/store';
 import { wallNow } from '../core/clock';
-import { fromUtcInput, SETTABLE_RANGE_MS, toUtcInput } from './format';
+import {
+  clampSettable,
+  MONTH_NAMES,
+  type Month,
+  monthOf,
+  monthSettable,
+  monthWeeks,
+  moveByKey,
+  onDay,
+  PART_COUNT,
+  shiftMonth,
+  startOfDay,
+  type TimePart,
+  timePart,
+  WEEKDAY_NAMES,
+  withTimePart,
+} from './calendar';
+import { fromUtcField, SETTABLE_RANGE_MS, toUtcField } from './format';
 import { Panel } from './Panel';
 
 /**
@@ -12,17 +37,48 @@ import { Panel } from './Panel';
  */
 const RELIABLE_MS = 7 * 86_400_000;
 
+const FIRST_YEAR = new Date(SETTABLE_RANGE_MS.first).getUTCFullYear();
+const LAST_YEAR = new Date(SETTABLE_RANGE_MS.last).getUTCFullYear();
+
 /**
- * Sets the simulated date and time, in UTC like the time bar. Opens on the
- * instant showing, and keeps the clock's rate when it jumps.
+ * With a keyboard to hand, the picker opens ready to be typed in. On a touch
+ * screen that would bring the keyboard up over the calendar, which is the
+ * easier way there.
+ */
+const TYPES_FIRST =
+  typeof window === 'undefined' || !window.matchMedia('(pointer: coarse)').matches;
+
+const dayLabel = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+const stepClass =
+  'grid size-7 place-items-center rounded-md text-lg leading-none text-slate-300 enabled:hover:bg-white/10 disabled:text-slate-700';
+
+/**
+ * Sets the simulated date and time, in UTC like the time bar: by typing it,
+ * or from a calendar and a clock. Opens on the instant showing, and keeps the
+ * clock's rate when it jumps.
  */
 export function TimePicker({ onClose }: { onClose(): void }) {
-  const [value, setValue] = useState(() => toUtcInput(currentSimTime()));
-  const [invalid, setInvalid] = useState(false);
-  const inputId = useId();
+  // What would be gone to: always an instant that can be.
+  const [instant, setInstant] = useState(() =>
+    clampSettable(Math.floor(currentSimTime() / 1000) * 1000),
+  );
+  // What is typed, which while it is being typed may not be one.
+  const [text, setText] = useState(() => toUtcField(instant));
+  const [refused, setRefused] = useState(false);
+  // The calendar's page, which can be turned without choosing anything.
+  const [page, setPage] = useState(() => monthOf(instant));
+  const [choosingMonth, setChoosingMonth] = useState(false);
+  const fieldId = useId();
   const panel = useRef<HTMLFormElement>(null);
-  const chosen = fromUtcInput(value);
-  const farFromNow = chosen !== null && Math.abs(chosen - wallNow()) > RELIABLE_MS;
+  const typed = fromUtcField(text);
+  const farFromNow = typed !== null && Math.abs(typed - wallNow()) > RELIABLE_MS;
 
   // Clicking anywhere else puts it away, as a menu would.
   useEffect(() => {
@@ -33,13 +89,31 @@ export function TimePicker({ onClose }: { onClose(): void }) {
     return () => window.removeEventListener('pointerdown', onPointerDown);
   }, [onClose]);
 
+  /** Takes an instant from the calendar or the clock, and shows it everywhere. */
+  const choose = (timeMs: number) => {
+    const chosen = clampSettable(timeMs);
+    setInstant(chosen);
+    setText(toUtcField(chosen));
+    setPage(monthOf(chosen));
+    setRefused(false);
+  };
+
+  const type = (value: string) => {
+    setText(value);
+    setRefused(false);
+    const timeMs = fromUtcField(value);
+    if (timeMs === null) return;
+    setInstant(timeMs);
+    setPage(monthOf(timeMs));
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (chosen === null) {
-      setInvalid(true);
+    if (typed === null) {
+      setRefused(true);
       return;
     }
-    useApp.getState().jumpTo(chosen);
+    useApp.getState().jumpTo(typed);
     onClose();
   };
 
@@ -53,42 +127,118 @@ export function TimePicker({ onClose }: { onClose(): void }) {
           onClose();
         }
       }}
-      className="absolute bottom-full left-1/2 mb-2 w-72 max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
+      className="absolute bottom-full left-1/2 mb-2 w-[19rem] max-w-[calc(100vw-1.5rem)] -translate-x-1/2"
     >
-      <Panel aria-label="Go to a date and time" className="space-y-2 p-3 text-xs">
-        <label htmlFor={inputId} className="block text-slate-300">
-          Go to a date and time (UTC)
-        </label>
-        <div className="flex gap-2">
-          <input
-            id={inputId}
-            type="datetime-local"
-            step={1}
-            min={toUtcInput(SETTABLE_RANGE_MS.first)}
-            max={toUtcInput(SETTABLE_RANGE_MS.last)}
-            value={value}
-            onChange={(event) => {
-              setValue(event.target.value);
-              setInvalid(false);
-            }}
-            aria-invalid={invalid}
-            // biome-ignore lint/a11y/noAutofocus: the picker is opened to type in it
-            autoFocus
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 font-mono text-xs text-slate-100 [color-scheme:dark] outline-none focus:border-accent/60 aria-invalid:border-amber-300/60"
-          />
+      <Panel
+        aria-label="Go to a date and time"
+        className="thin-scrollbar max-h-[calc(100dvh-5rem)] space-y-3 overflow-y-auto p-3 text-xs"
+      >
+        <div className="space-y-1.5">
+          <label htmlFor={fieldId} className="block text-slate-300">
+            Go to a date and time (UTC)
+          </label>
+          <div className="flex gap-2">
+            <input
+              id={fieldId}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="2027-08-02 10:07:00"
+              value={text}
+              onChange={(event) => type(event.target.value)}
+              aria-invalid={refused}
+              // biome-ignore lint/a11y/noAutofocus: the picker is opened to type in it
+              autoFocus={TYPES_FIRST}
+              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-accent/60 aria-invalid:border-amber-300/60"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-accent/15 px-3 py-1.5 font-medium text-accent hover:bg-accent/25"
+            >
+              Go
+            </button>
+          </div>
+          {refused && (
+            <p role="alert" className="text-amber-300/90">
+              Type a date as year-month-day, from {FIRST_YEAR} to {LAST_YEAR}, then a time if you
+              like: 2027-08-02 10:07
+            </p>
+          )}
+        </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setPage(shiftMonth(page, choosingMonth ? -12 : -1))}
+              disabled={
+                choosingMonth ? page.year <= FIRST_YEAR : !monthSettable(shiftMonth(page, -1))
+              }
+              aria-label={choosingMonth ? 'Previous year' : 'Previous month'}
+              className={stepClass}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              onClick={() => setChoosingMonth((open) => !open)}
+              aria-expanded={choosingMonth}
+              title={choosingMonth ? 'Back to the days' : 'Choose a month and year'}
+              className="rounded-md px-2 py-1 text-sm font-medium text-slate-100 hover:bg-white/10 aria-expanded:bg-white/10"
+            >
+              {choosingMonth ? page.year : `${MONTH_NAMES[page.month]} ${page.year}`}
+              <span aria-hidden className="ml-1 text-[0.6rem] text-slate-500">
+                {choosingMonth ? '▴' : '▾'}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(shiftMonth(page, choosingMonth ? 12 : 1))}
+              disabled={
+                choosingMonth ? page.year >= LAST_YEAR : !monthSettable(shiftMonth(page, 1))
+              }
+              aria-label={choosingMonth ? 'Next year' : 'Next month'}
+              className={stepClass}
+            >
+              ›
+            </button>
+          </div>
+
+          {choosingMonth ? (
+            <MonthGrid
+              page={page}
+              chosen={monthOf(instant)}
+              onYear={(year) => setPage({ year, month: page.month })}
+              onChoose={(month) => {
+                setPage(month);
+                setChoosingMonth(false);
+              }}
+            />
+          ) : (
+            <DayGrid page={page} instant={instant} onChoose={choose} />
+          )}
+        </div>
+
+        {/* biome-ignore lint/a11y/useSemanticElements: a fieldset's legend will not sit in a row */}
+        <div role="group" aria-label="Time" className="flex items-center gap-1.5">
+          <span className="mr-1.5 text-slate-400">Time</span>
+          <TimeField label="Hours" part="hours" instant={instant} onChoose={choose} />
+          <span className="text-slate-500">:</span>
+          <TimeField label="Minutes" part="minutes" instant={instant} onChoose={choose} />
+          <span className="text-slate-500">:</span>
+          <TimeField label="Seconds" part="seconds" instant={instant} onChoose={choose} />
+          <span className="ml-1 text-slate-500">UTC</span>
           <button
-            type="submit"
-            className="rounded-lg bg-accent/15 px-3 py-1.5 font-medium text-accent hover:bg-accent/25"
+            type="button"
+            onClick={() => choose(Math.floor(wallNow() / 1000) * 1000)}
+            className="ml-auto rounded-md px-2 py-1 text-slate-300 hover:bg-white/10"
           >
-            Go
+            Now
           </button>
         </div>
-        {invalid && (
-          <p role="alert" className="text-amber-300/90">
-            Pick a date between 1957 and 2100.
-          </p>
-        )}
-        {farFromNow && !invalid && (
+
+        {farFromNow && !refused && (
           <p className="text-slate-400">
             The Sun, Moon and planets are right for any date. Satellites this far from today are
             only a guess: their orbits are known as they are now.
@@ -96,5 +246,211 @@ export function TimePicker({ onClose }: { onClose(): void }) {
         )}
       </Panel>
     </form>
+  );
+}
+
+/**
+ * A month's days. One of them takes the keyboard: the chosen day if it is on
+ * the page, or else the first. From there the keys choose another: see
+ * `moveByKey`.
+ */
+function DayGrid({
+  page,
+  instant,
+  onChoose,
+}: {
+  page: Month;
+  instant: number;
+  onChoose(timeMs: number): void;
+}) {
+  const grid = useRef<HTMLTableElement>(null);
+  // Set when the keyboard moves the choice, so that it can be followed.
+  const follow = useRef(false);
+  const weeks = monthWeeks(page);
+  const chosenDay = startOfDay(instant);
+  const today = startOfDay(wallNow());
+  const onPage = weeks.flat().some((day) => day.inMonth && day.startMs === chosenDay);
+  const tabStop = onPage ? chosenDay : Date.UTC(page.year, page.month, 1);
+
+  useLayoutEffect(() => {
+    if (!follow.current) return;
+    follow.current = false;
+    grid.current?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus();
+  });
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    // From the day the keyboard is on, which is not the chosen one if the
+    // page has been turned away from it.
+    const held = (event.target as HTMLElement).closest<HTMLElement>('[data-day]')?.dataset.day;
+    if (held === undefined) return;
+    const to = moveByKey(onDay(instant, Number(held)), event.key, event.shiftKey);
+    if (to === null) return;
+    event.preventDefault();
+    // The arrow keys also steer the camera, when nothing else wants them.
+    event.stopPropagation();
+    follow.current = true;
+    onChoose(to);
+  };
+
+  return (
+    <table
+      ref={grid}
+      aria-label={`${MONTH_NAMES[page.month]} ${page.year}`}
+      onKeyDown={onKeyDown}
+      className="w-full table-fixed border-separate border-spacing-px"
+    >
+      <thead>
+        <tr>
+          {WEEKDAY_NAMES.map((name) => (
+            <th
+              key={name}
+              scope="col"
+              abbr={name}
+              className="py-1 text-center text-[0.65rem] font-normal text-slate-500"
+            >
+              {name.slice(0, 2)}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {weeks.map((week) => (
+          <tr key={week[0].startMs}>
+            {week.map((day) => (
+              <td key={day.startMs} className="p-0">
+                <button
+                  type="button"
+                  disabled={!day.settable}
+                  data-day={day.startMs}
+                  tabIndex={day.startMs === tabStop ? 0 : -1}
+                  onClick={() => onChoose(onDay(instant, day.startMs))}
+                  aria-label={dayLabel.format(day.startMs)}
+                  aria-pressed={day.startMs === chosenDay}
+                  aria-current={day.startMs === today ? 'date' : undefined}
+                  className={`h-8 w-full rounded-md font-mono tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent/70 enabled:hover:bg-white/10 disabled:text-slate-800 aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-slate-950 aria-pressed:hover:bg-accent aria-[current=date]:ring-1 aria-[current=date]:ring-accent/50 ${
+                    day.inMonth ? 'text-slate-200' : 'text-slate-600'
+                  }`}
+                >
+                  {day.day}
+                </button>
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The months of a year, and the year itself to type, for going a long way at once. */
+function MonthGrid({
+  page,
+  chosen,
+  onYear,
+  onChoose,
+}: {
+  page: Month;
+  chosen: Month;
+  onYear(year: number): void;
+  onChoose(month: Month): void;
+}) {
+  // What is typed for the year, while it is not yet one that can be gone to.
+  const [draft, setDraft] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center justify-center gap-2 text-slate-400">
+        Year
+        <input
+          type="text"
+          inputMode="numeric"
+          maxLength={4}
+          value={draft ?? String(page.year)}
+          onFocus={(event) => event.target.select()}
+          onChange={(event) => {
+            const value = event.target.value.replace(/\D/g, '');
+            const year = Number(value);
+            if (value.length === 4 && year >= FIRST_YEAR && year <= LAST_YEAR) {
+              setDraft(null);
+              onYear(year);
+            } else {
+              setDraft(value);
+            }
+          }}
+          onBlur={() => setDraft(null)}
+          className="w-16 rounded-md border border-white/10 bg-slate-900/80 px-2 py-1 text-center font-mono text-slate-100 outline-none focus:border-accent/60"
+        />
+        <span className="text-slate-600">
+          {FIRST_YEAR}–{LAST_YEAR}
+        </span>
+      </label>
+      <div className="grid grid-cols-3 gap-1">
+        {MONTH_NAMES.map((name, month) => {
+          const isChosen = chosen.year === page.year && chosen.month === month;
+          return (
+            <button
+              key={name}
+              type="button"
+              disabled={!monthSettable({ year: page.year, month })}
+              onClick={() => onChoose({ year: page.year, month })}
+              aria-pressed={isChosen}
+              className="h-9 rounded-md text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-accent/70 enabled:hover:bg-white/10 disabled:text-slate-800 aria-pressed:bg-accent/20 aria-pressed:text-accent"
+            >
+              {name.slice(0, 3)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One part of the time of day: two digits to type over, or to step with the
+ * arrow keys, going round from the last value to the first.
+ */
+function TimeField({
+  label,
+  part,
+  instant,
+  onChoose,
+}: {
+  label: string;
+  part: TimePart;
+  instant: number;
+  onChoose(timeMs: number): void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const value = timePart(instant, part);
+  const count = PART_COUNT[part];
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      role="spinbutton"
+      aria-label={label}
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={count - 1}
+      maxLength={2}
+      value={draft ?? String(value).padStart(2, '0')}
+      onFocus={(event) => event.target.select()}
+      onChange={(event) => {
+        const typed = event.target.value.replace(/\D/g, '');
+        setDraft(typed);
+        if (typed !== '' && Number(typed) < count)
+          onChoose(withTimePart(instant, part, Number(typed)));
+      }}
+      onBlur={() => setDraft(null)}
+      onKeyDown={(event) => {
+        const step = event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0;
+        if (step === 0) return;
+        event.preventDefault();
+        setDraft(null);
+        onChoose(withTimePart(instant, part, (value + step + count) % count));
+      }}
+      className="w-9 rounded-md border border-white/10 bg-slate-900/80 py-1 text-center font-mono text-slate-100 tabular-nums outline-none focus:border-accent/60"
+    />
   );
 }

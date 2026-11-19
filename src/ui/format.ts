@@ -111,27 +111,38 @@ export const SETTABLE_RANGE_MS = {
 const pad = (value: number, width = 2) => String(value).padStart(width, '0');
 
 /**
- * An instant as a `datetime-local` input wants it, read as UTC:
- * `2027-08-02T10:07:00`. Milliseconds are dropped.
+ * An instant written out to be read back or typed over, in UTC:
+ * `2027-08-02 10:07:00`. Milliseconds are dropped.
  */
-export function toUtcInput(timeMs: number): string {
+export function toUtcField(timeMs: number): string {
   const date = new Date(timeMs);
   return (
     `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
-    `T${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+    ` ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
   );
 }
 
+const UTC_FIELD =
+  /^(\d{4})-(\d{1,2})-(\d{1,2})(?:(?:\s+|T)(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?\s*(?:Z|UTC)?$/i;
+
 /**
- * The instant a `datetime-local` value names, taking it as UTC, or null if it
- * is not one or lies outside `SETTABLE_RANGE_MS`. Seconds are optional.
+ * The instant a typed date and time names, taking it as UTC, or null if it
+ * is not one or lies outside `SETTABLE_RANGE_MS`. The date comes first, year
+ * to day; the time is optional, and so are its seconds. Between the two goes
+ * a space, or the `T` of the form computers write.
  */
-export function fromUtcInput(value: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(value)) return null;
-  const timeMs = Date.parse(`${value}Z`);
-  if (Number.isNaN(timeMs)) return null;
-  // Date.parse rolls a day that does not exist, like February 30, into the
+export function fromUtcField(text: string): number | null {
+  const match = UTC_FIELD.exec(text.trim());
+  if (!match) return null;
+  // A part left out is a zero: no time is midnight, and no seconds is none.
+  const [year, month, day, hours, minutes, seconds] = match
+    .slice(1)
+    .map((part) => Number(part ?? 0));
+  if (hours > 23 || minutes > 59 || seconds > 59) return null;
+  const timeMs = Date.UTC(year, month - 1, day, hours, minutes, seconds);
+  // Date.UTC rolls a day that does not exist, like February 30, into the
   // next month rather than refusing it; such a date does not come back the same.
-  if (!toUtcInput(timeMs).startsWith(value.slice(0, 16))) return null;
+  const date = new Date(timeMs);
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
   return timeMs >= SETTABLE_RANGE_MS.first && timeMs <= SETTABLE_RANGE_MS.last ? timeMs : null;
 }
