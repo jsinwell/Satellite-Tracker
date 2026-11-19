@@ -29,7 +29,7 @@ import {
   skyViewReach,
   sunlightReaching,
 } from '../core/atmosphere';
-import { bodyExposure } from '../core/bodies';
+import { bodyExposure, MOONLIGHT_COLOR, moonlight, starsByMoonlight } from '../core/bodies';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
@@ -54,6 +54,15 @@ const GLARE_BRIGHTNESS = 6;
 const CLOSE_UP_FOV = [1.5, 12] as const;
 /** The clouds are drawn after the Moon (-0.3, see `SunAndMoon`) and before the satellites. */
 const CLOUDS_ORDER = -0.2;
+/**
+ * The Moon's light is worked into the sky only with the Sun this far down
+ * and the Moon not this far down itself, as sines of their heights (4° and
+ * 2° below level). Before that the last of the twilight is a thousand times
+ * brighter and it would make no difference; it costs a second pass through
+ * the air for every line of sight in the sky's map.
+ */
+const MOONLIGHT_WITH_SUN_BELOW = -Math.sin(MathUtils.degToRad(4));
+const MOONLIGHT_WITH_MOON_ABOVE = -Math.sin(MathUtils.degToRad(2));
 /** The Moon's shadow can only be on the Earth with the two this close in the sky, radians. */
 const ECLIPSE_SEPARATION = 0.03;
 
@@ -200,7 +209,12 @@ const sun: Vec3 = { x: 0, y: 0, z: 0 };
 const sunKm: Vec3 = { x: 0, y: 0, z: 0 };
 const moonKm: Vec3 = { x: 0, y: 0, z: 0 };
 const toSun: Vec3 = { x: 0, y: 0, z: 0 };
+const toMoon: Vec3 = { x: 0, y: 0, z: 0 };
 const ambient: Rgb = [0, 0, 0];
+const byMoon: Rgb = [0, 0, 0];
+/** The Moon's light, and the simulated instant it was worked out for: it changes over hours. */
+const moonShare = { atMs: Number.NaN, value: 0 };
+const MOONLIGHT_REFRESH_MS = 60_000;
 const reaching: Rgb = [0, 0, 0];
 const forward = new Vector3();
 const upward = new Vector3();
@@ -343,19 +357,56 @@ export function Atmosphere() {
     // and the part of the sky the camera faces.
     let exposure: number = EXPOSURE.space;
     uniforms.uStarKeep.value = 1;
+    uniforms.uSkyMoonlight.value.set(0, 0, 0);
     if (ground > 0) {
+      // The Moon, from here: by night it is the light there is.
+      const moonRange = Math.hypot(moonKm.x - eye.x, moonKm.y - eye.y, moonKm.z - eye.z);
+      toMoon.x = (moonKm.x - eye.x) / moonRange;
+      toMoon.y = (moonKm.y - eye.y) / moonRange;
+      toMoon.z = (moonKm.z - eye.z) / moonRange;
+      directionToWorld(toMoon, uniforms.uSkyMoon.value);
+      const eyeRadius = eye.length();
+      const sunHeight = (eye.x * sun.x + eye.y * sun.y + eye.z * sun.z) / eyeRadius;
+      const moonHeight = (eye.x * toMoon.x + eye.y * toMoon.y + eye.z * toMoon.z) / eyeRadius;
+      let moonlit = 0;
+      if (sunHeight < MOONLIGHT_WITH_SUN_BELOW && moonHeight > MOONLIGHT_WITH_MOON_ABOVE) {
+        if (!(Math.abs(simMs - moonShare.atMs) < MOONLIGHT_REFRESH_MS)) {
+          moonShare.atMs = simMs;
+          moonShare.value = moonlight(simMs);
+        }
+        moonlit = moonShare.value;
+        uniforms.uSkyMoonlight.value.set(
+          MOONLIGHT_COLOR[0] * moonlit,
+          MOONLIGHT_COLOR[1] * moonlit,
+          MOONLIGHT_COLOR[2] * moonlit,
+        );
+      }
+
       const shadow = eclipse ? moonShadow : undefined;
       meterSky(tables, eye, sun, ambient, shadow);
-      const sky = luminance(ambient);
       camera.getWorldDirection(forward).transformDirection(TEME_FROM_WORLD);
       looking.x = forward.x;
       looking.y = forward.y;
       looking.z = forward.z;
-      const adapted = skyExposure(sky, meterView(tables, eye, sun, looking, shadow));
+      let view = meterView(tables, eye, sun, looking, shadow);
+      if (moonlit > 0) {
+        // The same sky as the Sun makes, that much fainter.
+        meterSky(tables, eye, toMoon, byMoon);
+        for (let c = 0; c < 3; c++) ambient[c] += byMoon[c] * MOONLIGHT_COLOR[c] * moonlit;
+        view += meterView(tables, eye, toMoon, looking) * moonlit;
+      }
+      const sky = luminance(ambient);
+      const adapted = skyExposure(sky, view);
       exposure = EXPOSURE.space ** (1 - ground) * adapted ** ground;
       uniforms.uSkyAmbient.value.set(ambient[0], ambient[1], ambient[2]);
-      // Stars are drawn as a dark-adapted eye sees them. Short of that, less.
-      uniforms.uStarKeep.value = (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4;
+      // Stars are drawn as a dark-adapted eye sees them. Short of that,
+      // less; and less again through the veil of a bright Moon's light.
+      uniforms.uStarKeep.value =
+        (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4 *
+        starsByMoonlight(
+          moonlit,
+          MathUtils.radToDeg(Math.asin(MathUtils.clamp(moonHeight, -1, 1))),
+        );
     }
     // Closed in on the Moon or a planet, the picture is exposed for that, as
     // through a telescope, if it is brighter than the sky: by night the sky

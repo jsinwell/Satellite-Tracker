@@ -142,7 +142,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
   // Dry land: hills and hollows from 6 km across down to 15 m, each layer
   // dropped where it is too fine for the screen to show without flickering.
   // Only their slopes are used, to light them by: the ground stays flat.
-  vec3 landDry(vec3 albedo, vec2 at, float footprint, vec3 up, vec3 sunlight) {
+  vec3 landDry(vec3 albedo, vec2 at, float footprint, vec3 up, vec3 sunlight, vec3 moonlight) {
     vec2 slope = vec2(0.0);
     float mottle = 0.0;
     float across = 6.0;
@@ -172,17 +172,34 @@ export const LANDSCAPE_GLSL = /* glsl */ `
       weight *= 0.62;
     }
     vec3 normal = normalize(up - uLandEast * slope.x - uLandNorth * slope.y);
-    float facing = max(dot(normal, uSkySun), 0.0);
+    vec3 direct = sunlight * max(dot(normal, uSkySun), 0.0)
+      + moonlight * max(dot(normal, uSkyMoon), 0.0);
     // Slopes that face the sky less see less of it.
     float open = 0.5 + 0.5 * dot(normal, up);
     vec3 color = albedo * (1.0 + 0.8 * mottle);
-    return color * (sunlight * facing / SKY_PI + uSkyAmbient * open);
+    return color * (direct / SKY_PI + uSkyAmbient * open);
   }
 
   // Water: the sky mirrored in it, more the lower it is looked at, the Sun's
   // glitter, and the blue of the water itself. Swell tilts the surface where
   // it is near enough to make out.
-  vec3 landSea(vec3 direction, vec2 at, float footprint, vec3 up, vec3 sunlight, float sunHeight) {
+  // The glitter of a light on rough water: waves too small to see, some of
+  // which face just the way to catch it, more of them the nearer that way
+  // is to the surface's own. How bright, for a light as bright as the Sun.
+  float seaGlitter(vec3 direction, vec3 normal, vec3 toLight) {
+    vec3 halfway = normalize(toLight - direction);
+    float nh = max(dot(normal, halfway), 1e-3);
+    float tilt = (1.0 - nh * nh) / (nh * nh);
+    float facets = exp(-tilt / SEA_GLINT) / (SKY_PI * SEA_GLINT * nh * nh * nh * nh);
+    float nv = max(dot(-direction, normal), 1e-3);
+    float nl = max(dot(normal, toLight), 0.0);
+    float vh = max(dot(-direction, halfway), 1e-3);
+    float seen = min(1.0, min(2.0 * nh * nv / vh, 2.0 * nh * nl / vh));
+    float shine = 0.02 + 0.98 * pow(1.0 - vh, 5.0);
+    return shine * facets * seen / (4.0 * nv);
+  }
+
+  vec3 landSea(vec3 direction, vec2 at, float footprint, vec3 up, vec3 sunlight, vec3 moonlight) {
     vec2 slope = vec2(0.0);
     float crest = 0.24;
     float steep = 0.05;
@@ -212,20 +229,11 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     // The map keeps the sky as it is shown; this is what it was before that.
     vec3 sky = -log(max(1.0 - air, 1e-4)) / uSkyExposure;
 
-    vec3 body = SEA_COLOR * (sunlight * max(sunHeight, 0.0) / SKY_PI + uSkyAmbient);
-
-    // The glitter: waves too small to see, some of which face just the way
-    // to catch the Sun, more of them the nearer that way is to the surface's own.
-    vec3 halfway = normalize(uSkySun - direction);
-    float nh = max(dot(normal, halfway), 1e-3);
-    float tilt = (1.0 - nh * nh) / (nh * nh);
-    float facets = exp(-tilt / SEA_GLINT) / (SKY_PI * SEA_GLINT * nh * nh * nh * nh);
-    float nv = max(cosView, 1e-3);
-    float nl = max(dot(normal, uSkySun), 0.0);
-    float vh = max(dot(-direction, halfway), 1e-3);
-    float seen = min(1.0, min(2.0 * nh * nv / vh, 2.0 * nh * nl / vh));
-    float shine = 0.02 + 0.98 * pow(1.0 - vh, 5.0);
-    vec3 glitter = sunlight * (shine * facets * seen / (4.0 * nv));
+    vec3 falling = sunlight * max(dot(up, uSkySun), 0.0) + moonlight * max(dot(up, uSkyMoon), 0.0);
+    vec3 body = SEA_COLOR * (falling / SKY_PI + uSkyAmbient);
+    // The Sun's glitter, and by night the Moon's.
+    vec3 glitter = sunlight * seaGlitter(direction, normal, uSkySun)
+      + moonlight * seaGlitter(direction, normal, uSkyMoon);
 
     return mix(body, sky, seaReflectance(cosView)) + glitter;
   }
@@ -240,6 +248,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     float left = 1.0;
     if (uSkyEclipse > 0.5) left -= sunHiddenByMoon(up, uSkySunPosition, uSkyMoonPosition);
     vec3 sunlight = skySunlight(SKY_BOTTOM, sunHeight) * left;
+    vec3 moonlight = skySunlight(SKY_BOTTOM, dot(up, uSkyMoon)) * uSkyMoonlight;
 
     vec2 pattern = at + uLandOrigin;
     vec3 albedo = LAND_BARE;
@@ -260,6 +269,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
         * smoothstep(${float(CLOUD_COVER.from)}, ${float(CLOUD_COVER.to)}, textureLod(uLandClouds, place, 0.0).r)
         * (1.0 - smoothstep(${float(CLOUD_LATITUDES.full / 90)}, ${float(CLOUD_LATITUDES.none / 90)}, abs(latitude) / (0.5 * SKY_PI)));
       sunlight *= 1.0 - 0.7 * cloud;
+      moonlight *= 1.0 - 0.7 * cloud;
       // The maps are far coarser than the screen here: no need of their smaller copies.
       vec3 day = textureLod(uLandDay, place, 0.0).rgb;
       // Mirrors waterShare and landAlbedo, but for the shore being
@@ -272,10 +282,10 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     }
     vec3 light = vec3(0.0);
     if (water < 1.0) {
-      light += (1.0 - water) * landDry(albedo, pattern, footprint, up, sunlight);
+      light += (1.0 - water) * landDry(albedo, pattern, footprint, up, sunlight, moonlight);
     }
     if (water > 0.0) {
-      light += water * landSea(direction, pattern, footprint, up, sunlight, sunHeight);
+      light += water * landSea(direction, pattern, footprint, up, sunlight, moonlight);
     }
     return light;
   }
