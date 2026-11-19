@@ -8,8 +8,8 @@ import {
   formatLongitude,
   formatPeriod,
   formatUtc,
-  fromUtcInput,
-  toUtcInput,
+  fromUtcField,
+  toUtcField,
 } from './format';
 
 describe('format', () => {
@@ -77,27 +77,49 @@ describe('formatAgo', () => {
   });
 });
 
-describe('toUtcInput and fromUtcInput', () => {
+describe('toUtcField and fromUtcField', () => {
   const eclipse = Date.UTC(2027, 7, 2, 10, 7, 30);
 
   it('write and read an instant in UTC, whatever the local time zone', () => {
-    expect(toUtcInput(eclipse)).toBe('2027-08-02T10:07:30');
-    expect(fromUtcInput('2027-08-02T10:07:30')).toBe(eclipse);
+    expect(toUtcField(eclipse)).toBe('2027-08-02 10:07:30');
+    expect(fromUtcField('2027-08-02 10:07:30')).toBe(eclipse);
   });
 
-  it('take a time without seconds', () => {
-    expect(fromUtcInput('2027-08-02T10:07')).toBe(Date.UTC(2027, 7, 2, 10, 7));
+  it('read back what they write, to the second', () => {
+    for (const timeMs of [Date.UTC(1957, 9, 4, 19, 28, 34), eclipse, Date.UTC(2100, 11, 31)]) {
+      expect(fromUtcField(toUtcField(timeMs + 432))).toBe(timeMs);
+    }
+  });
+
+  it.each([
+    ['2027-08-02T10:07:30', eclipse],
+    ['2027-08-02T10:07:30Z', eclipse],
+    ['2027-08-02 10:07:30 UTC', eclipse],
+    ['  2027-08-02   10:07:30.250 ', eclipse],
+    ['2027-8-2 10:07:30', eclipse],
+    ['2027-08-02 10:07', Date.UTC(2027, 7, 2, 10, 7)],
+    ['2027-08-02 9:05', Date.UTC(2027, 7, 2, 9, 5)],
+    ['2027-08-02', Date.UTC(2027, 7, 2)],
+    ['2028-02-29', Date.UTC(2028, 1, 29)],
+  ])('take %j', (text, expected) => {
+    expect(fromUtcField(text)).toBe(expected);
   });
 
   it.each([
     '',
     'tomorrow',
-    '2027-08-02',
-    '2027-13-02T10:07',
-    '2027-02-30T10:07',
-    '1956-12-31T23:59',
-    '2101-01-01T00:00',
-  ])('reject %j', (value) => {
-    expect(fromUtcInput(value)).toBeNull();
+    '08/02/2027',
+    '2027-08',
+    '2027-13-02 10:07',
+    '2027-02-30 10:07',
+    '2027-02-29',
+    '2027-08-02 24:00',
+    '2027-08-02 10:60',
+    '2027-08-02 10:07:61',
+    '2027-08-02 10',
+    '1956-12-31 23:59',
+    '2101-01-01 00:00',
+  ])('reject %j', (text) => {
+    expect(fromUtcField(text)).toBeNull();
   });
 });

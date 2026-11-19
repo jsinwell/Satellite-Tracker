@@ -524,7 +524,7 @@ test.describe('with a catalog', () => {
     const field = picker.getByLabel('Go to a date and time (UTC)');
 
     await openPicker.click();
-    await field.fill('2027-08-02T10:07:00');
+    await field.fill('2027-08-02 10:07');
     // The planets will be right; the satellites, nine months on, will not.
     await expect(picker).toContainText('Satellites this far from today are only a guess');
     await picker.getByRole('button', { name: 'Go' }).click();
@@ -533,11 +533,60 @@ test.describe('with a catalog', () => {
 
     // Escape puts it away without going anywhere.
     await openPicker.click();
-    await expect(field).toHaveValue(/^2027-08-02T10:07/);
-    await field.fill('2030-01-01T00:00:00');
+    await expect(field).toHaveValue(/^2027-08-02 10:07/);
+    await field.fill('2030-01-01 00:00:00');
     await field.press('Escape');
     await expect(picker).toBeHidden();
     await expect(timeBar.locator('time')).toContainText('Aug 02, 2027');
+
+    // Something that is not a date goes nowhere, and says what would be one.
+    await openPicker.click();
+    await field.fill('next Tuesday');
+    await field.press('Enter');
+    await expect(picker.getByRole('alert')).toContainText('year-month-day');
+    await expect(timeBar.locator('time')).toContainText('Aug 02, 2027');
+  });
+
+  test('picks a date and time from the calendar', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const timeBar = page.getByRole('region', { name: 'Simulation time' });
+    const picker = page.getByRole('region', { name: 'Go to a date and time' });
+    const field = picker.getByLabel('Go to a date and time (UTC)');
+    const day = (name: string) => picker.getByRole('button', { name });
+
+    // It opens on the day showing.
+    await timeBar.getByRole('button', { name: /UTC$/ }).click();
+    await expect(picker.getByRole('table', { name: 'November 2026' })).toBeVisible();
+    await expect(day('Monday, November 16, 2026')).toHaveAttribute('aria-pressed', 'true');
+
+    // A day keeps the time of day; the clock sets that.
+    await picker.getByRole('button', { name: 'Next month' }).click();
+    await day('Friday, December 25, 2026').click();
+    await expect(field).toHaveValue(/^2026-12-25 06:30/);
+    await picker.getByRole('spinbutton', { name: 'Hours' }).fill('18');
+    await picker.getByRole('spinbutton', { name: 'Minutes' }).fill('05');
+    await picker.getByRole('spinbutton', { name: 'Seconds' }).fill('00');
+    await picker.getByRole('spinbutton', { name: 'Seconds' }).press('ArrowDown');
+    await expect(field).toHaveValue('2026-12-25 18:05:59');
+
+    // Decades away is a year and a month, not a hundred presses of an arrow.
+    await picker.getByRole('button', { name: 'December 2026' }).click();
+    await picker.getByRole('textbox', { name: /^Year/ }).fill('1969');
+    await picker.getByRole('button', { name: 'Jul', exact: true }).click();
+    await expect(picker.getByRole('table', { name: 'July 1969' })).toBeVisible();
+    await day('Sunday, July 20, 1969').click();
+    await expect(field).toHaveValue('1969-07-20 18:05:59');
+
+    // The keyboard walks the calendar, and typing in the field turns its page.
+    await day('Sunday, July 20, 1969').press('ArrowRight');
+    await expect(day('Monday, July 21, 1969')).toBeFocused();
+    await expect(field).toHaveValue('1969-07-21 18:05:59');
+    await field.fill('2027-08-02 10:07:00');
+    await expect(day('Monday, August 2, 2027')).toHaveAttribute('aria-pressed', 'true');
+
+    await picker.getByRole('button', { name: 'Go' }).click();
+    await expect(picker).toBeHidden();
+    await expect(timeBar.locator('time')).toContainText('Aug 02, 2027, 10:07');
   });
 
   test('controls simulated time', async ({ page }) => {
