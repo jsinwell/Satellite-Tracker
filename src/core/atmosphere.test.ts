@@ -12,6 +12,7 @@ import {
   type Rgb,
   SKY_VIEW,
   SUN_ANGULAR_RADIUS,
+  seenByNight,
   skyExposure,
   skyLight,
   skyViewAngle,
@@ -289,6 +290,27 @@ describe('sunlightReaching', () => {
     const outside: Vec3 = { x: 0, y: 0, z: ATMOSPHERE.topKm + 5000 };
     const light = sunlightReaching(tables, outside, above(30), SUN_ANGULAR_RADIUS, rgb());
     for (const channel of light) expect(channel).toBeCloseTo(1, 12);
+  });
+});
+
+describe('seenByNight', () => {
+  it('leaves the light as bright as it was', () => {
+    for (const light of [
+      [1, 0.4, 0.1],
+      [0.2, 0.5, 0.9],
+      [3e-7, 3e-7, 3e-7],
+    ] as Rgb[]) {
+      const before = luminance(light);
+      expect(luminance(seenByNight(light)) / before).toBeCloseTo(1, 3);
+    }
+  });
+
+  it('takes most of the red out of a low Moon and leaves it blue', () => {
+    const seen = seenByNight([1, 0.4, 0.1]);
+    // Red was two and a half times the green; now they are level, under the blue.
+    expect(seen[0] / seen[1]).toBeLessThan(1.1);
+    expect(seen[2]).toBeGreaterThan(seen[0]);
+    expect(seen[2]).toBeGreaterThan(seen[1]);
   });
 });
 

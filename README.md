@@ -108,9 +108,9 @@
   their real positions, and the Moon shows the right phase.
 - Day and night on the globe match the real Sun, and satellites dim when they pass into the
   Earth's shadow.
-- Nights are as bright as the Moon makes them. A full Moon lights the ground and the clouds,
-  leaves a glitter path on water, turns the sky a faint blue and drowns out the fainter
-  stars. At new Moon the night is black.
+- Nights are as bright as the Moon makes them. The Moon is a white disc with a glow around
+  it, and it lights the ground and the clouds, leaves a silver path on water, turns the sky
+  blue-gray and drowns out the fainter stars. At new Moon the night is black.
 - The clouds on the globe are the real ones, from weather satellite data that's a few hours
   old at most. Looking up from the ground you see them from below: how cloudy it is over you
   is real, and the individual clouds are generated. They hide the stars, Sun, Moon and

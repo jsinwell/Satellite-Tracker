@@ -199,6 +199,11 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     return shine * facets * seen / (4.0 * nv);
   }
 
+  // The Moon's light is drawn stronger than it is (see MOONLIGHT_SEEN), which
+  // is right for what it lights and too much for its own reflection: that
+  // is as bright as the Moon, not as the night.
+  const float SEA_MOON_GLITTER = 0.2;
+
   vec3 landSea(vec3 direction, vec2 at, float footprint, vec3 up, vec3 sunlight, vec3 moonlight) {
     vec2 slope = vec2(0.0);
     float crest = 0.24;
@@ -233,7 +238,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     vec3 body = SEA_COLOR * (falling / SKY_PI + uSkyAmbient);
     // The Sun's glitter, and by night the Moon's.
     vec3 glitter = sunlight * seaGlitter(direction, normal, uSkySun)
-      + moonlight * seaGlitter(direction, normal, uSkyMoon);
+      + SEA_MOON_GLITTER * moonlight * seaGlitter(direction, normal, uSkyMoon);
 
     return mix(body, sky, seaReflectance(cosView)) + glitter;
   }
@@ -248,7 +253,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     float left = 1.0;
     if (uSkyEclipse > 0.5) left -= sunHiddenByMoon(up, uSkySunPosition, uSkyMoonPosition);
     vec3 sunlight = skySunlight(SKY_BOTTOM, sunHeight) * left;
-    vec3 moonlight = skySunlight(SKY_BOTTOM, dot(up, uSkyMoon)) * uSkyMoonlight;
+    vec3 moonlight = skyByNight(skySunlight(SKY_BOTTOM, dot(up, uSkyMoon)) * uSkyMoonlight);
 
     vec2 pattern = at + uLandOrigin;
     vec3 albedo = LAND_BARE;

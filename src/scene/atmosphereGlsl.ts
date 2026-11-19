@@ -17,6 +17,7 @@ import {
   ECLIPSE_SKYLIGHT,
   MULTISCATTER_MIN_SUN,
   MULTISCATTER_SIZE,
+  NIGHT_VISION,
   SKY_STEP_OFFSET,
   SKY_STEPS,
   SKY_VIEW,
@@ -110,10 +111,12 @@ function createUniforms() {
     /** Toward the Moon from the camera. */
     uSkyMoon: { value: new Vector3(0, 1, 0) },
     /**
-     * Its light, by color, as a share of the Sun's: see `moonlight`. Nothing
+     * Its light, by color, as a share of the Sun's: see `moonlightSeen`. Nothing
      * while the Sun is up, when it makes no difference and is not worked out.
      */
     uSkyMoonlight: { value: new Vector3() },
+    /** The color and strength of the glow around the Moon: see `moonGlare`. */
+    uSkyMoonGlare: { value: new Vector3() },
     uSkyExposure: { value: 1 },
     /** 1 looking up from the ground, 0 out in space; see `groundView`. */
     uSkyGround: { value: 0 },
@@ -155,6 +158,7 @@ const SHARED_GLSL = /* glsl */ `
   uniform float uSkyEclipse;
   uniform vec3 uSkyMoon;
   uniform vec3 uSkyMoonlight;
+  uniform vec3 uSkyMoonGlare;
   uniform float uSkyExposure;
   uniform float uSkyGround;
   uniform vec3 uSkyViewAhead;
@@ -188,6 +192,12 @@ const SHARED_GLSL = /* glsl */ `
   const float SKY_VIEW_ABOVE = ${float(SKY_VIEW.above)};
   const float SKY_VIEW_BELOW = ${float(SKY_VIEW.below)};
   const float SKY_PI = 3.14159265;
+
+  // Mirrors seenByNight.
+  vec3 skyByNight(vec3 light) {
+    float gray = dot(light, vec3(0.2126, 0.7152, 0.0722));
+    return mix(light, gray * vec3(${NIGHT_VISION.tint.map((x) => x.toFixed(4)).join(', ')}), ${NIGHT_VISION.colorless.toFixed(4)});
+  }
 
   float skyLuminance(vec3 color) {
     return dot(color, vec3(0.2126, 0.7152, 0.0722));
