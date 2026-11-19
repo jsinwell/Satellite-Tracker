@@ -102,6 +102,42 @@ export function formatPlace(latitude: number, longitude: number): string {
   return `${formatLatitude(latitude)}, ${formatLongitude(longitude)}`;
 }
 
+const ARCSECONDS_PER_RADIAN = 206_264.806;
+const AU_KM = 149_597_870.7;
+const LIGHT_KM_PER_SECOND = 299_792.458;
+
+/**
+ * How wide something looks in the sky, the way astronomers write it: minutes
+ * of arc for the Moon (`31.4′`), seconds for a planet (`44.5″`).
+ */
+export function formatAngularSize(radians: number): string {
+  const arcseconds = radians * ARCSECONDS_PER_RADIAN;
+  return arcseconds >= 120 ? `${(arcseconds / 60).toFixed(1)}′` : `${arcseconds.toFixed(1)}″`;
+}
+
+/** How much of a disc is lit, as a calendar would say it of the Moon: `full`, `new`, `62% lit`. */
+export function litWords(fraction: number): string {
+  const percent = Math.round(fraction * 100);
+  if (percent >= 99) return 'full';
+  if (percent <= 1) return 'new';
+  return `${percent}% lit`;
+}
+
+/** How far the Moon or a planet is: km for the Moon, astronomical units beyond. */
+export function formatBodyDistance(km: number): string {
+  return km < 0.01 * AU_KM
+    ? `${formatInteger(Math.round(km / 100) * 100)} km`
+    : `${(km / AU_KM).toFixed(2)} AU`;
+}
+
+/** How long light takes to cover `km`: `1.3 s`, `35 min`, `4.1 h`. */
+export function formatLightTime(km: number): string {
+  const seconds = km / LIGHT_KM_PER_SECOND;
+  if (seconds < 90) return `${seconds.toFixed(1)} s`;
+  if (seconds < 5400) return `${Math.round(seconds / 60)} min`;
+  return `${(seconds / 3600).toFixed(1)} h`;
+}
+
 /** The earliest and latest instants the time can be set to: the space age, and this century. */
 export const SETTABLE_RANGE_MS = {
   first: Date.UTC(1957, 0, 1),

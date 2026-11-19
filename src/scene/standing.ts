@@ -30,11 +30,23 @@ export const SKY_FOV_RANGE = [20, 100] as const;
 
 /**
  * The field of view after zooming by `factor`: above 1 widens it, below 1
- * narrows it, within `SKY_FOV_RANGE`. Multiplying rather than adding makes
- * each step of the wheel, or each bit of a pinch, feel the same at any zoom.
+ * narrows it, within `SKY_FOV_RANGE`, or as narrow as `narrowest` if that is
+ * given: with the view held on a planet there is something to close in on.
+ * Multiplying rather than adding makes each step of the wheel, or each bit
+ * of a pinch, feel the same at any zoom.
  */
-export function zoomFov(fov: number, factor: number): number {
-  return Math.min(SKY_FOV_RANGE[1], Math.max(SKY_FOV_RANGE[0], fov * factor));
+export function zoomFov(fov: number, factor: number, narrowest: number = SKY_FOV_RANGE[0]): number {
+  return Math.min(SKY_FOV_RANGE[1], Math.max(narrowest, fov * factor));
+}
+
+/**
+ * A field of view part of the way from `from` to `to`, as it looks: halfway
+ * is the view that is as many times narrower than one as it is wider than
+ * the other. Going from the whole sky to a planet evenly in degrees would
+ * spend the whole trip on the first hundredth of it.
+ */
+export function mixFov(from: number, to: number, share: number): number {
+  return from * (to / from) ** share;
 }
 
 /** An observer's eye and local axes, in world coordinates (Earth radii). */

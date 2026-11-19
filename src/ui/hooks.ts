@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { isSunlit, subSatellitePoint } from '../core/astro';
+import { type BodyView, bodyView, type SkyBody } from '../core/bodies';
 import { wallNow } from '../core/clock';
 import { type EclipseView, eclipseFrom } from '../core/eclipse';
 import { footprintWidthKm } from '../core/ground';
@@ -209,6 +210,12 @@ export function useViewingWindow(observer: Observer): ViewingWindow | null {
 /** The planets above `observer`'s horizon that the eye can see, brightest first. */
 export function usePlanetsUp(observer: Observer): PlanetInSky[] {
   const read = useCallback(() => planetsUp(observer, currentSimTime()), [observer]);
+  return usePolled(read, SKY_INTERVAL_MS);
+}
+
+/** How the Moon or a planet looks to `observer` now; see `bodyView`. */
+export function useBodyView(body: SkyBody, observer: Observer): BodyView {
+  const read = useCallback(() => bodyView(body, observer, currentSimTime()), [body, observer]);
   return usePolled(read, SKY_INTERVAL_MS);
 }
 

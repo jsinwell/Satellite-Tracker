@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { SkyBody } from '../core/bodies';
 import { OBJECT_TYPES, type ObjectType } from '../core/catalog';
 import {
   type Clock,
@@ -57,6 +58,11 @@ interface AppState {
   observerFocusRequests: number;
   /** Whether the camera is standing at `observer`, looking at the sky. */
   lookingUp: boolean;
+  /**
+   * The Moon or planet the view is held on and zoomed in to, as through a
+   * telescope, while looking up. Instead of a selected satellite, not as well.
+   */
+  watching: SkyBody | null;
 
   colorBy: ColorBy;
   filters: Filters;
@@ -92,6 +98,12 @@ interface AppActions {
   setPickingObserver(picking: boolean): void;
   /** Stands at the observer to look at the sky, or comes back to the globe. Ends a ride. */
   setLookingUp(lookingUp: boolean): void;
+  /**
+   * Turns the view to the Moon or a planet and closes in on it, standing at
+   * the observer to do it if not there already; null lets go of it. Does
+   * nothing without an observer: there is nowhere to look from.
+   */
+  watch(body: SkyBody | null): void;
   /**
    * Switches what color stands for. The legend only shows the filter that
    * matches, so the other one is reset rather than left on out of sight.
@@ -154,6 +166,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     pickingObserver: false,
     observerFocusRequests: 0,
     lookingUp: false,
+    watching: null,
     colorBy: saved.colorBy,
     ...applyFilters(null, saved.filters),
 
@@ -161,7 +174,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     fail: (message) => set({ phase: 'error', error: message }),
 
     select: (index) =>
-      set(index === null ? { selected: null, riding: false } : { selected: index }),
+      set(index === null ? { selected: null, riding: false } : { selected: index, watching: null }),
     hover: (index) => {
       if (get().hovered !== index) set({ hovered: index });
     },
@@ -170,7 +183,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
       set((state) => ({ selected: index, focusRequests: state.focusRequests + 1 })),
     setRiding: (riding) => {
       if (!riding) set({ riding });
-      else if (get().selected !== null) set({ riding, lookingUp: false });
+      else if (get().selected !== null) set({ riding, lookingUp: false, watching: null });
     },
     toggleOverlay: (overlay) =>
       set(({ overlays }) => ({ overlays: { ...overlays, [overlay]: !overlays[overlay] } })),
@@ -181,13 +194,20 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
         observer,
         pickingObserver: false,
         lookingUp: state.lookingUp && observer !== null,
+        watching: observer === null ? null : state.watching,
         observerFocusRequests: state.observerFocusRequests + (observer ? 1 : 0),
       }));
     },
     setPickingObserver: (pickingObserver) => set({ pickingObserver }),
     setLookingUp: (lookingUp) => {
-      if (!lookingUp) set({ lookingUp });
+      if (!lookingUp) set({ lookingUp, watching: null });
       else if (get().observer !== null) set({ lookingUp, riding: false });
+    },
+    watch: (body) => {
+      if (body === null) set({ watching: null });
+      else if (get().observer !== null) {
+        set({ watching: body, lookingUp: true, riding: false, selected: null });
+      }
     },
 
     setColorBy: (colorBy) => {

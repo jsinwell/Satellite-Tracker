@@ -45,6 +45,16 @@
   </tr>
   <tr>
     <td width="50%" valign="top">
+      <img src="docs/saturn.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
+      <p>Zoomed in on Saturn from the ground.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/moon.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
+      <p>The Moon the same way, a day past first quarter.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
       <img src="docs/night-side.jpg" alt="South America at night from space, its cities lit, with daylight along one edge of the Earth" />
       <p>South America at night.</p>
     </td>
@@ -85,6 +95,9 @@
   the Sun is on them and dark in the Earth's shadow, and once in a while one flares.
 - The sky panel says which planets are up and how bright they are, for when you can't tell a
   planet from a satellite.
+- Click the Moon or a planet, in the sky or in that list, to zoom in on it like a telescope.
+  The view follows it as the sky turns. You can see Saturn's rings, Jupiter's four big moons,
+  the phases of Venus, the ice cap on Mars and the craters on the Moon. Scroll to zoom further.
 
 ### Sky, Sun and Moon
 
@@ -189,5 +202,6 @@ instead. You can force a real download with `npm run data -- --fresh`, but don't
 Orbital data from [CelesTrak](https://celestrak.org), propagation by
 [satellite.js](https://github.com/shashwatak/satellite-js), planet positions by
 [Astronomy Engine](https://github.com/cosinekitty/astronomy), Earth and Moon textures from the
-[three.js](https://github.com/mrdoob/three.js) examples, star map from
+[three.js](https://github.com/mrdoob/three.js) examples, planet maps from
+[Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), star map from
 [NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851).

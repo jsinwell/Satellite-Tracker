@@ -2,6 +2,7 @@ import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 're
 import { useApp } from './app/store';
 import { setLabelLayer } from './scene/labelLayer';
 import { Scene } from './scene/Scene';
+import { BodyPanel } from './ui/BodyPanel';
 import { BootScreen } from './ui/BootScreen';
 import { FilterPanel } from './ui/FilterPanel';
 import { HoverLabel } from './ui/HoverLabel';
@@ -23,6 +24,7 @@ function useEscapeToDeselect() {
       const state = useApp.getState();
       if (state.pickingObserver) state.setPickingObserver(false);
       else if (state.riding) state.setRiding(false);
+      else if (state.watching !== null) state.watch(null);
       else if (state.lookingUp) state.setLookingUp(false);
       else state.select(null);
     };
@@ -98,6 +100,7 @@ export function App() {
   const phase = useApp((state) => state.phase);
   const world = useApp((state) => state.world);
   const selected = useApp((state) => state.selected);
+  const watching = useApp((state) => state.watching);
   // Both only matter on narrow screens, where the filters are tucked behind a
   // button and the selected satellite shows a summary until asked for the rest.
   // Opening one closes the other: there is not room for both and the globe.
@@ -177,6 +180,11 @@ export function App() {
               </div>
             )}
           </div>
+          {watching !== null && observer && (
+            <div className="pointer-events-auto w-full sm:w-72">
+              <BodyPanel body={watching} observer={observer} />
+            </div>
+          )}
           {selected !== null && (
             // Capped and scrollable, so it can never run under the bottom row.
             <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
