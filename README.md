@@ -1,8 +1,7 @@
 <h1 align="center">Satellite Tracker</h1>
 
 <p align="center">
-  Every tracked satellite and piece of debris in Earth orbit, about 19,500 objects,<br />
-  with positions computed live in your browser.
+  About 19,500 satellites and pieces of debris, tracked in 3D in your browser.
 </p>
 
 <p align="center">
@@ -21,37 +20,37 @@
 
 ![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/globe.jpg)
 
-## A look around
+## Screenshots
 
 <table>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/ride.jpg" alt="The view from just behind the ISS, with East Africa below and the horizon ahead" />
-      <p><strong>Ride along.</strong> Sit just behind any satellite and follow it around its orbit. This is the ISS crossing East Africa.</p>
+      <p>Riding along with the ISS over East Africa.</p>
     </td>
     <td width="50%" valign="top">
       <img src="docs/constellations.jpg" alt="The globe with satellites colored by constellation, most of them Starlink" />
-      <p><strong>See who owns the sky.</strong> Color by constellation and more than half of everything up there turns out to be Starlink.</p>
+      <p>Colored by constellation. Almost all of the cyan is Starlink.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/big-sur.jpg" alt="The Sun setting over the Pacific, with a path of glitter on the water and satellites overhead" />
-      <p><strong>Look up from where you are.</strong> The camera stands on the ground under the real sky. Sunset over the Pacific from Big Sur, with the satellites that are overhead.</p>
+      <p>Looking up from Big Sur at sunset. The markers are the satellites overhead at that moment.</p>
     </td>
     <td width="50%" valign="top">
       <img src="docs/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under an evening sky with satellites" />
-      <p><strong>Stand somewhere real.</strong> The ground is the place you picked. The desert near Monument Valley, Utah, with the Sun low in the west.</p>
+      <p>Near Monument Valley, Utah, a little before sunset.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
       <img src="docs/night-side.jpg" alt="South America at night from space, its cities lit, with daylight along one edge of the Earth" />
-      <p><strong>Day and night where they really are.</strong> The Earth is lit from the Sun's true position, with city lights on the dark side.</p>
+      <p>South America at night.</p>
     </td>
     <td width="50%" valign="top">
       <img src="docs/eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
-      <p><strong>Eclipses happen on their own.</strong> The total solar eclipse of 2 August 2027 from Luxor, with Venus and Mercury out beside the Sun.</p>
+      <p>The total solar eclipse of August 2, 2027, seen from Luxor. Venus and Mercury are the two dots next to it.</p>
     </td>
   </tr>
 </table>
@@ -60,68 +59,55 @@
 
 ### Satellites
 
-- Search by name or NORAD ID, or click a satellite, to see where it is, how fast it's moving,
-  whether it's in sunlight, and the orbit it's on.
-- A selected satellite shows its ground track for the next orbit, marked with the times it'll
-  pass over each place, and its coverage: the part of the Earth that has it above the horizon
-  right now. Either one, and the orbit, can be switched off.
-- Ride along with a satellite. The camera sits just behind it and follows it around its orbit,
-  with the horizon ahead and the ground going by underneath. Drag to look around.
-- Filter by type (payloads, rocket bodies, debris) or by orbit. The counts and the search
-  follow whatever is on screen.
-- Color by constellation to pick out Starlink, OneWeb and Kuiper, or show any one of eight
-  constellations by itself.
-- Drag the "Launched by" slider to see what was up in a given year, or press play and watch
-  orbit fill in. It only covers objects that are still up there.
+- Search by name or NORAD ID, or just click one. You get its position, speed and orbit, and
+  whether it's in sunlight.
+- Selecting a satellite draws its orbit, its ground track for the next lap with times along
+  it, and the area on the ground that can see it right now. Each of those can be turned off.
+- "Ride along" puts the camera right behind a satellite and follows it around. Drag to look
+  around.
+- Filter by type (payloads, rocket bodies, debris) or by orbit (LEO, MEO, GEO, HEO).
+- Color by constellation, or show just one of them: Starlink, OneWeb, Kuiper and five others.
+- The "Launched by" slider shows what was in orbit in a given year. Press play to watch it
+  fill up. It only knows about objects that are still up there.
 
 ### From where you are
 
-- Tell it where you are (your device's location, a click on the globe, or typed coordinates)
-  to see what's above you right now and which of those you could spot by eye.
-- Select a satellite to see when it next passes over, with the passes you could see marked.
-  Click one to jump to it.
-- Look up from where you are: the camera stands on the ground and shows the real sky, with
-  the satellites, stars, planets, Sun and Moon where they'd be. Drag to look around, and
-  scroll or pinch to widen or narrow the view.
-- The ground there is the place you're standing on. Its color comes from the Earth map, so
-  it's sand in the Sahara, forest in the Amazon and ice in Greenland, with hills that catch
-  the light when the Sun is low. Water mirrors the sky and glitters under the Sun. The map
-  is only good to about 10 km, so the hills themselves are made up.
-- In that view satellites are drawn as small satellite shapes heading the way they're going,
-  with a short trail behind, lit from the Sun's side. Sunlit ones glow against a dark sky,
-  ones in the Earth's shadow go dark, and now and then one flares as a flat face catches the
-  Sun.
-- The sky panel lists which planets are up and how bright they are, so you can tell them from
-  satellites.
+- Set your location (GPS, a click on the globe, or typed coordinates) and it lists what's
+  overhead and which of those you could actually see.
+- Pick a satellite and it shows its next passes over you. Click a pass to jump to that time.
+- "Look up from here" puts the camera on the ground and shows the sky from where you're
+  standing: satellites, stars, planets, the Sun and the Moon. Drag to look around, scroll or
+  pinch to zoom.
+- The ground is colored from the Earth map at your location, so it's sandy in the Sahara,
+  green in the Amazon and white in Greenland, and water reflects the sky. The map only has
+  about 10 km of detail, so the hills are generated.
+- Satellites in this view are small satellite shapes with a short trail. They're bright when
+  the Sun is on them and dark in the Earth's shadow, and once in a while one flares.
+- The sky panel says which planets are up and how bright they are, for when you can't tell a
+  planet from a satellite.
 
 ### Sky, Sun and Moon
 
-- The sky is worked out from the air itself: how sunlight scatters off air molecules and
-  haze on its way down, and how the ozone layer soaks up some of it. That gives a blue sky
-  by day with no stars showing, a Sun that yellows and reddens as it sets, a band of orange
-  along the horizon afterward, and stars coming out as twilight fades. From orbit the same
-  air is the thin blue line around the Earth.
-- The background is NASA's star map lined up with the real sky, so the Milky Way and the
-  constellations are where they should be. The Sun and Moon are in their real positions too,
-  and the Moon shows the right phase.
-- The Earth is lit from where the Sun actually is, and satellites dim when they pass into its
-  shadow.
-- Eclipses happen on their own, because the Sun and Moon are where they really are: the
-  Moon's shadow crosses the globe in a solar eclipse, and from inside it the sky goes dark
-  around the corona. In a lunar eclipse the Moon turns dim and red. Try 2 August 2027 at
-  10:06 UTC from Luxor (`?t=2027-08-02T10:06:00Z`, then set your place to 25.5, 33.2).
+- The sky color is computed from how sunlight scatters in the atmosphere. It's blue by day
+  and orange at sunset, and stars only show up once it's dark enough. From orbit the same
+  atmosphere is the thin blue line around the Earth.
+- The stars are NASA's star map lined up with the real sky. The Sun, Moon and planets are in
+  their real positions, and the Moon shows the right phase.
+- Day and night on the globe match the real Sun, and satellites dim when they pass into the
+  Earth's shadow.
+- Eclipses show up when they really happen. In a solar eclipse you can watch the Moon's
+  shadow cross the globe, or stand under it and see the corona. In a lunar eclipse the Moon
+  goes dim and red. A good one to try is August 2, 2027 at 10:06 UTC from Luxor
+  (`?t=2027-08-02T10:06:00Z`, then set your location to 25.5, 33.2).
 
 ### Time and controls
 
-- Pause time or run it at up to 1000x, or click the date to go to any moment from 1957 to
-  2100. Above 10x the satellites leave short trails, so you can see which way everything is
-  going.
-- Move the camera with WASD or the arrow keys, and zoom with Q and E. Looking up, the same
-  keys turn your view.
+- Pause, or run time at up to 1000x. Click the date to jump to any moment from 1957 to 2100.
+  Above 10x the satellites leave short trails so you can see which way they're going.
+- WASD or the arrow keys move the camera, and Q and E zoom.
 - Works on a phone.
-- Remembers your filters, color scheme, what's drawn on the globe and your location from one
-  visit to the next.
-- Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
+- Your filters, colors and location are saved between visits.
+- You can link to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
   moment in time with `?t=2026-11-16T06:30:00Z`.
 
 ## Running it
@@ -160,16 +146,13 @@ Positions stay in the inertial frame that SGP4 produces and the Earth rotates un
 them, lit from the sun's real position. React only draws the panels and never re-renders per
 frame.
 
-The sky isn't a painted gradient. A shader steps along lines of sight through the
-atmosphere and adds up the sunlight scattered toward the camera: Rayleigh scattering off air
-molecules, Mie scattering off haze, absorption by ozone, and light that has bounced more than
-once. Doing that for every pixel is too slow for integrated graphics, so each frame it's done
-for a small map of the whole sky around the camera (256 by 160 directions, packed closest at
-the horizon) and the screen reads from the map. The parts that never change are worked out
-once at startup into two lookup tables. This follows Sébastien Hillaire's 2020 paper _A
-Scalable and Production Ready Sky and Atmosphere Rendering Technique_ and Eric Bruneton's
-earlier work. The same model is written in plain TypeScript so it can be tested, and so the
-exposure can follow the brightness of the sky the way your eyes would.
+The sky is a physically based atmosphere: Rayleigh and Mie scattering, ozone absorption and
+multiple scattering, following Sébastien Hillaire's 2020 paper _A Scalable and Production
+Ready Sky and Atmosphere Rendering Technique_ and Eric Bruneton's earlier work. Ray marching
+it for every pixel ran at about 30 fps on integrated graphics, so each frame the shader only
+marches a 256x160 map of the sky around the camera, with most of its rows near the horizon,
+and the screen samples that. The same model is also written in plain TypeScript, which is
+what the unit tests run against and what sets the exposure.
 
 The math is kept separate from the UI:
 
@@ -183,7 +166,7 @@ scripts     builds the catalog
 e2e         Playwright tests
 ```
 
-Positions are only as good as the elements behind them. They're usually within a few
+Accuracy depends on how old the orbital elements are. Positions are usually within a few
 kilometers when the elements are a day or two old and drift from there. The info panel shows
 how old each satellite's elements are.
 
