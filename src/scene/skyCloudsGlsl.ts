@@ -28,6 +28,16 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
   const float CLOUD_HEIGHT = ${float(SKY_CLOUDS.heightKm)};
   const float CLOUD_HAZE = ${float(SKY_CLOUDS.hazeKm)};
 
+  // How brightly a cloud shows a light coming from "toLight", for one as
+  // bright as the Sun: the underside of the cloud, the side of each lump that
+  // faces the light, and the glow through thin cloud toward it.
+  float cloudLit(vec3 direction, vec2 slope, vec3 toLight, float under, float thick) {
+    vec2 along = vec2(dot(toLight, uLandEast), dot(toLight, uLandNorth));
+    float side = clamp(0.5 - 1.2 * dot(slope, along), 0.0, 1.0);
+    float toward = max(dot(direction, toLight), 0.0);
+    return under * (0.07 + 0.16 * side) + 0.5 * (1.0 - thick) * pow(toward, 6.0);
+  }
+
   void main() {
     vec3 direction = normalize(vRay);
     float r = SKY_BOTTOM + uSkyEyeHeight;
@@ -97,11 +107,11 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
     float left = 1.0;
     if (uSkyEclipse > 0.5) left -= sunHiddenByMoon(up, uSkySunPosition, uSkyMoonPosition);
     vec3 sunlight = skySunlight(shell, sunHeight) * left;
-    float toSun = max(dot(direction, uSkySun), 0.0);
-    vec2 sunAlong = vec2(dot(uSkySun, uLandEast), dot(uSkySun, uLandNorth));
-    float side = clamp(0.5 - 1.2 * dot(slope, sunAlong), 0.0, 1.0);
+    // And by the Moon, the same way, when it is the light there is.
+    vec3 moonlight = skySunlight(shell, dot(up, uSkyMoon)) * uSkyMoonlight;
     float under = mix(1.0, 0.3, thick);
-    vec3 light = sunlight * (under * (0.07 + 0.16 * side) + 0.5 * (1.0 - thick) * pow(toSun, 6.0))
+    vec3 light = sunlight * cloudLit(direction, slope, uSkySun, under, thick)
+      + moonlight * cloudLit(direction, slope, uSkyMoon, under, thick)
       + uSkyAmbient * (0.5 + 0.7 * under);
 
     // The air between: far clouds go the color of the sky they are seen

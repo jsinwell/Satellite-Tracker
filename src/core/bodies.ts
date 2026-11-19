@@ -13,8 +13,8 @@ import {
   type RotationMatrix,
   Vector,
 } from 'astronomy-engine';
-import { AU_KM, moonPosition } from './astro';
-import { MOON_RADIUS_KM } from './eclipse';
+import { AU_KM, moonPosition, sunPosition } from './astro';
+import { MOON_RADIUS_KM, sunHiddenByEarth } from './eclipse';
 import type { Vec3 } from './kinematics';
 import { directionAngles, lookAngles, type Observer, observerFrame } from './observer';
 import { PLANET_NAMES, PLANETS, type Planet, type PlanetPosition } from './planets';
@@ -103,6 +103,7 @@ const BODIES: Record<Planet, Body> = {
 };
 
 const DEG = Math.PI / 180;
+const moonKm: Vec3 = { x: 0, y: 0, z: 0 };
 /** How long light takes to cross one astronomical unit, ms. */
 const LIGHT_MS_PER_AU = 499_004.784;
 
@@ -223,6 +224,41 @@ export function jupiterMoonOffsets(timeMs: number, distanceKm: number): Record<J
   };
 }
 
+/** The Sun's apparent magnitude, which the Moon's is measured against. */
+const SUN_MAGNITUDE = -26.74;
+const sunKm: Vec3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * How much light the Moon sends the Earth, as a share of the Sun's: about
+ * two and a half millionths when full, a tenth of that at the quarters (it
+ * falls off far faster than the lit part of the disc shrinks, as a rough
+ * surface lit from the side is mostly its own shadows), next to nothing when
+ * new, and nothing while the Earth's shadow is on it.
+ */
+export function moonlight(timeMs: number): number {
+  const magnitude = Illumination(Body.Moon, new Date(timeMs)).mag;
+  const share = 10 ** (-0.4 * (magnitude - SUN_MAGNITUDE));
+  const eclipsed = sunHiddenByEarth(moonPosition(timeMs, moonKm), sunPosition(timeMs, sunKm));
+  return share * (1 - eclipsed);
+}
+
+/** The light of a full Moon, on the same scale: what `moonlight` is at its most, near enough. */
+export const FULL_MOONLIGHT = 2.5e-6;
+/** Moonlight is sunlight off gray-brown rock: a little warmer than the Sun's. */
+export const MOONLIGHT_COLOR = [1.06, 1.0, 0.88] as const;
+
+/**
+ * How much of the stars' light is left to see with the Moon up, 0 to 1. A
+ * full Moon high in the sky takes most of the faint ones: its light in the
+ * air is a veil in front of them. `share` is `moonlight`, and `elevation`
+ * how high the Moon is, degrees.
+ */
+export function starsByMoonlight(share: number, elevationDeg: number): number {
+  const up = Math.min(1, Math.max(0, (elevationDeg + 2) / 12));
+  const strength = Math.sqrt(Math.min(1, share / FULL_MOONLIGHT));
+  return 1 - 0.6 * strength * up * up * (3 - 2 * up);
+}
+
 export interface BodyView {
   /** From the observer, km. */
   distanceKm: number;
@@ -246,8 +282,6 @@ function constellationOf(j2000: { x: number; y: number; z: number }): string {
   const hours = (Math.atan2(j2000.y, j2000.x) / DEG / 15 + 24) % 24;
   return Constellation(hours, Math.asin(j2000.z / length) / DEG).name;
 }
-
-const moonKm: Vec3 = { x: 0, y: 0, z: 0 };
 
 /** What an observer sees of the Moon or a planet at `timeMs`. */
 export function bodyView(body: SkyBody, observer: Observer, timeMs: number): BodyView {

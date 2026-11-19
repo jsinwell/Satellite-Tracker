@@ -107,6 +107,13 @@ function createUniforms() {
     uSkyMoonPosition: { value: new Vector3(0, 60, 0) },
     /** 1 while the Moon's shadow is on or near the Earth; it is not looked for otherwise. */
     uSkyEclipse: { value: 0 },
+    /** Toward the Moon from the camera. */
+    uSkyMoon: { value: new Vector3(0, 1, 0) },
+    /**
+     * Its light, by color, as a share of the Sun's: see `moonlight`. Nothing
+     * while the Sun is up, when it makes no difference and is not worked out.
+     */
+    uSkyMoonlight: { value: new Vector3() },
     uSkyExposure: { value: 1 },
     /** 1 looking up from the ground, 0 out in space; see `groundView`. */
     uSkyGround: { value: 0 },
@@ -146,6 +153,8 @@ const SHARED_GLSL = /* glsl */ `
   uniform vec3 uSkySunPosition;
   uniform vec3 uSkyMoonPosition;
   uniform float uSkyEclipse;
+  uniform vec3 uSkyMoon;
+  uniform vec3 uSkyMoonlight;
   uniform float uSkyExposure;
   uniform float uSkyGround;
   uniform vec3 uSkyViewAhead;
@@ -264,15 +273,16 @@ export const ATMOSPHERE_MARCH_GLSL = /* glsl */ `
 
   // Mirrors march: the light scattered toward the camera from the air between
   // "start" and "end" along a line of sight, and how much of what lies beyond
-  // gets through.
-  void skyMarch(vec3 direction, float start, float end, out vec3 light, out vec3 through) {
+  // gets through. The light is from "toLight", as much of it as the Sun
+  // gives: the Sun itself, which the Moon can eclipse, or the Moon.
+  void skyMarch(vec3 direction, float start, float end, vec3 toLight, bool eclipsed, out vec3 light, out vec3 through) {
     light = vec3(0.0);
     through = vec3(1.0);
     float span = end - start;
     float bunching = clamp(1.0 - uSkyEyeHeight / (SKY_TOP - SKY_BOTTOM), 0.0, 1.0);
     float b = dot(uSkyEye, direction);
-    float eyeSun = dot(uSkyEye, uSkySun);
-    float cosine = dot(direction, uSkySun);
+    float eyeSun = dot(uSkyEye, toLight);
+    float cosine = dot(direction, toLight);
     // The square of the camera's distance from the center, less the ground's.
     float above = uSkyEyeHeight * (2.0 * SKY_BOTTOM + uSkyEyeHeight);
 
@@ -298,7 +308,7 @@ export const ATMOSPHERE_MARCH_GLSL = /* glsl */ `
 
       float sunHeight = (eyeSun + t * cosine) / r;
       float left = 1.0;
-      if (uSkyEclipse > 0.5) {
+      if (eclipsed && uSkyEclipse > 0.5) {
         left -= sunHiddenByMoon((uSkyEye + direction * t) / SKY_BOTTOM, uSkySunPosition, uSkyMoonPosition);
       }
       float skylight = SKY_ECLIPSE_SKYLIGHT + (1.0 - SKY_ECLIPSE_SKYLIGHT) * left;

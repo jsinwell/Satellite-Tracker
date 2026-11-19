@@ -10,10 +10,12 @@ import {
   isSkyBody,
   JUPITER_MOONS,
   jupiterMoonOffsets,
+  moonlight,
   NARROWEST_FOV,
   type PlanetDisc,
   planetDiscs,
   SATURN_RINGS,
+  starsByMoonlight,
 } from './bodies';
 import type { Vec3 } from './kinematics';
 import { type Planet, planetPositions } from './planets';
@@ -247,6 +249,51 @@ describe('exposure', () => {
     // 14 is the exposure by day: see EXPOSURE in atmosphere.ts.
     expect(bodyShown('jupiter', 14)).toBeLessThan(0.1);
     expect(bodyShown('venus', 14)).toBe(1);
+  });
+});
+
+describe('moonlight', () => {
+  const full = Date.UTC(2027, 7, 17, 12);
+  const firstQuarter = Date.UTC(2027, 7, 9, 5);
+  const newMoon = Date.UTC(2027, 7, 2, 10, 7);
+
+  it('is a few millionths of sunlight at full Moon', () => {
+    expect(moonlight(full)).toBeGreaterThan(1.5e-6);
+    expect(moonlight(full)).toBeLessThan(3.5e-6);
+  });
+
+  it('is about a tenth of that at the quarter, not half', () => {
+    const share = moonlight(firstQuarter) / moonlight(full);
+    expect(share).toBeGreaterThan(0.06);
+    expect(share).toBeLessThan(0.14);
+  });
+
+  it('is next to nothing at new Moon', () => {
+    expect(moonlight(newMoon)).toBeLessThan(1e-8);
+  });
+
+  it('goes out in a total eclipse of the Moon', () => {
+    // 3 March 2026, greatest eclipse at 11:34 UTC.
+    const totality = Date.UTC(2026, 2, 3, 11, 34);
+    expect(moonlight(totality)).toBeLessThan(0.01 * moonlight(totality - 6 * 3_600_000));
+  });
+});
+
+describe('starsByMoonlight', () => {
+  it('leaves the stars alone with no Moon, or with it down', () => {
+    expect(starsByMoonlight(0, 60)).toBe(1);
+    expect(starsByMoonlight(2.5e-6, -10)).toBe(1);
+  });
+
+  it('takes most of them with a full Moon high up', () => {
+    expect(starsByMoonlight(2.5e-6, 50)).toBeCloseTo(0.4, 6);
+    expect(starsByMoonlight(9e-6, 50)).toBeCloseTo(0.4, 6);
+  });
+
+  it('takes fewer the thinner the Moon and the lower it is', () => {
+    expect(starsByMoonlight(2.5e-7, 50)).toBeGreaterThan(starsByMoonlight(2.5e-6, 50));
+    expect(starsByMoonlight(2.5e-6, 3)).toBeGreaterThan(starsByMoonlight(2.5e-6, 50));
+    expect(starsByMoonlight(2.5e-7, 50)).toBeLessThan(1);
   });
 });
 
