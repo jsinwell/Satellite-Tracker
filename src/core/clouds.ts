@@ -54,6 +54,12 @@ export function cloudsDrawnAt(latitudeDeg: number): number {
   return 1 - t * t * (3 - 2 * t);
 }
 
+/**
+ * Seen from the ground, the clouds are one layer this high, km, about where
+ * fair-weather cloud sits, and are lost in the haze over about this distance.
+ */
+export const SKY_CLOUDS = { heightKm: 3, hazeKm: 80 } as const;
+
 export function cloudCover(value: number): number {
   const t = Math.min(
     1,

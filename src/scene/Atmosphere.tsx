@@ -37,6 +37,7 @@ import { groundOrigin } from '../core/landscape';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { directionToWorld, OVERLAY_ORDER, TEME_FROM_WORLD } from './frame';
 import { LANDSCAPE_GLSL, landscapeUniforms } from './landscapeGlsl';
+import { SKY_CLOUDS_FRAGMENT } from './skyCloudsGlsl';
 import { renderSkyView } from './skyView';
 import { groundView } from './standing';
 
@@ -51,6 +52,8 @@ const SUN_BRIGHTNESS = 150;
 const GLARE_BRIGHTNESS = 6;
 /** The view goes over to a telescope's exposure as it narrows from the second of these to the first, degrees. */
 const CLOSE_UP_FOV = [1.5, 12] as const;
+/** The clouds are drawn after the Moon (-0.3, see `SunAndMoon`) and before the satellites. */
+const CLOUDS_ORDER = -0.2;
 /** The Moon's shadow can only be on the Earth with the two this close in the sky, radians. */
 const ECLIPSE_SEPARATION = 0.03;
 
@@ -230,7 +233,7 @@ const moonShadow = (point: Vec3) => 1 - sunHiddenByMoon(point, sunKm, moonKm);
  * faces sag up to 2 km inside the true sphere, more than the eye's height.
  */
 export function Atmosphere() {
-  const { sky, cover, uniforms } = useMemo(() => {
+  const { sky, clouds, cover, uniforms } = useMemo(() => {
     const uniforms = {
       ...atmosphereUniforms(),
       ...landscapeUniforms(),
@@ -246,14 +249,18 @@ export function Atmosphere() {
       'position',
       new Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3),
     );
-    const pass = (defines: Record<string, string>, renderOrder: number) => {
+    const pass = (
+      defines: Record<string, string>,
+      renderOrder: number,
+      fragment = fragmentShader,
+    ) => {
       const mesh = new Mesh(
         geometry,
         new ShaderMaterial({
           uniforms,
           defines,
           vertexShader,
-          fragmentShader,
+          fragmentShader: fragment,
           transparent: true,
           depthWrite: false,
           depthTest: false,
@@ -270,6 +277,10 @@ export function Atmosphere() {
     return {
       // After the star map and the Earth, before the satellites and the Moon.
       sky: pass({}, -0.5),
+      // The clouds from under them: over the stars, the Sun, the Moon and the
+      // planets, which they hide, and under the satellites, which are what
+      // the view is for.
+      clouds: pass({}, CLOUDS_ORDER, SKY_CLOUDS_FRAGMENT),
       // After everything, the selection ring included.
       cover: pass({ COVER: '' }, OVERLAY_ORDER.marker + 1),
       uniforms,
@@ -280,9 +291,10 @@ export function Atmosphere() {
     () => () => {
       sky.geometry.dispose();
       sky.material.dispose();
+      clouds.material.dispose();
       cover.material.dispose();
     },
-    [sky, cover],
+    [sky, clouds, cover],
   );
 
   useFrame(({ camera, gl }) => {
@@ -290,6 +302,7 @@ export function Atmosphere() {
     const height = Math.max(camera.position.length() - 1, 1e-6);
     const ground = groundView(height);
     cover.visible = ground > 0;
+    clouds.visible = ground > 0 && uniforms.uLandClouded.value > 0;
 
     sunDirection(simMs, sun);
     sunPosition(simMs, sunKm);
@@ -402,6 +415,7 @@ export function Atmosphere() {
   return (
     <>
       <primitive object={sky} />
+      <primitive object={clouds} />
       <primitive object={cover} />
     </>
   );
