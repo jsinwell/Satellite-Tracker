@@ -1,6 +1,7 @@
-import { Canvas } from '@react-three/fiber';
-import { Suspense } from 'react';
+import { addAfterEffect, addEffect, Canvas } from '@react-three/fiber';
+import { Suspense, useEffect } from 'react';
 import { ACCENT_COLOR } from '../app/palette';
+import { holdSimTime, releaseSimTime } from '../app/store';
 import type { World } from '../app/world';
 import { Atmosphere } from './Atmosphere';
 import { CameraRig } from './CameraRig';
@@ -25,6 +26,17 @@ const UnsupportedNotice = (
 );
 
 export function Scene({ world }: { world: World }) {
+  // Everything in a frame is drawn for one instant: see `holdSimTime`.
+  useEffect(() => {
+    const stopHolding = addEffect(holdSimTime);
+    const stopReleasing = addAfterEffect(releaseSimTime);
+    return () => {
+      stopHolding();
+      stopReleasing();
+      releaseSimTime();
+    };
+  }, []);
+
   return (
     <Canvas
       // `flat` disables tone mapping: colors here encode data and must not shift.
