@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { SkyBody } from '../core/bodies';
+import type { SkyShows } from '../core/brightness';
 import { OBJECT_TYPES, type ObjectType } from '../core/catalog';
 import {
   type Clock,
@@ -62,6 +63,8 @@ interface AppState {
   cloudsAtMs: number | null;
   /** Whether the clouds are drawn. Kept from one visit to the next. */
   showClouds: boolean;
+  /** Which satellites show looking up, and how. Kept from one visit to the next. */
+  skyShows: SkyShows;
   /**
    * The Moon or planet the view is held on and zoomed in to, as through a
    * telescope, while looking up. Instead of a selected satellite, not as well.
@@ -105,6 +108,7 @@ interface AppActions {
   /** Records that there is a picture of the clouds, and when it is from. */
   setCloudsAt(timeMs: number): void;
   setShowClouds(show: boolean): void;
+  setSkyShows(shows: SkyShows): void;
   /**
    * Turns the view to the Moon or a planet and closes in on it, standing at
    * the observer to do it if not there already; null lets go of it. Does
@@ -175,6 +179,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     lookingUp: false,
     cloudsAtMs: null,
     showClouds: saved.clouds,
+    skyShows: saved.skyShows,
     watching: null,
     colorBy: saved.colorBy,
     ...applyFilters(null, saved.filters),
@@ -214,6 +219,7 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     },
     setCloudsAt: (cloudsAtMs) => set({ cloudsAtMs }),
     setShowClouds: (showClouds) => set({ showClouds }),
+    setSkyShows: (skyShows) => set({ skyShows }),
     watch: (body) => {
       if (body === null) set({ watching: null });
       else if (get().observer !== null) {
@@ -267,13 +273,15 @@ useApp.subscribe((state, previous) => {
     state.colorBy !== previous.colorBy ||
     state.filters !== previous.filters ||
     state.overlays !== previous.overlays ||
-    state.showClouds !== previous.showClouds
+    state.showClouds !== previous.showClouds ||
+    state.skyShows !== previous.skyShows
   ) {
     saveSettings({
       colorBy: state.colorBy,
       filters: state.filters,
       overlays: state.overlays,
       clouds: state.showClouds,
+      skyShows: state.skyShows,
     });
   }
 });

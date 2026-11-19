@@ -2,6 +2,7 @@ import { ecfToLookAngles, eciToEcf, propagate } from 'satellite.js';
 import { describe, expect, it } from 'vitest';
 import { geostationary, iss } from './__fixtures__/satellites';
 import { gmst, sunDirection } from './astro';
+import { standardMagnitude } from './brightness';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import type { Vec3 } from './kinematics';
@@ -179,14 +180,20 @@ describe('skyState', () => {
 });
 
 describe('canBeSeen', () => {
-  const overhead = { elevation: 40, rangeKm: 600 };
+  const overhead = { elevation: 40 };
 
-  it('needs sunlight on the satellite, a dark sky, some height and not too much distance', () => {
-    expect(canBeSeen(overhead, true, -12)).toBe(true);
-    expect(canBeSeen(overhead, false, -12)).toBe(false); // in the Earth's shadow
-    expect(canBeSeen(overhead, true, -2)).toBe(false); // sky too bright
-    expect(canBeSeen({ elevation: 5, rangeKm: 2000 }, true, -12)).toBe(false); // too low
-    expect(canBeSeen({ elevation: 80, rangeKm: 20_000 }, true, -12)).toBe(false); // too far
+  it('needs sunlight on the satellite, a dark sky, some height and enough brightness', () => {
+    expect(canBeSeen(overhead, true, -12, 4)).toBe(true);
+    expect(canBeSeen(overhead, false, -12, 4)).toBe(false); // in the Earth's shadow
+    expect(canBeSeen(overhead, true, -2, 4)).toBe(false); // sky too bright
+    expect(canBeSeen({ elevation: 5 }, true, -12, 4)).toBe(false); // too low
+    expect(canBeSeen(overhead, true, -12, 9)).toBe(false); // too faint
+  });
+
+  it('lets the brightest through in twilight', () => {
+    // The space station at its best, with the Sun 4 degrees down.
+    expect(canBeSeen(overhead, true, -4, -3)).toBe(true);
+    expect(canBeSeen(overhead, true, 5, -3)).toBe(false);
   });
 });
 
@@ -196,9 +203,10 @@ describe('skyNow', () => {
   const state = new Float32Array(satellites.length * STATE_STRIDE);
   new Propagator(satellites).propagate(timeMs, state);
   const all = Uint8Array.of(1, 1);
+  const magnitudes = Float32Array.from(satellites, standardMagnitude);
 
   it('lists what is above the horizon, highest first', () => {
-    const sky = skyNow(observerFrame(underGoes, timeMs), timeMs, state, 2, 0, all, all);
+    const sky = skyNow(observerFrame(underGoes, timeMs), timeMs, state, 2, 0, all, magnitudes);
     const goes = sky.above.find((entry) => entry.index === 1);
     expect(goes?.elevation).toBeGreaterThan(85);
     // Overhead and sunlit, perhaps, but far too far away to see.
@@ -214,13 +222,13 @@ describe('skyNow', () => {
       2,
       0,
       Uint8Array.of(1, 0),
-      all,
+      magnitudes,
     );
     expect(sky.above.some((entry) => entry.index === 1)).toBe(false);
   });
 
   it('leaves out GOES 16 from the far side of the world, where it is below the horizon', () => {
-    const sky = skyNow(observerFrame(farFromGoes, timeMs), timeMs, state, 2, 0, all, all);
+    const sky = skyNow(observerFrame(farFromGoes, timeMs), timeMs, state, 2, 0, all, magnitudes);
     expect(sky.above.some((entry) => entry.index === 1)).toBe(false);
   });
 });

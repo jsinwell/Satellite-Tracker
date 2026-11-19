@@ -12,12 +12,15 @@ import {
 } from 'three';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
-import { subSatellitePoint } from '../core/astro';
+import { subSatellitePoint, sunDirection } from '../core/astro';
 import { SKY_BODIES, type SkyBody } from '../core/bodies';
+import { faintestSeen, isSeen } from '../core/brightness';
+import type { Vec3 } from '../core/kinematics';
 import type { Observer } from '../core/observer';
 import { pickSatellite } from '../core/picking';
 import { directionToWorld, TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
 import { createBodySight, sightOf } from './skyBodies';
+import { groundView } from './standing';
 
 /** How close (CSS px) the pointer must be to a satellite to hit it. */
 const PICK_RADIUS = { mouse: 9, touch: 22 };
@@ -33,6 +36,7 @@ interface Point {
 
 const clipFromTeme = new Matrix4();
 const eye = new Vector3();
+const sun: Vec3 = { x: 0, y: 0, z: 0 };
 
 function pick(
   world: World,
@@ -53,16 +57,33 @@ function pick(
   eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
 
   const { simulation } = world;
+  const simMs = currentSimTime();
+  const { visible, skyShows, selected } = useApp.getState();
+  // Looking up at only the satellites that can be seen, only those are there
+  // to point at, and the selected one, which is drawn regardless: as
+  // `Satellites` has it.
+  let drawn: ((index: number, position: Vec3) => boolean) | undefined;
+  if (skyShows !== 'all' && groundView(camera.position.length() - 1) > 0.5) {
+    sunDirection(simMs, sun);
+    const sunHeight = (sun.x * eye.x + sun.y * eye.y + sun.z * eye.z) / Math.max(1, eye.length());
+    const faintest = faintestSeen(
+      skyShows,
+      MathUtils.radToDeg(Math.asin(MathUtils.clamp(sunHeight, -1, 1))),
+    );
+    drawn = (index, position) =>
+      index === selected || isSeen(world.standardMagnitudes[index], eye, position, sun, faintest);
+  }
   const index = pickSatellite({
     state: simulation.state,
     count: simulation.count,
-    dtSeconds: simulation.dtSeconds(currentSimTime()),
-    visible: useApp.getState().visible,
+    dtSeconds: simulation.dtSeconds(simMs),
+    visible,
     clipFromTeme: clipFromTeme.elements,
     eye,
     pointer,
     viewport: { width: element.clientWidth, height: element.clientHeight },
     radiusPx,
+    drawn,
   });
   return index === -1 ? null : index;
 }

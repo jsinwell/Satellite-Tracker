@@ -91,8 +91,13 @@
 - The ground is colored from the Earth map at your location, so it's sandy in the Sahara,
   green in the Amazon and white in Greenland, and water reflects the sky. The map only has
   about 10 km of detail, so the hills are generated.
-- Satellites in this view are small satellite shapes with a short trail. They're bright when
-  the Sun is on them and dark in the Earth's shadow, and once in a while one flares.
+- Satellites in this view are points of light with a short trail, about as bright as they'd
+  really look. You only get the ones you could see from there, so none by day and none in the
+  Earth's shadow. They turn red as they fade into it, and once in a while one flares.
+- The button next to the search box switches that to what binoculars would show, or to every
+  satellite overhead drawn as a marker.
+- How bright each one looks is an estimate. Distance and the angle of the Sun are worked out;
+  size isn't in the catalog, so it goes by what kind of object it is.
 - The sky panel says which planets are up and how bright they are, for when you can't tell a
   planet from a satellite.
 - Click the Moon or a planet, in the sky or in that list, to zoom in on it like a telescope.

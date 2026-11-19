@@ -99,7 +99,7 @@ function readSky(world: World, observer: Observer): SkyNow {
     simulation.count,
     simulation.dtSeconds(simMs),
     useApp.getState().visible,
-    world.largeEnoughToSee,
+    world.standardMagnitudes,
   );
 }
 

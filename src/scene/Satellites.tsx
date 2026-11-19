@@ -19,6 +19,7 @@ import { satelliteColor } from '../app/palette';
 import { type ColorBy, currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { sunDirection } from '../core/astro';
+import { faintestSeen } from '../core/brightness';
 import type { ObjectType } from '../core/catalog';
 import { wallNow } from '../core/clock';
 import { type ConstellationId, soleEnabled } from '../core/constellation';
@@ -60,6 +61,17 @@ const GLYPH_SPREAD = 2.6;
  * away among the stars. Three seconds is a few degrees for one passing over.
  */
 const GROUND_TRAIL_SECONDS = 3;
+/**
+ * Drawn as the light it is, a satellite is a point this wide, CSS px: `min`
+ * for one only just seen, and `perMagnitude` more for each magnitude
+ * brighter than that, up to `max`. The space station at its best is ten
+ * magnitudes past what the eye can make out.
+ */
+const LIGHT_SIZE = { min: 2.4, perMagnitude: 0.65, max: 9 } as const;
+/** The point drawn is this many times wider than that, for its glow. */
+const LIGHT_SPREAD = 2.6;
+/** A solar panel catching the Sun makes a satellite this many magnitudes brighter, at most. */
+const GLINT_MAGNITUDES = 5;
 
 // Both shaders read the same per-satellite attributes; see `buildSatellites`.
 const SHARED_GLSL = /* glsl */ `
@@ -67,12 +79,58 @@ const SHARED_GLSL = /* glsl */ `
   attribute vec3 aVelocity;
   attribute vec3 aColor;
   attribute float aVisible;
+  /** Its standard magnitude: see core/brightness.ts. */
+  attribute float aMagnitude;
 
   uniform float uDt;
   uniform vec3 uSunDirection;
   uniform float uShadowBrightness;
+  /** Where the camera is, km, in the same frame as the satellites. */
+  uniform vec3 uEye;
+  /**
+   * 1 where the satellites are drawn as the lights they are, and only the
+   * ones bright enough to see: looking up, unless everything is asked for.
+   */
+  uniform float uLight;
+  /** The faintest magnitude that shows then. */
+  uniform float uFaintest;
+  /** The selected satellite, which is always drawn, and as a satellite; -1 for none. */
+  uniform float uSelected;
 
   ${ORBIT_GLSL}
+
+  const float PI = 3.14159265;
+  const float LN10 = 2.302585;
+
+  // Mirrors phaseShare in core/brightness.ts.
+  float phaseShare(float cosPhase) {
+    float phase = acos(clamp(cosPhase, -1.0, 1.0));
+    return (sin(phase) + (PI - phase) * cosPhase) / PI;
+  }
+
+  // Mirrors magnitudeFrom: how bright it is from the camera, if the Sun is on it.
+  float magnitudeAt(vec3 p) {
+    vec3 toEye = uEye - p;
+    float range = length(toEye);
+    float share = max(PI * phaseShare(dot(uSunDirection, toEye) / range), 1e-6);
+    return aMagnitude + (5.0 * log(range / 1000.0) - 2.5 * log(share)) / LN10;
+  }
+
+  // How much of a satellite "over" magnitudes brighter than the faintest
+  // seen shows: it comes in over a magnitude, and is dim for a while after.
+  float lightShown(float over) {
+    return smoothstep(-0.5, 0.5, over) * clamp(0.7 + 0.15 * over, 0.0, 1.0);
+  }
+
+  // A sunlit satellite is white; passing into the Earth's shadow the last
+  // light on it has come through the air, and is red.
+  vec3 lightColor(float lit) {
+    return mix(vec3(1.0, 0.42, 0.22), vec3(1.0, 0.98, 0.94), smoothstep(0.0, 0.85, lit));
+  }
+
+  bool isChosen() {
+    return float(gl_InstanceID) == uSelected;
+  }
 
   // An all-zero position means "no state"; see Propagator.propagate.
   bool isHidden() {
@@ -92,8 +150,6 @@ const pointVertexShader = /* glsl */ `
   uniform float uGround;
   /** The view's width over its height, to turn clip space into screen directions. */
   uniform float uAspect;
-  /** Where the camera is, km, in the same frame as the satellites. */
-  uniform vec3 uEye;
   /** How far the view of the sky is zoomed in: 1 at its usual width. */
   uniform float uZoom;
   varying vec3 vColor;
@@ -109,10 +165,10 @@ const pointVertexShader = /* glsl */ `
   varying float vGlint;
   /** The size of the point the satellite itself needs, px; \`vSize\` may be larger for a flare. */
   varying float vGlyphSize;
+  /** How much of it shows, drawn as a light, 0 to 1; negative where it is drawn as a satellite. */
+  varying float vShown;
 
   ${SHARED_GLSL}
-
-  const float PI = 3.14159265;
 
   /** The direction on screen, aspect corrected, from one point to another. */
   vec2 screenDirection(vec4 fromClip, vec3 to) {
@@ -127,6 +183,7 @@ const pointVertexShader = /* glsl */ `
     vSun = vec3(0.0, 0.0, 1.0);
     vGlint = 0.0;
     vGlyphSize = 0.0;
+    vShown = -1.0;
     vHeading = vec2(1.0, 0.0);
     if (isHidden()) {
       gl_Position = OUTSIDE_CLIP_VOLUME;
@@ -148,28 +205,15 @@ const pointVertexShader = /* glsl */ `
       return;
     }
 
-    // From the ground: big enough to show a satellite's shape, largest for
-    // those passing close overhead, with room around it for its glow.
-    // Zooming in enlarges them too, so their shape and shading can be seen.
-    float size = clamp(aSize * 1.6 / distance, ${GLYPH_SIZE.min.toFixed(1)}, ${GLYPH_SIZE.max.toFixed(1)}) * uZoom;
-    vGlyphSize = size * ${GLYPH_SPREAD.toFixed(1)} * uPixelRatio;
-    vSize = vGlyphSize;
-    gl_PointSize = vSize;
-    vColor = aColor;
+    // From the ground. First what goes for it however it is drawn: whether
+    // the Sun is on it, and how much of its sunlit side faces the viewer,
+    // by the angle between the Sun and the viewer seen from the satellite.
+    // Brightness follows a diffuse sphere's, like the Moon's phases.
     vLit = sunlight(p, uSunDirection, 0.0);
-
-    // Which way it is crossing the screen: where it will be a second from now.
-    vHeading = screenDirection(gl_Position, extrapolate(aPosition, aVelocity, uDt + 1.0));
-
-    // The phase angle: between the Sun and the viewer, seen from the
-    // satellite. Brightness follows a diffuse sphere's, like the Moon's phases.
     vec3 toEye = normalize(uEye - p);
     float cosPhase = clamp(dot(uSunDirection, toEye), -1.0, 1.0);
     float phase = acos(cosPhase);
-    vPhase = ((PI - phase) * cosPhase + sin(phase)) / PI;
-    vec2 sunward = screenDirection(gl_Position, p + uSunDirection * 100.0);
-    vec2 across = vec2(-vHeading.y, vHeading.x);
-    vSun = vec3(vec2(dot(sunward, vHeading), dot(sunward, across)) * sin(phase), cosPhase);
+    vPhase = phaseShare(cosPhase);
 
     // Glints. Most satellites keep one side toward the Earth, so the flat
     // faces of their bodies and panels turn once an orbit. When one sits
@@ -191,13 +235,45 @@ const pointVertexShader = /* glsl */ `
         vGlint = max(vGlint, smoothstep(0.9965, 0.99985, dot(face, halfway)));
       }
       vGlint *= vLit;
-      // A flare is as big on screen however far off the satellite is: grow
-      // the point to fit it, leaving the satellite drawn at its own size.
-      if (vGlint > 0.0) {
-        vSize = max(vGlyphSize, ${(2 * FLARE_REACH_PX).toFixed(1)} * uPixelRatio);
-        gl_PointSize = vSize;
-      }
     }
+
+    if (uLight > 0.5 && !isChosen()) {
+      // As the light it is, and only if it is bright enough to see: a point
+      // the size of its brightness, like a star or a planet. A glint can
+      // bring one into sight for the few seconds it lasts.
+      float over = uFaintest - (magnitudeAt(p) - ${GLINT_MAGNITUDES.toFixed(1)} * vGlint);
+      vShown = lightShown(over) * vLit;
+      if (vShown <= 0.0) {
+        gl_Position = OUTSIDE_CLIP_VOLUME;
+        gl_PointSize = 0.0;
+        return;
+      }
+      float width = clamp(
+        ${LIGHT_SIZE.min.toFixed(1)} + ${LIGHT_SIZE.perMagnitude.toFixed(2)} * over,
+        ${LIGHT_SIZE.min.toFixed(1)},
+        ${LIGHT_SIZE.max.toFixed(1)});
+      vGlyphSize = width * ${LIGHT_SPREAD.toFixed(1)} * uPixelRatio;
+      vColor = lightColor(vLit);
+      // Only a glint from something already in plain sight has spikes to it.
+      vGlint *= smoothstep(1.0, 3.0, over);
+    } else {
+      // As a satellite: big enough to show its shape, largest for those
+      // passing close overhead, with room around it for its glow. Zooming
+      // in enlarges them too, so their shape and shading can be seen.
+      float size = clamp(aSize * 1.6 / distance, ${GLYPH_SIZE.min.toFixed(1)}, ${GLYPH_SIZE.max.toFixed(1)}) * uZoom;
+      vGlyphSize = size * ${GLYPH_SPREAD.toFixed(1)} * uPixelRatio;
+      vColor = aColor;
+      // Which way it is crossing the screen: where it will be a second from now.
+      vHeading = screenDirection(gl_Position, extrapolate(aPosition, aVelocity, uDt + 1.0));
+      vec2 sunward = screenDirection(gl_Position, p + uSunDirection * 100.0);
+      vec2 across = vec2(-vHeading.y, vHeading.x);
+      vSun = vec3(vec2(dot(sunward, vHeading), dot(sunward, across)) * sin(phase), cosPhase);
+    }
+    vSize = vGlyphSize;
+    // A flare is as big on screen however far off the satellite is: grow
+    // the point to fit it, leaving the satellite drawn at its own size.
+    if (vGlint > 0.0) vSize = max(vGlyphSize, ${(2 * FLARE_REACH_PX).toFixed(1)} * uPixelRatio);
+    gl_PointSize = vSize;
   }
 `;
 
@@ -214,6 +290,18 @@ const pointFragmentShader = /* glsl */ `
   varying vec3 vSun;
   varying float vGlint;
   varying float vGlyphSize;
+  varying float vShown;
+
+  // A flare is a flash of white with spikes, as a bright point of light
+  // looks to the eye, measured in screen pixels so it is the same size for
+  // a satellite near or far.
+  float flareAt(vec2 px) {
+    return min(1.0, vGlint * (
+      exp(-dot(px, px) / 10.0) +
+      0.3 * exp(-dot(px, px) / 90.0) +
+      0.85 * exp(-abs(px.y) / 0.8) * exp(-abs(px.x) / 8.0) +
+      0.85 * exp(-abs(px.x) / 0.8) * exp(-abs(px.y) / 8.0)));
+  }
 
   // Signed distance from a box of half-size \`extent\` centered at the origin.
   // (Not \`half\`, which GLSL reserves.)
@@ -232,7 +320,21 @@ const pointFragmentShader = /* glsl */ `
       return;
     }
 
-    // Looking up, a satellite is drawn as one: a body pointed the way it is
+    vec2 px = c * vSize / uPixelRatio;
+    if (vShown >= 0.0) {
+      // As a light: a bright core in a soft glow, like a planet's.
+      float d = 2.0 * length(c) * vSize / vGlyphSize;
+      float core = 1.0 - smoothstep(${(0.7 / LIGHT_SPREAD).toFixed(3)}, ${(1 / LIGHT_SPREAD).toFixed(3)}, d);
+      float glow = 0.3 * pow(max(1.0 - d, 0.0), 2.0);
+      float flare = flareAt(px);
+      float alpha = max(max(core, glow) * vShown, flare);
+      if (alpha < 0.004) discard;
+      gl_FragColor = vec4(mix(vColor, vec3(1.0), flare), alpha);
+      #include <colorspace_fragment>
+      return;
+    }
+
+    // Asked for as one, a satellite is drawn as one: a body pointed the way it is
     // going, with a solar panel out to either side; too far off for that, a
     // diamond. It sits in the middle of a larger point, which leaves room for
     // its glow and glint.
@@ -283,16 +385,7 @@ const pointFragmentShader = /* glsl */ `
     color = mix(vColor * 1.3, color, alpha);
     alpha = alpha + halo * (1.0 - alpha);
 
-    // A flare is a flash of white with spikes, as a bright point of light
-    // looks to the eye, measured in screen pixels so it is the same size for
-    // a satellite near or far.
-    vec2 px = c * vSize / uPixelRatio;
-    float flare = vGlint * (
-      exp(-dot(px, px) / 10.0) +
-      0.3 * exp(-dot(px, px) / 90.0) +
-      0.85 * exp(-abs(px.y) / 0.8) * exp(-abs(px.x) / 8.0) +
-      0.85 * exp(-abs(px.x) / 0.8) * exp(-abs(px.y) / 8.0));
-    flare = min(flare, 1.0);
+    float flare = flareAt(px);
     color = mix(color, vec3(1.0), flare);
     alpha = max(alpha, flare);
 
@@ -320,6 +413,12 @@ const trailVertexShader = /* glsl */ `
     vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * uTrailSeconds);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
     vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), (1.0 - tail) * 0.4);
+    if (uLight > 0.5 && !isChosen()) {
+      // The streak of a light: only where the light itself shows.
+      float lit = sunlight(p, uSunDirection, 0.0);
+      float shown = lightShown(uFaintest - magnitudeAt(p)) * lit;
+      vColor = vec4(lightColor(lit), (1.0 - tail) * 0.3 * shown);
+    }
   }
 `;
 
@@ -362,6 +461,7 @@ function buildSatellites(world: World) {
     aVelocity: new InterleavedBufferAttribute(stateBuffer, 3, 3),
     aColor: colors,
     aVisible: visibility,
+    aMagnitude: new InstancedBufferAttribute(world.standardMagnitudes, 1),
   };
   const instanced = (vertices: number[]) => {
     const geometry = new InstancedBufferGeometry();
@@ -387,6 +487,9 @@ function buildSatellites(world: World) {
     uEye: { value: new Vector3() },
     uSkyDark: { value: 0 },
     uZoom: { value: 1 },
+    uLight: { value: 0 },
+    uFaintest: { value: 6 },
+    uSelected: { value: -1 },
   };
 
   const pointGeometry = instanced([0, 0, 0]);
@@ -473,7 +576,7 @@ export function Satellites({ world }: { world: World }) {
   const uploadedVersion = useRef(-1);
   useFrame(({ gl, camera, size }) => {
     const { simulation } = world;
-    const { clock } = useApp.getState();
+    const { clock, skyShows, selected } = useApp.getState();
     simulation.update(clock, wallNow());
     if (uploadedVersion.current !== simulation.version) {
       uploadedVersion.current = simulation.version;
@@ -500,6 +603,16 @@ export function Satellites({ world }: { world: World }) {
     const sunHeight =
       (sun.x * eyeTeme.x + sun.y * eyeTeme.y + sun.z * eyeTeme.z) / Math.max(1, eyeTeme.length());
     uniforms.uSkyDark.value = 1 - MathUtils.smoothstep(sunHeight, -0.17, -0.03);
+    // Looking up, the satellites are the lights they are, unless all of
+    // them are asked for.
+    uniforms.uLight.value = ground > 0.5 && skyShows !== 'all' ? 1 : 0;
+    if (skyShows !== 'all') {
+      uniforms.uFaintest.value = faintestSeen(
+        skyShows,
+        MathUtils.radToDeg(Math.asin(MathUtils.clamp(sunHeight, -1, 1))),
+      );
+    }
+    uniforms.uSelected.value = selected ?? -1;
     const fov = camera instanceof PerspectiveCamera ? camera.fov : SKY_FOV;
     uniforms.uZoom.value = MathUtils.clamp(
       Math.tan(MathUtils.degToRad(SKY_FOV) / 2) / Math.tan(MathUtils.degToRad(fov) / 2),

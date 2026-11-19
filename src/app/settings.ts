@@ -1,3 +1,4 @@
+import { SKY_SHOWS, type SkyShows } from '../core/brightness';
 import { OBJECT_TYPES } from '../core/catalog';
 import { CONSTELLATION_IDS } from '../core/constellation';
 import { allEnabled, type Filters, SHOW_EVERYTHING } from '../core/filter';
@@ -26,6 +27,8 @@ export interface Settings {
   overlays: Readonly<Record<Overlay, boolean>>;
   /** Whether the Earth is drawn with its clouds. */
   clouds: boolean;
+  /** Which satellites the view of the sky from the ground shows, and how. */
+  skyShows: SkyShows;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -33,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   filters: SHOW_EVERYTHING,
   overlays: allEnabled(OVERLAYS),
   clouds: true,
+  skyShows: 'eye',
 };
 
 const SETTINGS_KEY = 'satellite-tracker.settings';
@@ -97,6 +101,7 @@ export function parseSettings(raw: unknown): Settings {
     },
     overlays: flags(OVERLAYS, saved.overlays, DEFAULT_SETTINGS.overlays),
     clouds: typeof saved.clouds === 'boolean' ? saved.clouds : DEFAULT_SETTINGS.clouds,
+    skyShows: SKY_SHOWS.find((shows) => shows === saved.skyShows) ?? DEFAULT_SETTINGS.skyShows,
   };
 }
 
