@@ -9,10 +9,12 @@ import {
   PerspectiveCamera,
   Quaternion,
   TextureLoader,
+  type WebGLProgramParametersWithUniforms,
 } from 'three';
 import { currentSimTime } from '../app/store';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { j2000ToDate } from '../core/planets';
+import { atmosphereUniforms } from './atmosphereGlsl';
 import { SPHERE_POLES_TO_Z } from './frame';
 import { configureSkyMap } from './skyMap';
 
@@ -32,6 +34,22 @@ const SKY_BRIGHTNESS = new Color('#c8c8c8').r;
  * degrees.
  */
 const SKY_FADES = [2, 12] as const;
+
+/**
+ * Under a bright Moon the faint stars are not dimmer, they are gone: lost in
+ * the light of the sky, where the bright ones still stand out of it. So
+ * what the Moon takes is taken off the map's light, not a share of it, and
+ * whatever was fainter than that is black. `Atmosphere` says how much.
+ */
+function loseFaintStars(shader: WebGLProgramParametersWithUniforms): void {
+  shader.uniforms.uSkyStarVeil = atmosphereUniforms().uSkyStarVeil;
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', 'uniform float uSkyStarVeil;\n#include <common>')
+    .replace(
+      '#include <map_fragment>',
+      '#include <map_fragment>\ndiffuseColor.rgb = max(diffuseColor.rgb - uSkyStarVeil, 0.0);',
+    );
+}
 
 /**
  * The real night sky: NASA's Deep Star Maps, drawn on a sphere around the
@@ -71,7 +89,13 @@ export function Sky() {
     <group quaternion={toDate}>
       <mesh rotation={[...SPHERE_POLES_TO_Z]} frustumCulled={false} renderOrder={-1}>
         <sphereGeometry args={[SKY_RADIUS_KM, 64, 32]} />
-        <meshBasicMaterial ref={material} map={map} side={BackSide} depthWrite={false} />
+        <meshBasicMaterial
+          ref={material}
+          map={map}
+          side={BackSide}
+          depthWrite={false}
+          onBeforeCompile={loseFaintStars}
+        />
       </mesh>
     </group>
   );

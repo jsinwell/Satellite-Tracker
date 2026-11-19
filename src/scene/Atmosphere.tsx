@@ -36,7 +36,9 @@ import {
   moonGlare,
   moonlight,
   moonlightSeen,
-  starsByMoonlight,
+  moonVeil,
+  STAR_VEIL,
+  starsKept,
 } from '../core/bodies';
 import { driftClouds } from '../core/clouds';
 import { EARTH_RADIUS_KM } from '../core/constants';
@@ -407,6 +409,7 @@ export function Atmosphere() {
     uniforms.uStarKeep.value = 1;
     uniforms.uSkyMoonlight.value.set(0, 0, 0);
     uniforms.uSkyMoonGlare.value.set(0, 0, 0);
+    uniforms.uSkyStarVeil.value = 0;
     // The Moon's light as it is, for the glow around it, once the exposure is known.
     let moonShines = 0;
     if (ground > 0) {
@@ -427,14 +430,15 @@ export function Atmosphere() {
         }
         moonShines = moonShare.value;
       }
+      // How much of the night's part the Moon has yet, as the Sun goes down.
+      let dusk = 0;
       if (sunHeight < MOONLIGHT_WITH_SUN_BELOW && moonShines > 0) {
-        moonlit =
-          moonlightSeen(moonShines) *
-          MathUtils.smoothstep(
-            -sunHeight,
-            -MOONLIGHT_WITH_SUN_BELOW,
-            -MOONLIGHT_FULL_WITH_SUN_BELOW,
-          );
+        dusk = MathUtils.smoothstep(
+          -sunHeight,
+          -MOONLIGHT_WITH_SUN_BELOW,
+          -MOONLIGHT_FULL_WITH_SUN_BELOW,
+        );
+        moonlit = moonlightSeen(moonShines) * dusk;
         uniforms.uSkyMoonlight.value.set(
           MOONLIGHT_COLOR[0] * moonlit,
           MOONLIGHT_COLOR[1] * moonlit,
@@ -462,13 +466,13 @@ export function Atmosphere() {
       exposure = EXPOSURE.space ** (1 - ground) * adapted ** ground;
       uniforms.uSkyAmbient.value.set(ambient[0], ambient[1], ambient[2]);
       // Stars are drawn as a dark-adapted eye sees them. Short of that,
-      // less; and less again through the veil of a bright Moon's light.
-      uniforms.uStarKeep.value =
-        (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4 *
-        starsByMoonlight(
-          moonlit > 0 ? moonShines : 0,
-          MathUtils.radToDeg(Math.asin(MathUtils.clamp(moonHeight, -1, 1))),
-        );
+      // less; and through the veil of the Moon's light the faint ones not
+      // at all, and the rest less again.
+      const veil =
+        dusk *
+        moonVeil(moonShines, MathUtils.radToDeg(Math.asin(MathUtils.clamp(moonHeight, -1, 1))));
+      uniforms.uStarKeep.value = (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4 * starsKept(veil);
+      uniforms.uSkyStarVeil.value = ground * STAR_VEIL.floor * veil;
 
       // The Moon as it looks from here, for the glow around it: how big,
       // and how much of its light arrives past the Earth and the air.

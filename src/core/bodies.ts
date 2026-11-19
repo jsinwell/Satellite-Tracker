@@ -275,15 +275,30 @@ export function moonGlare(share: number, exposure: number): number {
 const MOON_GLARE = 60;
 
 /**
- * How much of the stars' light is left to see with the Moon up, 0 to 1. A
- * full Moon high in the sky takes most of the faint ones: its light in the
- * air is a veil in front of them. `share` is `moonlight`, and `elevation`
- * how high the Moon is, degrees.
+ * How much the Moon's light in the air veils the stars, 0 to 1: `share` is
+ * `moonlight`, and `elevationDeg` how high the Moon is. It takes far less
+ * than a full Moon to lose most of them: at half the veil is half a full
+ * Moon's, with a tenth of the light, as the eye's sense of how bright the
+ * sky is goes by ratios.
  */
-export function starsByMoonlight(share: number, elevationDeg: number): number {
+export function moonVeil(share: number, elevationDeg: number): number {
+  if (!(share > 0)) return 0;
   const up = Math.min(1, Math.max(0, (elevationDeg + 2) / 12));
-  const strength = Math.sqrt(Math.min(1, share / FULL_MOONLIGHT));
-  return 1 - 0.75 * strength * up * up * (3 - 2 * up);
+  const strength = Math.min(1, share / FULL_MOONLIGHT) ** 0.3;
+  return strength * up * up * (3 - 2 * up);
+}
+
+/**
+ * What a veil of 1 does to the stars. The faintest go altogether: anything
+ * in the map of them fainter than `floor`, as a share of its white, which
+ * takes the Milky Way and all but a few hundred stars, as a full Moon does.
+ * And what is left is dimmed by `dimming`.
+ */
+export const STAR_VEIL = { floor: 0.1, dimming: 0.3 } as const;
+
+/** How much of the light of the stars that still show is left under a veil of `veil`, 0 to 1. */
+export function starsKept(veil: number): number {
+  return 1 - STAR_VEIL.dimming * Math.min(1, Math.max(0, veil));
 }
 
 export interface BodyView {

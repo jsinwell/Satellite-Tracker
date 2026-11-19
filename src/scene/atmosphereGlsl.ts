@@ -117,6 +117,11 @@ function createUniforms() {
     uSkyMoonlight: { value: new Vector3() },
     /** The color and strength of the glow around the Moon: see `moonGlare`. */
     uSkyMoonGlare: { value: new Vector3() },
+    /**
+     * Stars fainter than this in the map of them are lost in the Moon's
+     * light: see `STAR_VEIL`. Read by `Sky`, which draws them.
+     */
+    uSkyStarVeil: { value: 0 },
     uSkyExposure: { value: 1 },
     /** 1 looking up from the ground, 0 out in space; see `groundView`. */
     uSkyGround: { value: 0 },

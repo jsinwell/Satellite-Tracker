@@ -13,11 +13,13 @@ import {
   moonGlare,
   moonlight,
   moonlightSeen,
+  moonVeil,
   NARROWEST_FOV,
   type PlanetDisc,
   planetDiscs,
   SATURN_RINGS,
-  starsByMoonlight,
+  STAR_VEIL,
+  starsKept,
 } from './bodies';
 import type { Vec3 } from './kinematics';
 import { type Planet, planetPositions } from './planets';
@@ -312,21 +314,36 @@ describe('moonGlare', () => {
   });
 });
 
-describe('starsByMoonlight', () => {
-  it('leaves the stars alone with no Moon, or with it down', () => {
-    expect(starsByMoonlight(0, 60)).toBe(1);
-    expect(starsByMoonlight(2.5e-6, -10)).toBe(1);
+describe('moonVeil', () => {
+  it('is nothing with no Moon, or with it down', () => {
+    expect(moonVeil(0, 60)).toBe(0);
+    expect(moonVeil(2.5e-6, -10)).toBe(0);
   });
 
-  it('takes most of them with a full Moon high up', () => {
-    expect(starsByMoonlight(2.5e-6, 50)).toBeCloseTo(0.25, 6);
-    expect(starsByMoonlight(9e-6, 50)).toBeCloseTo(0.25, 6);
+  it('is all there with a full Moon high up, or a brighter one', () => {
+    expect(moonVeil(2.5e-6, 50)).toBe(1);
+    expect(moonVeil(9e-6, 50)).toBe(1);
   });
 
-  it('takes fewer the thinner the Moon and the lower it is', () => {
-    expect(starsByMoonlight(2.5e-7, 50)).toBeGreaterThan(starsByMoonlight(2.5e-6, 50));
-    expect(starsByMoonlight(2.5e-6, 3)).toBeGreaterThan(starsByMoonlight(2.5e-6, 50));
-    expect(starsByMoonlight(2.5e-7, 50)).toBeLessThan(1);
+  it('is half of it by half Moon, and still something for a crescent', () => {
+    expect(moonVeil(2.5e-7, 50)).toBeGreaterThan(0.45);
+    expect(moonVeil(2.5e-7, 50)).toBeLessThan(0.55);
+    expect(moonVeil(1e-8, 50)).toBeGreaterThan(0.12);
+    expect(moonVeil(1e-8, 50)).toBeLessThan(0.25);
+  });
+
+  it('is less the lower the Moon is', () => {
+    expect(moonVeil(2.5e-6, 3)).toBeLessThan(moonVeil(2.5e-6, 50));
+    expect(moonVeil(2.5e-6, 3)).toBeGreaterThan(0);
+  });
+});
+
+describe('starsKept', () => {
+  it('leaves the stars alone with no veil and dims them under one', () => {
+    expect(starsKept(0)).toBe(1);
+    expect(starsKept(1)).toBeCloseTo(1 - STAR_VEIL.dimming);
+    expect(starsKept(0.5)).toBeGreaterThan(starsKept(1));
+    expect(starsKept(7)).toBeCloseTo(1 - STAR_VEIL.dimming);
   });
 });
 
