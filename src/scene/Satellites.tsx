@@ -26,8 +26,7 @@ import { trailSeconds, type Vec3 } from '../core/kinematics';
 import { STATE_STRIDE } from '../core/propagator';
 import { TEME_FROM_WORLD } from './frame';
 import { ORBIT_GLSL, SHADOW_BRIGHTNESS } from './orbitGlsl';
-import { groundView } from './SkyDome';
-import { SKY_FOV } from './standing';
+import { groundView, SKY_FOV } from './standing';
 
 /**
  * The smallest a satellite is drawn, CSS px. From the ground the far ones,

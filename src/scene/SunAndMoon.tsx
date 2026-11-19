@@ -1,5 +1,5 @@
 import { useFrame, useLoader } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   AdditiveBlending,
   CanvasTexture,
@@ -7,33 +7,36 @@ import {
   MathUtils,
   Matrix4,
   PerspectiveCamera,
+  ShaderMaterial,
   type Sprite,
   SRGBColorSpace,
   TextureLoader,
   Vector3,
 } from 'three';
 import { currentSimTime } from '../app/store';
-import { moonPosition, obliquity, sunDirection, sunPosition } from '../core/astro';
+import { moonPosition, obliquity, sunPosition } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
-import { ECLIPSE_GLSL } from './eclipseGlsl';
-import { CAMERA_FOV, directionToWorld, SPHERE_POLES_TO_Z, TEME_FROM_WORLD } from './frame';
+import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
+import { CAMERA_FOV, SPHERE_POLES_TO_Z, TEME_FROM_WORLD } from './frame';
 
 const MOON_MAP_URL = `${import.meta.env.BASE_URL}textures/moon_1024.jpg`;
 
 /**
- * The Sun is drawn at a stand-in distance from the camera, inside the sky
- * sphere, in the direction it really is from the camera, at the size it
- * really looks from there. Only near the Earth does that matter: from the
- * ground the direction from the Earth's center is off by a twentieth of a
- * degree, enough to spoil an eclipse. The sprite is larger than the disc, to
- * carry the glow around it.
+ * The corona is drawn at a stand-in distance from the camera, inside the sky
+ * sphere, in the direction the Sun really is from the camera, at the size it
+ * really looks from there.
  */
 const SUN_DISTANCE_KM = 700 * EARTH_RADIUS_KM;
-const SUN_GLOW_SCALE = 26;
 /** The corona reaches a few solar radii out; the sprite is this many discs across. */
 const CORONA_SCALE = 7;
+/**
+ * Both are drawn after the sky, so that they lie over it, and the Moon after
+ * the corona, whose middle it hides.
+ */
+const CORONA_ORDER = -0.4;
+const MOON_ORDER = -0.3;
 
 /**
  * The Sun's outer atmosphere, only seen when the Moon covers the rest: a
@@ -76,31 +79,6 @@ function createCoronaTexture(): CanvasTexture {
       context.lineTo(half + Math.cos(angle) * length, half + Math.sin(angle) * length);
       context.stroke();
     }
-  }
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  return texture;
-}
-
-/** A white-hot disc fading into a warm halo, as a sprite texture. */
-function createSunTexture(): CanvasTexture {
-  const size = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext('2d');
-  if (context) {
-    const half = size / 2;
-    const disc = 1 / SUN_GLOW_SCALE;
-    const gradient = context.createRadialGradient(half, half, 0, half, half, half);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(disc, 'rgba(255, 252, 240, 1)');
-    gradient.addColorStop(disc * 1.6, 'rgba(255, 236, 190, 0.45)');
-    gradient.addColorStop(disc * 5, 'rgba(255, 214, 150, 0.12)');
-    gradient.addColorStop(0.5, 'rgba(255, 200, 130, 0.03)');
-    gradient.addColorStop(1, 'rgba(255, 200, 130, 0)');
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, size, size);
   }
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
@@ -158,27 +136,41 @@ const moonVertexShader = /* glsl */ `
 // In a lunar eclipse the Earth hides the Sun: the Moon dims through the
 // penumbra, and in the umbra is lit only by sunlight bent through the
 // Earth's atmosphere, which reaches it dim and red.
+//
+// Seen through the air, it is dimmed and reddened like the Sun, and the light
+// of the sky lies in front of it: by day its dark part is not black but the
+// blue of the sky, which is why a daytime Moon looks cut out of it.
 const moonFragmentShader = /* glsl */ `
   uniform sampler2D uMap;
-  uniform vec3 uSunDirection;
-  uniform vec3 uSun;
 
   varying vec2 vUv;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
 
-  ${ECLIPSE_GLSL}
+  ${ATMOSPHERE_GLSL}
 
   void main() {
-    float facing = max(dot(normalize(vWorldNormal), uSunDirection), 0.0);
-    float left = 1.0 - sunHiddenByEarth(vWorldPosition, uSun);
+    float facing = max(dot(normalize(vWorldNormal), uSkySun), 0.0);
+    float left = 1.0 - sunHiddenByEarth(vWorldPosition, uSkySunPosition);
     vec3 sunlight = mix(vec3(0.16, 0.055, 0.025), vec3(1.0), left);
-    gl_FragColor = vec4(texture2D(uMap, vUv).rgb * (0.02 + 1.3 * facing * sunlight), 1.0);
+    vec3 color = texture2D(uMap, vUv).rgb * (0.02 + 1.3 * facing * sunlight);
+
+    vec3 direction = normalize(vWorldPosition - cameraPosition);
+    float start;
+    float end;
+    bool ground;
+    if (skySpan(direction, start, end, ground)) {
+      vec3 light;
+      vec3 through;
+      skyMarch(direction, start, end, light, through);
+      color = skyAdd(skyTone(light), color * through);
+    }
+
+    gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>
   }
 `;
 
-const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 const sunKm: Vec3 = { x: 0, y: 0, z: 0 };
 const moonKm: Vec3 = { x: 0, y: 0, z: 0 };
 const eye = new Vector3();
@@ -188,61 +180,55 @@ const east = new Vector3();
 const basis = new Matrix4();
 
 /**
- * The Sun and Moon where they actually are for the simulated instant. The Sun
- * hides behind the Earth when it should, and the Moon shows its true phase
- * with the near side facing us. Lives inside the TEME group; see `frame.ts`.
+ * The Moon where it actually is for the simulated instant, showing its true
+ * phase with the near side facing us, and the Sun's corona for when the Moon
+ * covers the rest of it. The Sun itself is drawn with the sky, by
+ * `Atmosphere`. Lives inside the TEME group; see `frame.ts`.
  */
 export function SunAndMoon() {
   const moonMap = useLoader(TextureLoader, MOON_MAP_URL);
-  const sun = useRef<Sprite>(null);
   const corona = useRef<Sprite>(null);
   const moon = useRef<Group>(null);
   const moonTag = useRef<Sprite>(null);
 
-  const sunTexture = useMemo(createSunTexture, []);
   const coronaTexture = useMemo(createCoronaTexture, []);
   const moonLabel = useMemo(() => createLabelTexture('Moon'), []);
-  const moonUniforms = useMemo(() => {
+  const moonMaterial = useMemo(() => {
     moonMap.colorSpace = SRGBColorSpace;
-    return {
-      uMap: { value: moonMap },
-      uSunDirection: { value: new Vector3(1, 0, 0) },
-      uSun: { value: new Vector3() },
-    };
+    // Made here, not as an element: see `atmosphereUniforms`.
+    return new ShaderMaterial({
+      uniforms: { ...atmosphereUniforms(), uMap: { value: moonMap } },
+      vertexShader: moonVertexShader,
+      fragmentShader: moonFragmentShader,
+      // Solid, but marked see-through so that it is drawn after the sky.
+      transparent: true,
+    });
   }, [moonMap]);
+  useEffect(() => () => moonMaterial.dispose(), [moonMaterial]);
 
   useFrame(({ camera }) => {
     const simMs = currentSimTime();
     sunPosition(simMs, sunKm);
     moonPosition(simMs, moonKm);
-    directionToWorld(sunDirection(simMs, scratch), moonUniforms.uSunDirection.value);
-    directionToWorld(sunKm, moonUniforms.uSun.value).divideScalar(EARTH_RADIUS_KM);
 
-    // The Sun as it looks from the camera: where, how big, and how much of
-    // it the Moon leaves. The corona shows only when nearly all of it is gone.
+    // The corona shows only when the Moon has nearly all of the Sun covered,
+    // as seen from the camera. From the ground that is not quite where the
+    // Sun is from the Earth's center: off by little, but enough to spoil an
+    // eclipse.
     eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
-    const toSun = Math.hypot(sunKm.x - eye.x, sunKm.y - eye.y, sunKm.z - eye.z);
-    const disc = 2 * SUN_DISTANCE_KM * Math.tan(Math.asin(SUN_RADIUS_KM / toSun));
-    const hidden = sunHiddenByMoon(eye, sunKm, moonKm);
-    for (const [sprite, scale] of [
-      [sun.current, SUN_GLOW_SCALE],
-      [corona.current, CORONA_SCALE],
-    ] as const) {
-      if (!sprite) continue;
+    const opacity = MathUtils.smoothstep(sunHiddenByMoon(eye, sunKm, moonKm), 0.97, 1);
+    if (corona.current) {
+      const sprite = corona.current;
+      sprite.visible = opacity > 0;
+      sprite.material.opacity = opacity;
+      const toSun = Math.hypot(sunKm.x - eye.x, sunKm.y - eye.y, sunKm.z - eye.z);
       sprite.position.set(
         eye.x + ((sunKm.x - eye.x) / toSun) * SUN_DISTANCE_KM,
         eye.y + ((sunKm.y - eye.y) / toSun) * SUN_DISTANCE_KM,
         eye.z + ((sunKm.z - eye.z) / toSun) * SUN_DISTANCE_KM,
       );
-      sprite.scale.setScalar(disc * scale);
-    }
-    // Even a thin crescent of Sun is dazzling: the glare only goes in the
-    // last few percent before totality.
-    if (sun.current) sun.current.material.opacity = MathUtils.smoothstep(1 - hidden, 0, 0.08);
-    if (corona.current) {
-      const opacity = MathUtils.smoothstep(hidden, 0.97, 1);
-      corona.current.material.opacity = opacity;
-      corona.current.visible = opacity > 0;
+      const disc = 2 * SUN_DISTANCE_KM * Math.tan(Math.asin(SUN_RADIUS_KM / toSun));
+      sprite.scale.setScalar(disc * CORONA_SCALE);
     }
 
     // A perspective-free sprite still scales with the field of view; undo
@@ -273,16 +259,7 @@ export function SunAndMoon() {
 
   return (
     <>
-      <sprite ref={sun}>
-        <spriteMaterial
-          map={sunTexture}
-          blending={AdditiveBlending}
-          depthWrite={false}
-          transparent
-        />
-      </sprite>
-      {/* Behind the Moon, which hides its middle. */}
-      <sprite ref={corona} visible={false}>
+      <sprite ref={corona} visible={false} renderOrder={CORONA_ORDER}>
         <spriteMaterial
           map={coronaTexture}
           blending={AdditiveBlending}
@@ -292,13 +269,9 @@ export function SunAndMoon() {
         />
       </sprite>
       <group ref={moon}>
-        <mesh rotation={[...SPHERE_POLES_TO_Z]}>
+        <mesh rotation={[...SPHERE_POLES_TO_Z]} renderOrder={MOON_ORDER}>
           <sphereGeometry args={[MOON_RADIUS_KM, 48, 24]} />
-          <shaderMaterial
-            uniforms={moonUniforms}
-            vertexShader={moonVertexShader}
-            fragmentShader={moonFragmentShader}
-          />
+          <primitive object={moonMaterial} attach="material" />
         </mesh>
         {/*
           Scaled up by the Earth's radius to cancel the enclosing group's

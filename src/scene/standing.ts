@@ -5,6 +5,24 @@ import { directionToWorld } from './frame';
 /** Eye height above the drawn Earth while looking up, in Earth radii: about 600 m. */
 export const EYE_HEIGHT = 1e-4;
 
+/**
+ * Coming down, the view goes over from the one from space to the one from
+ * the ground between these heights (Earth radii: about 60 km and 13 km).
+ */
+export const GROUND_FADE = { start: 0.01, full: 0.002 } as const;
+
+/**
+ * How far the view has gone over to the ground's, from 0 at or above the
+ * first `GROUND_FADE` height to 1 at or below the second. `height` is above
+ * the ground, in Earth radii.
+ */
+export function groundView(height: number): number {
+  return (
+    1 -
+    Math.min(1, Math.max(0, (height - GROUND_FADE.full) / (GROUND_FADE.start - GROUND_FADE.full)))
+  );
+}
+
 /** The field of view looking up, degrees: wide, as the sky is big. */
 export const SKY_FOV = 70;
 /** How far the wheel or a pinch can narrow or widen it. */
