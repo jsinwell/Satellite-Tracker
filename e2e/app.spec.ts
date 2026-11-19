@@ -188,8 +188,12 @@ test.describe('with a catalog', () => {
     await passes.getByRole('button').first().click();
     await expect(clock).not.toHaveText(before ?? '');
 
-    // The place is remembered for next time, and the panel opens with it.
+    // The place is remembered for next time. The panel starts closed, and
+    // opens with it.
     await page.reload();
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Your sky' })).toBeHidden();
+    await page.getByRole('button', { name: 'Your sky' }).click();
     await expect(page.getByRole('region', { name: 'Your sky' })).toContainText('41.88° N');
   });
 
@@ -251,8 +255,9 @@ test.describe('with a catalog', () => {
     await expect(sky).toContainText('Total solar eclipse: the Moon is covering the Sun.');
 
     // The total lunar eclipse of 3 March 2026, from Honolulu. The place is
-    // remembered and the panel opens with it, so it is changed from there.
+    // remembered, so it is changed from there.
     await page.goto('/?t=2026-03-03T11:34:00Z');
+    await page.getByRole('button', { name: 'Your sky' }).click();
     await sky.getByRole('button', { name: 'Change' }).click();
     const field = sky.getByLabel('Or type its coordinates');
     await field.fill('21.31, -157.86');
