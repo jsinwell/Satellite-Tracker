@@ -1,4 +1,5 @@
 import { Matrix3, type Texture, Vector2, Vector3 } from 'three';
+import { CLOUD_COVER, CLOUD_LATITUDES } from '../core/clouds';
 import {
   BARE_GROUND,
   EARTH_ECCENTRICITY_SQUARED,
@@ -23,6 +24,9 @@ function createUniforms() {
     uLandOrigin: { value: new Vector2() },
     /** Seconds, for the sea to move by. */
     uLandTime: { value: 0 },
+    /** The picture of the Earth's clouds, and how much they are shown: both from `Earth`. */
+    uLandClouds: { value: null as Texture | null },
+    uLandClouded: { value: 0 },
   };
 }
 
@@ -59,6 +63,8 @@ export const LANDSCAPE_GLSL = /* glsl */ `
   uniform vec3 uLandNorth;
   uniform vec2 uLandOrigin;
   uniform float uLandTime;
+  uniform sampler2D uLandClouds;
+  uniform float uLandClouded;
 
   const vec3 LAND_MAP_WATER = ${vec3(MAP_WATER.map(Math.sqrt))};
   const vec2 LAND_MAP_WATER_WITHIN = vec2(${float(MAP_WATER_WITHIN[0])}, ${float(MAP_WATER_WITHIN[1])});
@@ -249,6 +255,11 @@ export const LANDSCAPE_GLSL = /* glsl */ `
       // off, differently from place to place, bends them.
       vec2 bend = 8.0 * vec2(landRough(pattern, 9.0, footprint), landRough(pattern + 71.7, 9.0, footprint));
       place += bend / vec2(40075.0 * max(cos(latitude), 0.05), 20004.0);
+      // Under cloud the ground is in its shade. Mirrors cloudCover and cloudsDrawnAt.
+      float cloud = uLandClouded
+        * smoothstep(${float(CLOUD_COVER.from)}, ${float(CLOUD_COVER.to)}, textureLod(uLandClouds, place, 0.0).r)
+        * (1.0 - smoothstep(${float(CLOUD_LATITUDES.full / 90)}, ${float(CLOUD_LATITUDES.none / 90)}, abs(latitude) / (0.5 * SKY_PI)));
+      sunlight *= 1.0 - 0.7 * cloud;
       // The maps are far coarser than the screen here: no need of their smaller copies.
       vec3 day = textureLod(uLandDay, place, 0.0).rgb;
       // Mirrors waterShare and landAlbedo, but for the shore being

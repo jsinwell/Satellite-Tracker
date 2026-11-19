@@ -164,6 +164,8 @@ export function Earth() {
         map.anisotropy = 8;
         cloudMap.current = map;
         material.uniforms.uCloudMap.value = map;
+        // And for the sky seen from under them.
+        landscapeUniforms().uLandClouds.value = map;
       },
       undefined,
       // No clouds, then.
@@ -173,6 +175,8 @@ export function Earth() {
       stale = true;
       material.uniforms.uCloudMap.value = null;
       material.uniforms.uClouds.value = 0;
+      landscapeUniforms().uLandClouds.value = null;
+      landscapeUniforms().uLandClouded.value = 0;
       cloudMap.current?.dispose();
       cloudMap.current = null;
     };
@@ -184,6 +188,7 @@ export function Earth() {
     const clouds = material.uniforms.uClouds;
     const step = CLOUDS_FADE_RATE * deltaSeconds;
     clouds.value = Math.min(1, Math.max(0, clouds.value + (wanted > clouds.value ? step : -step)));
+    landscapeUniforms().uLandClouded.value = clouds.value;
   });
 
   return (
