@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense } from 'react';
 import { ACCENT_COLOR } from '../app/palette';
 import type { World } from '../app/world';
+import { Atmosphere } from './Atmosphere';
 import { CameraRig } from './CameraRig';
 import { Coverage } from './Coverage';
 import { Earth, EarthPlaceholder } from './Earth';
@@ -15,7 +16,6 @@ import { Planets } from './Planets';
 import { Satellites } from './Satellites';
 import { Sky } from './Sky';
 import { SkyCompass } from './SkyCompass';
-import { SkyDome } from './SkyDome';
 import { SunAndMoon } from './SunAndMoon';
 
 const UnsupportedNotice = (
@@ -39,7 +39,7 @@ export function Scene({ world }: { world: World }) {
       <CameraRig world={world} />
       <Picker world={world} />
       <SkyCompass />
-      <SkyDome />
+      <Atmosphere />
 
       <group rotation={[...TEME_GROUP_ROTATION]} scale={TEME_GROUP_SCALE}>
         {/* Loads after everything else; the plain background stands in until then. */}

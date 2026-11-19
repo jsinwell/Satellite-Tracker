@@ -25,8 +25,13 @@ computed live in the browser.
   planets are up and how bright they are, so you can tell them from satellites. Satellites
   are drawn as small satellite shapes heading the way they're going, with a short trail
   behind, lit from the Sun's side. Sunlit ones glow against a dark sky, ones in the Earth's
-  shadow go dark, and now and then one flares as a flat face catches the Sun. The sky is dark, twilit or blue to
-  match the hour. Drag to look around, and scroll or pinch to widen or narrow the view.
+  shadow go dark, and now and then one flares as a flat face catches the Sun. Drag to look
+  around, and scroll or pinch to widen or narrow the view.
+- The sky is worked out from the air itself: how sunlight scatters off air molecules and
+  haze on its way down, and how the ozone layer soaks up some of it. That gives a blue sky
+  by day with no stars showing, a Sun that yellows and reddens as it sets, a band of orange
+  along the horizon afterward, and stars coming out as twilight fades. From orbit the same
+  air is the thin blue line around the Earth.
 - Pause time or run it at up to 1000x, or click the date to go to any moment from 1957 to 2100. Above 10x the satellites leave short trails, so you can
   see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the
@@ -51,6 +56,10 @@ computed live in the browser.
   visit to the next.
 - Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
   moment in time with `?t=2026-11-16T06:30:00Z`.
+
+![Sunset from Luxor, looking west, with the sky running from orange at the horizon to blue overhead](docs/sunset.png)
+
+Sunset from Luxor on 3 August 2027, looking west.
 
 ![The total solar eclipse of 2 August 2027 seen from Luxor, with Venus and Mercury beside the Sun](docs/eclipse.png)
 
@@ -92,6 +101,17 @@ Rendering is Three.js through react-three-fiber, with every satellite in a singl
 Positions stay in the inertial frame that SGP4 produces and the Earth rotates underneath
 them, lit from the sun's real position. React only draws the panels and never re-renders per
 frame.
+
+The sky isn't a painted gradient. A shader steps along lines of sight through the
+atmosphere and adds up the sunlight scattered toward the camera: Rayleigh scattering off air
+molecules, Mie scattering off haze, absorption by ozone, and light that has bounced more than
+once. Doing that for every pixel is too slow for integrated graphics, so each frame it's done
+for a small map of the whole sky around the camera (256 by 160 directions, packed closest at
+the horizon) and the screen reads from the map. The parts that never change are worked out
+once at startup into two lookup tables. This follows Sébastien Hillaire's 2020 paper _A
+Scalable and Production Ready Sky and Atmosphere Rendering Technique_ and Eric Bruneton's
+earlier work. The same model is written in plain TypeScript so it can be tested, and so the
+exposure can follow the brightness of the sky the way your eyes would.
 
 The math is kept separate from the UI:
 
