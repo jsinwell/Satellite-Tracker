@@ -1,11 +1,60 @@
-# Satellite Tracker
+<h1 align="center">Satellite Tracker</h1>
 
-A 3D view of the satellites and debris in Earth orbit, about 19,500 objects, with positions
-computed live in the browser.
+<p align="center">
+  Every tracked satellite and piece of debris in Earth orbit, about 19,500 objects,<br />
+  with positions computed live in your browser.
+</p>
 
-**[jsinwell-satellite-tracker.pages.dev](https://jsinwell-satellite-tracker.pages.dev/)**
+<p align="center">
+  <a href="https://jsinwell-satellite-tracker.pages.dev/"><strong>Open the live site</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#features">Features</a>
+  &nbsp;·&nbsp;
+  <a href="#running-it">Running it</a>
+  &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a>
+</p>
 
-![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/screenshot.png)
+<p align="center">
+  <a href="https://github.com/jsinwell/Satellite-Tracker/actions/workflows/ci.yml"><img src="https://github.com/jsinwell/Satellite-Tracker/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+</p>
+
+![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/globe.jpg)
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/ride.jpg" alt="The view from just behind the ISS, with East Africa below and the horizon ahead" />
+      <p><strong>Ride along.</strong> Sit just behind any satellite and follow it around its orbit. This is the ISS crossing East Africa.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/constellations.jpg" alt="The globe with satellites colored by constellation, most of them Starlink" />
+      <p><strong>See who owns the sky.</strong> Color by constellation and more than half of everything up there turns out to be Starlink.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/big-sur.jpg" alt="The Sun setting over the Pacific, with a path of glitter on the water and satellites overhead" />
+      <p><strong>Look up from where you are.</strong> The camera stands on the ground under the real sky. Sunset over the Pacific from Big Sur, with the satellites that are overhead.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/chicago.jpg" alt="City lights stretching to the horizon under a twilight sky full of satellites" />
+      <p><strong>Stand somewhere real.</strong> The ground is the place you picked. Chicago at dusk, looking west, when satellites still catch the Sun.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/night-side.jpg" alt="South America at night from space, its cities lit, with daylight along one edge of the Earth" />
+      <p><strong>Day and night where they really are.</strong> The Earth is lit from the Sun's true position, with city lights on the dark side.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
+      <p><strong>Eclipses happen on their own.</strong> The total solar eclipse of 2 August 2027 from Luxor, with Venus and Mercury out beside the Sun.</p>
+    </td>
+  </tr>
+</table>
 
 ## Features
 
@@ -35,7 +84,7 @@ computed live in the browser.
   the satellites, stars, planets, Sun and Moon where they'd be. Drag to look around, and
   scroll or pinch to widen or narrow the view.
 - The ground there is the place you're standing on. Its color comes from the Earth map, so
-  it's sand around Luxor, forest in the Amazon and ice in Greenland, with hills that catch
+  it's sand in the Sahara, forest in the Amazon and ice in Greenland, with hills that catch
   the light when the Sun is low. Water mirrors the sky and glitters under the Sun, and at
   night towns and cities show as lamps out to the horizon. The map is only good to about
   10 km, so the hills and the individual lamps are made up.
@@ -45,10 +94,6 @@ computed live in the browser.
   Sun.
 - The sky panel lists which planets are up and how bright they are, so you can tell them from
   satellites.
-
-![Sunset from Luxor, looking west, with the sky running from orange at the horizon to blue overhead](docs/sunset.png)
-
-Sunset from Luxor on 3 August 2027, looking west.
 
 ### Sky, Sun and Moon
 
@@ -66,11 +111,6 @@ Sunset from Luxor on 3 August 2027, looking west.
   Moon's shadow crosses the globe in a solar eclipse, and from inside it the sky goes dark
   around the corona. In a lunar eclipse the Moon turns dim and red. Try 2 August 2027 at
   10:06 UTC from Luxor (`?t=2027-08-02T10:06:00Z`, then set your place to 25.5, 33.2).
-
-![The total solar eclipse of 2 August 2027 seen from Luxor, with Venus and Mercury beside the Sun](docs/eclipse.png)
-
-The total solar eclipse of 2 August 2027, looking up from Luxor at mid-eclipse. Venus and
-Mercury are out in the darkened sky beside the Sun.
 
 ### Time and controls
 
