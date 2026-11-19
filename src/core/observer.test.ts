@@ -214,6 +214,28 @@ describe('skyNow', () => {
     for (const entry of sky.above) expect(entry.elevation).toBeGreaterThan(0);
   });
 
+  it('counts as seen what binoculars show, when asked', () => {
+    // A sixth-magnitude satellite 500 km straight up over Chicago, lit from
+    // the side: about magnitude 4.5 by eye, with the sky fully dark.
+    const midnight = Date.parse('2026-06-21T06:00:00Z');
+    const frame = observerFrame(chicago, midnight);
+    const overhead = new Float32Array(STATE_STRIDE);
+    const scale = (EARTH_RADIUS_KM + 500) / Math.hypot(frame.up.x, frame.up.y, frame.up.z);
+    // Near enough straight up: along the observer's "up" from the Earth's center.
+    overhead.set([frame.up.x * scale, frame.up.y * scale, frame.up.z * scale]);
+    const one = Uint8Array.of(1);
+    const read = (standard: number, seenWith?: 'eye' | 'binoculars') =>
+      skyNow(frame, midnight, overhead, 1, 0, one, Float32Array.of(standard), seenWith);
+
+    // In the Earth's shadow at midnight, whatever it is looked at with.
+    expect(read(6).seeable).toBe(0);
+    expect(read(6, 'binoculars').seeable).toBe(0);
+    // But near enough to see, by eye or binoculars, if the Sun were on it.
+    expect(read(6).withinReach).toBe(1);
+    expect(read(9).withinReach).toBe(0);
+    expect(read(9, 'binoculars').withinReach).toBe(1);
+  });
+
   it('leaves out what the filters hide', () => {
     const sky = skyNow(
       observerFrame(underGoes, timeMs),

@@ -89,7 +89,7 @@ export function useTelemetry(world: World, index: number): Telemetry | null {
 const SKY_INTERVAL_MS = 1000;
 const frame = createObserverFrame();
 
-function readSky(world: World, observer: Observer): SkyNow {
+function readSky(world: World, observer: Observer, seenWith: 'eye' | 'binoculars'): SkyNow {
   const { simulation } = world;
   const simMs = currentSimTime();
   return skyNow(
@@ -100,12 +100,20 @@ function readSky(world: World, observer: Observer): SkyNow {
     simulation.dtSeconds(simMs),
     useApp.getState().visible,
     world.standardMagnitudes,
+    seenWith,
   );
 }
 
-/** What is above `observer` now, among the satellites the filters show. */
-export function useSkyNow(world: World, observer: Observer): SkyNow {
-  const read = useCallback(() => readSky(world, observer), [world, observer]);
+/**
+ * What is above `observer` now, among the satellites the filters show, and
+ * which of them show by eye, or in binoculars if `seenWith` says so.
+ */
+export function useSkyNow(
+  world: World,
+  observer: Observer,
+  seenWith: 'eye' | 'binoculars' = 'eye',
+): SkyNow {
+  const read = useCallback(() => readSky(world, observer, seenWith), [world, observer, seenWith]);
   return usePolled(read, SKY_INTERVAL_MS);
 }
 
