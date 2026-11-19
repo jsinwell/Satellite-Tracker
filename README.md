@@ -45,7 +45,7 @@
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/sky-by-eye.jpg" alt="A dusk sky with the Moon, Saturn and a dozen faint points of light, each with a short tail" />
+      <img src="docs/dusk-by-eye.jpg" alt="A dusk sky with the Moon, Saturn and a dozen points of light, each with a tail" />
       <p>Los Angeles an hour after sunset. The points with tails are the satellites you could see.</p>
     </td>
     <td width="50%" valign="top">
@@ -104,8 +104,8 @@
 - The ground is colored from the Earth map at your location, so it's sandy in the Sahara,
   green in the Amazon and white in Greenland, and water reflects the sky. The map only has
   about 10 km of detail, so the hills are generated.
-- Satellites in this view are points of light with a short trail, about as bright as they'd
-  really look. You only get the ones you could see from there, so none by day and none in the
+- Satellites in this view are points of light, about as bright as they'd really look. Each
+  has a tail and a faint edge in its legend color, which is how you tell one from a star. You only get the ones you could see from there, so none by day and none in the
   Earth's shadow. They turn red as they fade into it, and once in a while one flares.
 - The space stations and Hubble get a name beside them when they're in sight, and so does
   anything else as bright as a bright star.

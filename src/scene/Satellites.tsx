@@ -88,11 +88,19 @@ const FLARE_REACH_PX = 26;
 /** Looking up, each point is this many times wider than the satellite in it, for its glow and glint. */
 const GLYPH_SPREAD = 2.6;
 /**
- * Looking up, every satellite trails where it was this many simulated seconds
- * ago, even at real speed or paused: the motion is what gives a satellite
- * away among the stars. Three seconds is a few degrees for one passing over.
+ * Looking up, every satellite that can be seen trails where it was this many
+ * simulated seconds ago, even at real speed or paused: the tail is what
+ * tells a satellite from a star at a glance. Seven seconds is about five
+ * degrees for one passing overhead, three fingers at arm's length, and one
+ * finger for one low down and far off.
  */
-const GROUND_TRAIL_SECONDS = 3;
+const GROUND_TRAIL_SECONDS = 7;
+/**
+ * With all of them shown, the ones that cannot be seen have a tail this much
+ * of that long and this strong: there are a thousand of them, and they are
+ * the background.
+ */
+const UNSEEN_TAIL = { length: 0.35, shown: 0.45 } as const;
 /**
  * Drawn as the light it is, a satellite is a point this wide, CSS px: `min`
  * for one only just seen, and `perMagnitude` more for each magnitude
@@ -207,6 +215,8 @@ const pointVertexShader = /* glsl */ `
   varying float vGlyphSize;
   /** How much of it shows, drawn as a light, 0 to 1; negative where it is drawn as a satellite. */
   varying float vShown;
+  /** The legend's color for it, which a light has around its edge. */
+  varying vec3 vTint;
 
   ${SHARED_GLSL}
 
@@ -224,6 +234,7 @@ const pointVertexShader = /* glsl */ `
     vGlint = 0.0;
     vGlyphSize = 0.0;
     vShown = -1.0;
+    vTint = aColor;
     vHeading = vec2(1.0, 0.0);
     if (isHidden()) {
       gl_Position = OUTSIDE_CLIP_VOLUME;
@@ -348,6 +359,7 @@ const pointFragmentShader = /* glsl */ `
   varying float vGlint;
   varying float vGlyphSize;
   varying float vShown;
+  varying vec3 vTint;
 
   // A flare is a flash of white with spikes, as a bright point of light
   // looks to the eye, measured in screen pixels so it is the same size for
@@ -389,14 +401,16 @@ const pointFragmentShader = /* glsl */ `
 
     vec2 px = c * vSize / uPixelRatio;
     if (vShown >= 0.0) {
-      // As a light: a bright core in a soft glow, like a planet's.
+      // As a light: a bright core in a soft glow, like a planet's. The
+      // glow is in the legend's color for it, which no star has: with its
+      // tail, that is what tells it from one.
       float d = 2.0 * length(c) * vSize / vGlyphSize;
       float core = 1.0 - smoothstep(${(0.7 / LIGHT_SPREAD).toFixed(3)}, ${(1 / LIGHT_SPREAD).toFixed(3)}, d);
-      float glow = 0.3 * pow(max(1.0 - d, 0.0), 2.0);
+      float glow = 0.5 * pow(max(1.0 - d, 0.0), 1.5);
       float flare = flareAt(px);
       float alpha = max(max(core, glow) * vShown, flare);
       if (alpha < 0.004) discard;
-      gl_FragColor = vec4(mix(vColor, vec3(1.0), flare), alpha);
+      gl_FragColor = vec4(mix(mix(vTint, vColor, core), vec3(1.0), flare), alpha);
       #include <colorspace_fragment>
       gl_FragColor.rgb *= gl_FragColor.a;
       gl_FragColor.a *= ${LIGHT_COVER.sky.toFixed(2)};
@@ -487,21 +501,32 @@ const trailVertexShader = /* glsl */ `
     float tail = position.x;
     vTail = tail;
     float reach = uTrailSeconds;
+    vec3 head = extrapolate(aPosition, aVelocity, uDt);
+    bool light = uGround > 0.5 && !isChosen();
+    // How much of it shows as a light: see the points' shader.
+    float seen = 0.0;
     if (uGround < 0.5) {
-      vec3 head = extrapolate(aPosition, aVelocity, uDt);
       float away = length((modelViewMatrix * vec4(head, 1.0)).xyz);
       reach *= clamp(away / ${FULL_TRAIL_FROM.toFixed(1)}, 0.1, 1.0);
+    } else if (light) {
+      seen = lightShown(uFaintest - magnitudeAt(head)) * sunlight(head, uSunDirection, 0.0);
+      reach *= mix(${UNSEEN_TAIL.length.toFixed(2)}, 1.0, seen);
     }
     vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * reach);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-    // From space, and for the ones that cannot be seen from the ground when
-    // all are shown, in the legend's color.
+    // From space, and for the selected one, in the legend's color.
     vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), 0.5);
-    if (uLight > 0.5 && !isChosen()) {
-      // The streak of a light: only where the light itself shows.
+    if (light) {
+      // The streak of a light: white where it leaves the light, and the
+      // legend's color for most of its length. Only where the light itself
+      // shows, unless all of them are asked for, when the rest have a
+      // short faint one.
       float lit = sunlight(p, uSunDirection, 0.0);
-      float shown = lightShown(uFaintest - magnitudeAt(p)) * lit;
-      vColor = vec4(lightColor(lit), 0.4 * shown);
+      float shown = seen * lit;
+      if (uLight < 0.5) {
+        shown = max(shown, ${UNSEEN_TAIL.shown.toFixed(2)} * mix(${UNSEEN_LIGHT.inShadow.toFixed(2)}, 1.0, lit));
+      }
+      vColor = vec4(mix(lightColor(lit), aColor, smoothstep(0.0, 0.35, tail)), 0.7 * shown);
     }
   }
 `;
@@ -511,8 +536,8 @@ const trailFragmentShader = /* glsl */ `
   varying float vTail;
 
   void main() {
-    // Gone quickly, like the tail of a comet: most of it is near the head.
-    gl_FragColor = vec4(vColor.rgb, vColor.a * (1.0 - vTail) * (1.0 - vTail));
+    // Gone by its end, like the tail of a comet.
+    gl_FragColor = vec4(vColor.rgb, vColor.a * pow(1.0 - vTail, 1.6));
     #include <colorspace_fragment>
     gl_FragColor.rgb *= gl_FragColor.a;
     gl_FragColor.a *= ${LIGHT_COVER.trail.toFixed(2)};
