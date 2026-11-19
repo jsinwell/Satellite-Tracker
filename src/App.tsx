@@ -9,6 +9,7 @@ import { HoverLabel } from './ui/HoverLabel';
 import { InfoPanel } from './ui/InfoPanel';
 import { SearchBox } from './ui/SearchBox';
 import { SkyPanel } from './ui/SkyPanel';
+import { SkyShowsButton } from './ui/SkyShowsButton';
 import { StatusLine } from './ui/StatusLine';
 import { TimeBar } from './ui/TimeBar';
 
@@ -118,6 +119,7 @@ export function App() {
   const watching = useApp((state) => state.watching);
   const haveClouds = useApp((state) => state.cloudsAtMs !== null);
   const showClouds = useApp((state) => state.showClouds);
+  const lookingUp = useApp((state) => state.lookingUp);
   // Both only matter on narrow screens, where the filters are tucked behind a
   // button and the selected satellite shows a summary until asked for the rest.
   // Opening one closes the other: there is not room for both and the globe.
@@ -193,6 +195,7 @@ export function App() {
                   <CloudIcon />
                 </button>
               )}
+              {lookingUp && <SkyShowsButton />}
             </div>
             {skyOpen && (
               // On a phone the selected satellite takes this spot, and the

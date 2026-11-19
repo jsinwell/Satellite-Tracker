@@ -22,6 +22,7 @@ describe('parseSettings', () => {
       },
       overlays: { orbit: true, groundTrack: false, coverage: false },
       clouds: false,
+      skyShows: 'binoculars',
     };
     expect(parseSettings(saved)).toEqual(saved);
   });
@@ -36,6 +37,9 @@ describe('parseSettings', () => {
     expect(settings.filters.regimes).toEqual({ LEO: false, MEO: true, GEO: true, HEO: true });
     expect(settings.filters.launchedBy).toBeNull();
     expect(settings.overlays).toEqual({ orbit: true, groundTrack: true, coverage: false });
+    expect(settings.skyShows).toBe('eye');
+    expect(parseSettings({ skyShows: 'telescope' }).skyShows).toBe('eye');
+    expect(parseSettings({ skyShows: 'all' }).skyShows).toBe('all');
   });
 
   it('never keeps a filter the legend would not show', () => {

@@ -47,6 +47,27 @@ function query(state: Float32Array, overrides: Partial<PickQuery> = {}): PickQue
 }
 
 describe('pickSatellite', () => {
+  it('passes over what is not drawn, for the nearest that is', () => {
+    const state = new Float32Array(2 * STATE_STRIDE);
+    state.set([EARTH_RADIUS_KM + 500, 0, 0], 0);
+    state.set([EARTH_RADIUS_KM + 500, 40, 0], STATE_STRIDE);
+    const query = {
+      state,
+      count: 2,
+      dtSeconds: 0,
+      visible: Uint8Array.of(1, 1),
+      // Looking down the x axis from far off: y to the right, z up.
+      clipFromTeme: [0, 0, 0, 0, 1e-3, 0, 0, 0, 0, 1e-3, 0, 0, 0, 0, 0, 1],
+      eye: { x: 50_000, y: 0, z: 0 },
+      pointer: { x: 500, y: 500 },
+      viewport: { width: 1000, height: 1000 },
+      radiusPx: 50,
+    };
+    expect(pickSatellite(query)).toBe(0);
+    expect(pickSatellite({ ...query, drawn: (index) => index !== 0 })).toBe(1);
+    expect(pickSatellite({ ...query, drawn: () => false })).toBe(-1);
+  });
+
   it('picks the satellite under the pointer', () => {
     const state = states([NEAR_SIDE, 0, 0, 0, 0, 0], [NEAR_SIDE, 3000, 0, 0, 0, 0]);
     expect(pickSatellite(query(state))).toBe(0);

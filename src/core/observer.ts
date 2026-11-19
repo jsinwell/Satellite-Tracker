@@ -1,5 +1,6 @@
 import { geodeticToEcf } from 'satellite.js';
 import { gmst, shadowDepth, sunDirection } from './astro';
+import { faintestSeen, magnitudeFrom, standardMagnitude } from './brightness';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import { extrapolatePosition, hasState, type Vec3 } from './kinematics';
@@ -174,35 +175,27 @@ export function skyState(sunElevationDeg: number): SkyState {
 }
 
 /**
- * Brightness falls with the square of distance, and beyond this even a large
- * satellite is too faint to see without binoculars. A GPS satellite, 20,000
- * km up, is around magnitude 11; the eye stops at about 6.
- */
-export const MAX_SEEING_RANGE_KM = 2500;
-
-/** Whether a catalog object is big enough to be seen: debris is mostly fragments too small to. */
-export function largeEnoughToSee(record: SatelliteRecord): boolean {
-  return record.objectType !== 'debris';
-}
-
-/**
- * True if a satellite could be seen with the naked eye: in sunlight, close,
- * and well up in a dark sky. Whether it is actually bright enough also
- * depends on its size and how it is turned, which the catalog does not say,
- * so this is "worth looking for" rather than a promise.
+ * True if a satellite could be seen with the naked eye: in sunlight, well
+ * up, and brighter than the faintest thing the sky lets through, which by
+ * twilight is not much. `magnitude` is how bright it is from here, lit or
+ * not: see `brightness.ts`, which also says how much of a guess that is.
+ * So this is "worth looking for" rather than a promise.
  */
 export function canBeSeen(
-  look: Pick<LookAngles, 'elevation' | 'rangeKm'>,
+  look: Pick<LookAngles, 'elevation'>,
   sunlit: boolean,
   sunElevationDeg: number,
+  magnitude: number,
 ): boolean {
   return (
     sunlit &&
     look.elevation >= MIN_VIEWING_ELEVATION &&
-    look.rangeKm <= MAX_SEEING_RANGE_KM &&
-    sunElevationDeg <= DARK_SKY_SUN_ELEVATION
+    magnitude <= faintestSeen('eye', sunElevationDeg)
   );
 }
+
+/** A Sun low enough that the sky costs nothing: see `twilightLoss`. */
+const FULLY_DARK_SUN_ELEVATION = -90;
 
 export interface SkyEntry {
   index: number;
@@ -219,9 +212,9 @@ export interface SkyNow {
   /** How many of `above` can be seen. */
   seeable: number;
   /**
-   * How many of `above` are big enough, close enough and high enough to see,
-   * sunlit or not. The difference from `seeable` is the ones that would be
-   * seen but for the Earth's shadow, or the sky being too bright.
+   * How many of `above` are bright enough and high enough to see, sunlit or
+   * not. The difference from `seeable` is the ones that would be seen but
+   * for the Earth's shadow, or the sky being too bright.
    */
   withinReach: number;
 }
@@ -233,7 +226,7 @@ const angles: LookAngles = { azimuth: 0, elevation: 0, rangeKm: 0 };
 /**
  * Everything above the observer's horizon at `timeMs`, from the simulation's
  * state buffer (see `kinematics.ts`), leaving out satellites `shown` marks 0.
- * `seeable` marks the satellites big enough to see at all; see `largeEnoughToSee`.
+ * `standardMagnitudes` has each satellite's: see `standardMagnitude`.
  */
 export function skyNow(
   frame: ObserverFrame,
@@ -242,7 +235,7 @@ export function skyNow(
   count: number,
   dtSeconds: number,
   shown: Uint8Array,
-  seeable: Uint8Array,
+  standardMagnitudes: Float32Array,
 ): SkyNow {
   sunDirection(timeMs, sun);
   const sunHeight = sunElevation(frame, sun);
@@ -255,14 +248,15 @@ export function skyNow(
     lookAngles(frame, position, angles);
     if (angles.elevation <= 0) continue;
     const lit = shadowDepth(position, sun) < 0.5;
+    const magnitude = magnitudeFrom(standardMagnitudes[index], frame.position, position, sun);
     const entry = {
       index,
       azimuth: angles.azimuth,
       elevation: angles.elevation,
-      seeable: seeable[index] === 1 && canBeSeen(angles, lit, sunHeight),
+      seeable: canBeSeen(angles, lit, sunHeight, magnitude),
     };
     if (entry.seeable) seen++;
-    if (seeable[index] === 1 && canBeSeen(angles, true, DARK_SKY_SUN_ELEVATION)) withinReach++;
+    if (canBeSeen(angles, true, FULLY_DARK_SUN_ELEVATION, magnitude)) withinReach++;
     above.push(entry);
   }
   above.sort((a, b) => Number(b.seeable) - Number(a.seeable) || b.elevation - a.elevation);
@@ -422,15 +416,16 @@ export function predictPasses(
     return (a + b) / 2;
   };
 
+  const standard = standardMagnitude(record);
   const seeableDuring = (riseMs: number, setMs: number): Pass['seeable'] => {
-    if (!largeEnoughToSee(record)) return null;
     let fromMs = Number.NaN;
     let toMs = Number.NaN;
     for (let t = riseMs; t <= setMs; t += VISIBILITY_STEP_MS) {
       const angles = lookAt(t);
       sunDirection(t, sun);
       const lit = shadowDepth(where, sun) < 0.5;
-      if (canBeSeen(angles, lit, sunElevation(frame, sun))) {
+      const magnitude = magnitudeFrom(standard, frame.position, where, sun);
+      if (canBeSeen(angles, lit, sunElevation(frame, sun), magnitude)) {
         if (Number.isNaN(fromMs)) fromMs = t;
         toMs = t;
       }

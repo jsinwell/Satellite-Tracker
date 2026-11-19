@@ -1,3 +1,4 @@
+import { standardMagnitude } from '../core/brightness';
 import { type Catalog, OBJECT_TYPES, type ObjectType, type SatelliteRecord } from '../core/catalog';
 import {
   CONSTELLATION_IDS,
@@ -6,7 +7,6 @@ import {
   typicalAltitudeKm,
 } from '../core/constellation';
 import { launchYear } from '../core/filter';
-import { largeEnoughToSee } from '../core/observer';
 import { ORBIT_REGIMES, type OrbitRegime, type OrbitSummary, summarizeOrbit } from '../core/orbit';
 import { createSearchIndex, type SearchIndex } from '../core/search';
 import { Simulation } from '../sim/Simulation';
@@ -30,8 +30,8 @@ export interface World {
   readonly launchYearRange: readonly [number, number];
   /** Each satellite's constellation, as an index into `CONSTELLATION_IDS`. */
   readonly constellations: Uint8Array;
-  /** 1 for each satellite large enough to be seen by eye; see `largeEnoughToSee`. */
-  readonly largeEnoughToSee: Uint8Array;
+  /** How bright each satellite is, as far as its kind says; see `standardMagnitude`. */
+  readonly standardMagnitudes: Float32Array;
   readonly indexByNoradId: ReadonlyMap<number, number>;
   readonly countByType: Readonly<Record<ObjectType, number>>;
   readonly countByRegime: Readonly<Record<OrbitRegime, number>>;
@@ -66,9 +66,7 @@ export async function createWorld(catalog: Catalog): Promise<World> {
       knownYears.reduce((a, b) => Math.max(a, b), Number.NEGATIVE_INFINITY),
     ],
     constellations: Uint8Array.from(memberships, (id) => CONSTELLATION_IDS.indexOf(id)),
-    largeEnoughToSee: Uint8Array.from(satellites, (satellite) =>
-      largeEnoughToSee(satellite) ? 1 : 0,
-    ),
+    standardMagnitudes: Float32Array.from(satellites, standardMagnitude),
     indexByNoradId: new Map(satellites.map((satellite, index) => [satellite.noradId, index])),
     countByType: tally(
       OBJECT_TYPES,

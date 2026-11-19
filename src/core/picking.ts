@@ -20,6 +20,12 @@ export interface PickQuery {
   viewport: { width: number; height: number };
   /** Maximum distance from the pointer, in CSS pixels, that still counts as a hit. */
   radiusPx: number;
+  /**
+   * For when not every satellite is drawn where it is, as looking up at only
+   * the ones that can be seen: whether the one at `index`, which is at
+   * `position` (TEME km), is. Left out, they all are.
+   */
+  drawn?: (index: number, position: Vec3) => boolean;
 }
 
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
@@ -50,8 +56,9 @@ export function pickSatellite(query: PickQuery): number {
     const dy = (0.5 - ndcY * 0.5) * viewport.height - pointer.y;
     const distanceSquared = dx * dx + dy * dy;
     if (distanceSquared >= bestDistanceSquared) continue;
-    // Checked last: it is the most expensive test and rarely reached.
+    // Checked last: they are the most expensive tests and rarely reached.
     if (isOccludedByEarth(eye, p)) continue;
+    if (query.drawn && !query.drawn(i, p)) continue;
 
     best = i;
     bestDistanceSquared = distanceSquared;

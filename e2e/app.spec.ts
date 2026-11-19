@@ -395,6 +395,29 @@ test.describe('with a catalog', () => {
     await expect(sky).toContainText(/\d+\.\d+° [NS], \d+\.\d+° [EW]/);
   });
 
+  test('chooses which satellites show looking up', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const shown = page.getByRole('button', { name: /^Satellites shown/ });
+    // There is nothing to choose from out in space.
+    await setPlace(page, '41.88, -87.63');
+    await expect(shown).toBeHidden();
+
+    await page.getByRole('button', { name: 'Look up from here' }).click();
+    await expect(shown).toHaveAccessibleName('Satellites shown: By eye');
+    await shown.click();
+    await expect(shown).toHaveAccessibleName('Satellites shown: Binoculars');
+    await shown.click();
+    await expect(shown).toHaveAccessibleName('Satellites shown: All');
+
+    // And it is as it was left on the next visit.
+    await page.reload();
+    await page.getByRole('button', { name: 'Your sky' }).click();
+    await page.getByRole('button', { name: 'Look up from here' }).click();
+    await expect(shown).toHaveAccessibleName('Satellites shown: All');
+    await shown.click();
+    await expect(shown).toHaveAccessibleName('Satellites shown: By eye');
+  });
+
   test.describe('on a touch screen', () => {
     test.use({ hasTouch: true });
 
