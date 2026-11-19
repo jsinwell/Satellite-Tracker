@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
   Color,
+  CustomBlending,
   DynamicDrawUsage,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
@@ -10,6 +11,8 @@ import {
   InterleavedBufferAttribute,
   LineSegments,
   MathUtils,
+  OneFactor,
+  OneMinusSrcAlphaFactor,
   PerspectiveCamera,
   Points,
   ShaderMaterial,
@@ -49,6 +52,27 @@ const TYPE_SIZES: Record<ObjectType, number> = {
  * for that, and it is a diamond.
  */
 const GLYPH_SIZE = { min: 6, outline: 10.5, max: 16 } as const;
+/**
+ * From space a satellite is a small light with a soft edge: this many times
+ * wider than its bright middle. Where there are many together, as in the
+ * shells the big constellations fly in, their edges run into a glow, and
+ * the shape of the swarm shows where a mass of separate dots hid it.
+ */
+const GLOW_SPREAD = 2.4;
+/**
+ * How much of what is behind a light it hides, for all of its own that it
+ * adds: little, so that lights on top of each other add up, but some, or
+ * over the white of the clouds, where there is nothing left to add, they
+ * would not show at all.
+ */
+const LIGHT_COVER = { space: 0.45, sky: 0.3, trail: 0.3 } as const;
+/**
+ * From space every satellite trails where it was this many simulated seconds
+ * ago, at any speed: about 150 km in low orbit, a tail a few pixels long,
+ * which is enough to see which way each is going and the swarm as so many
+ * streams. Much longer and the tails cross into a net over the globe.
+ */
+const SPACE_TRAIL_SECONDS = 20;
 /** How many flat faces each satellite has to flash in the Sun. */
 const GLINT_FACES = 4;
 /** How far a flare's spikes reach from its center, CSS px. */
@@ -197,11 +221,15 @@ const pointVertexShader = /* glsl */ `
     float distance = -viewPosition.z;
 
     if (uGround < 0.5) {
-      // From space, a dot that shrinks with distance (in Earth radii) but
-      // never below a visible size, dimmed in the Earth's shadow.
-      vSize = clamp(aSize * 9.0 / distance, uMinSize, 6.0) * uPixelRatio;
+      // From space, a light that shrinks with distance (in Earth radii) but
+      // never below a visible size, dimmed in the Earth's shadow. The far
+      // ones are fainter as well as smaller, so that it is where they
+      // gather that shows, and close to they are each plain to see.
+      float width = clamp(aSize * 9.0 / distance, uMinSize, 6.0);
+      vSize = width * ${GLOW_SPREAD.toFixed(1)} * uPixelRatio;
       gl_PointSize = vSize;
       vColor = aColor * sunlight(p, uSunDirection, uShadowBrightness);
+      vShown = mix(0.6, 1.0, smoothstep(2.0, 4.5, width));
       return;
     }
 
@@ -313,10 +341,16 @@ const pointFragmentShader = /* glsl */ `
   void main() {
     vec2 c = gl_PointCoord - 0.5;
     if (uGround < 0.5) {
-      float alpha = 1.0 - smoothstep(0.3, 0.5, length(c));
-      if (alpha <= 0.0) discard;
-      gl_FragColor = vec4(vColor, alpha * 0.9);
+      // In widths of its bright middle from the center of it.
+      float d = 2.0 * length(c) * ${GLOW_SPREAD.toFixed(1)};
+      float core = 1.0 - smoothstep(0.55, 1.0, d);
+      float glow = 0.4 * exp(-0.7 * d * d) * (1.0 - smoothstep(${(0.75 * 2.4).toFixed(2)}, ${GLOW_SPREAD.toFixed(1)}, d));
+      float alpha = max(core, glow) * vShown;
+      if (alpha < 0.004) discard;
+      gl_FragColor = vec4(vColor, alpha);
       #include <colorspace_fragment>
+      gl_FragColor.rgb *= gl_FragColor.a;
+      gl_FragColor.a *= ${LIGHT_COVER.space.toFixed(2)};
       return;
     }
 
@@ -331,6 +365,8 @@ const pointFragmentShader = /* glsl */ `
       if (alpha < 0.004) discard;
       gl_FragColor = vec4(mix(vColor, vec3(1.0), flare), alpha);
       #include <colorspace_fragment>
+      gl_FragColor.rgb *= gl_FragColor.a;
+      gl_FragColor.a *= ${LIGHT_COVER.sky.toFixed(2)};
       return;
     }
 
@@ -392,6 +428,8 @@ const pointFragmentShader = /* glsl */ `
     if (alpha < 0.004) discard;
     gl_FragColor = vec4(min(color, vec3(1.0)), alpha);
     #include <colorspace_fragment>
+    // Blended as the lights are, but hiding all of what is behind it.
+    gl_FragColor.rgb *= gl_FragColor.a;
   }
 `;
 
@@ -400,6 +438,8 @@ const pointFragmentShader = /* glsl */ `
 const trailVertexShader = /* glsl */ `
   uniform float uTrailSeconds;
   varying vec4 vColor;
+  /** 0 at the satellite, 1 at the far end of its trail. */
+  varying float vTail;
 
   ${SHARED_GLSL}
 
@@ -409,29 +449,46 @@ const trailVertexShader = /* glsl */ `
       return;
     }
 
-    float tail = position.x; // 0 at the satellite, 1 at the far end of its trail
+    float tail = position.x;
+    vTail = tail;
     vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * uTrailSeconds);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-    vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), (1.0 - tail) * 0.4);
+    vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), 0.5);
     if (uLight > 0.5 && !isChosen()) {
       // The streak of a light: only where the light itself shows.
       float lit = sunlight(p, uSunDirection, 0.0);
       float shown = lightShown(uFaintest - magnitudeAt(p)) * lit;
-      vColor = vec4(lightColor(lit), (1.0 - tail) * 0.3 * shown);
+      vColor = vec4(lightColor(lit), 0.4 * shown);
     }
   }
 `;
 
 const trailFragmentShader = /* glsl */ `
   varying vec4 vColor;
+  varying float vTail;
 
   void main() {
-    gl_FragColor = vColor;
+    // Gone quickly, like the tail of a comet: most of it is near the head.
+    gl_FragColor = vec4(vColor.rgb, vColor.a * (1.0 - vTail) * (1.0 - vTail));
     #include <colorspace_fragment>
+    gl_FragColor.rgb *= gl_FragColor.a;
+    gl_FragColor.a *= ${LIGHT_COVER.trail.toFixed(2)};
   }
 `;
 
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * How the satellites are laid over what is behind them: the color the
+ * shader gives is added, and its alpha says how much of what is behind to
+ * hide. With the two the same that is ordinary blending; with less hidden
+ * than added, lights on top of each other add up.
+ */
+const LIGHT_BLENDING = {
+  blending: CustomBlending,
+  blendSrc: OneFactor,
+  blendDst: OneMinusSrcAlphaFactor,
+} as const;
 
 function buildSatellites(world: World) {
   const { simulation, satellites } = world;
@@ -503,6 +560,7 @@ function buildSatellites(world: World) {
       fragmentShader: pointFragmentShader,
       transparent: true,
       depthWrite: false,
+      ...LIGHT_BLENDING,
     }),
   );
 
@@ -514,9 +572,9 @@ function buildSatellites(world: World) {
       fragmentShader: trailFragmentShader,
       transparent: true,
       depthWrite: false,
+      ...LIGHT_BLENDING,
     }),
   );
-  trails.visible = false;
 
   // Positions change on the GPU every frame, so CPU bounding volumes would be wrong.
   points.frustumCulled = false;
@@ -620,12 +678,13 @@ export function Satellites({ world }: { world: World }) {
       4,
     );
     uniforms.uAspect.value = size.width / Math.max(1, size.height);
-    // From the ground, always a short trail, behind the way time is running.
-    const groundTrail = ground > 0.5 ? (clock.rate < 0 ? -1 : 1) * GROUND_TRAIL_SECONDS : 0;
+    // Always a trail, behind the way time is running: short from the
+    // ground, longer from space, and longer yet with time running fast.
+    const steadyTrail =
+      (clock.rate < 0 ? -1 : 1) * (ground > 0.5 ? GROUND_TRAIL_SECONDS : SPACE_TRAIL_SECONDS);
     const fastTrail = trailSeconds(clock.rate);
     uniforms.uTrailSeconds.value =
-      Math.abs(fastTrail) > Math.abs(groundTrail) ? fastTrail : groundTrail;
-    trails.visible = uniforms.uTrailSeconds.value !== 0;
+      Math.abs(fastTrail) > Math.abs(steadyTrail) ? fastTrail : steadyTrail;
   });
 
   return (
