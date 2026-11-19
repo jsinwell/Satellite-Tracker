@@ -38,6 +38,7 @@ import {
   moonlightSeen,
   starsByMoonlight,
 } from '../core/bodies';
+import { driftClouds } from '../core/clouds';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
@@ -260,6 +261,8 @@ const TEME_AXES_FROM_WORLD = new Matrix4().makeRotationX(Math.PI / 2);
 const earthFromWorld = new Matrix4();
 const fixed = new Vector3();
 const origin = { x: 0, y: 0 };
+/** How far the clouds overhead have drifted, and the simulated and real instants it was as of. */
+const cloudDrift = { x: 0, y: 0, atMs: Number.NaN, atSeconds: Number.NaN };
 const looking: Vec3 = { x: 0, y: 0, z: 0 };
 const moonShadow = (point: Vec3) => 1 - sunHiddenByMoon(point, sunKm, moonKm);
 
@@ -508,14 +511,22 @@ export function Atmosphere() {
       east.normalize();
       uniforms.uLandNorth.value.crossVectors(upward, east);
       fixed.copy(upward).applyMatrix4(earthFromWorld);
-      groundOrigin(
-        MathUtils.radToDeg(Math.asin(MathUtils.clamp(fixed.z, -1, 1))),
-        MathUtils.radToDeg(Math.atan2(fixed.y, fixed.x)),
-        origin,
-      );
+      const latitude = MathUtils.radToDeg(Math.asin(MathUtils.clamp(fixed.z, -1, 1)));
+      groundOrigin(latitude, MathUtils.radToDeg(Math.atan2(fixed.y, fixed.x)), origin);
       uniforms.uLandOrigin.value.set(origin.x, origin.y);
       // Wrapped, to keep the number small enough to stay exact.
-      uniforms.uLandTime.value = (performance.now() / 1000) % 3600;
+      const nowSeconds = performance.now() / 1000;
+      uniforms.uLandTime.value = nowSeconds % 3600;
+      // The clouds overhead go with the wind, as time does.
+      driftClouds(
+        cloudDrift,
+        latitude,
+        (simMs - cloudDrift.atMs) / 1000,
+        nowSeconds - cloudDrift.atSeconds,
+      );
+      cloudDrift.atMs = simMs;
+      cloudDrift.atSeconds = nowSeconds;
+      uniforms.uLandCloudDrift.value.set(cloudDrift.x, cloudDrift.y);
     }
 
     // The Sun as it looks from the camera: where, how big, and how much of
