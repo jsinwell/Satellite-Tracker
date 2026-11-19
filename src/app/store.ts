@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { OBJECT_TYPES, type ObjectType } from '../core/catalog';
 import {
   type Clock,
+  holdable,
   realTimeClock,
   simTimeAt,
   wallNow,
@@ -240,11 +241,24 @@ useApp.subscribe((state, previous) => {
   }
 });
 
+const simTime = holdable(() => simTimeAt(useApp.getState().clock, wallNow()));
+
 /**
  * The simulated instant right now. Read imperatively — from the render loop
  * and from polling hooks — because time changes every frame and must not
  * drive React renders.
+ *
+ * While a frame is being drawn it is one instant for everything in the
+ * frame: see `holdSimTime`.
  */
 export function currentSimTime(): number {
-  return simTimeAt(useApp.getState().clock, wallNow());
+  return simTime.now();
 }
+
+/**
+ * Stops simulated time for the drawing of one frame, so that everything in
+ * it is drawn for the same instant, and lets it go again after. The scene
+ * calls these around every frame.
+ */
+export const holdSimTime = simTime.hold;
+export const releaseSimTime = simTime.release;

@@ -24,6 +24,36 @@ export function wallNow(): number {
   return performance.timeOrigin + performance.now();
 }
 
+/**
+ * A reading that can be held still. Between `hold` and `release`, `now`
+ * gives the reading taken at `hold`; otherwise it reads afresh each time.
+ *
+ * One frame of the picture is drawn by many hands, each asking the time: the
+ * camera, the Earth, the sky, the ground. Asked a fraction of a millisecond
+ * apart they get different answers, and at 1000× that fraction is enough
+ * for the Earth to have turned hundreds of meters between the camera being
+ * placed on it and the ground being drawn under the camera. Held for the
+ * frame, the time is the same for all of them.
+ */
+export interface Holdable {
+  now(): number;
+  hold(): void;
+  release(): void;
+}
+
+export function holdable(read: () => number): Holdable {
+  let held: number | null = null;
+  return {
+    now: () => held ?? read(),
+    hold: () => {
+      held = read();
+    },
+    release: () => {
+      held = null;
+    },
+  };
+}
+
 /** A clock running in real time, showing the present. */
 export function realTimeClock(wallMs: number): Clock {
   return { anchorWallMs: wallMs, anchorSimMs: wallMs, rate: 1 };

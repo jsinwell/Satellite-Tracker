@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { realTimeClock, simTimeAt, withRate, withSimTime } from './clock';
+import { holdable, realTimeClock, simTimeAt, withRate, withSimTime } from './clock';
 
 const T0 = Date.UTC(2026, 10, 15);
 
@@ -38,5 +38,51 @@ describe('clock', () => {
     const jumped = withSimTime(fast, T0 + 1000, T0 - 86_400_000);
     expect(simTimeAt(jumped, T0 + 1000)).toBe(T0 - 86_400_000);
     expect(simTimeAt(jumped, T0 + 2000)).toBe(T0 - 86_400_000 + 10_000);
+  });
+});
+
+describe('holdable', () => {
+  it('reads afresh each time until it is held', () => {
+    let wall = 100;
+    const time = holdable(() => wall);
+    expect(time.now()).toBe(100);
+    wall = 105;
+    expect(time.now()).toBe(105);
+  });
+
+  it('stands still while held, at the reading taken when it was', () => {
+    let wall = 100;
+    const time = holdable(() => wall);
+    time.hold();
+    wall = 107;
+    expect(time.now()).toBe(100);
+    wall = 250;
+    expect(time.now()).toBe(100);
+  });
+
+  it('catches up when released', () => {
+    let wall = 100;
+    const time = holdable(() => wall);
+    time.hold();
+    wall = 116;
+    time.release();
+    expect(time.now()).toBe(116);
+  });
+
+  it('takes a new reading each time it is held', () => {
+    let wall = 100;
+    const time = holdable(() => wall);
+    time.hold();
+    wall = 116;
+    time.hold();
+    expect(time.now()).toBe(116);
+    wall = 132;
+    expect(time.now()).toBe(116);
+  });
+
+  it('can be released without having been held', () => {
+    const time = holdable(() => 7);
+    time.release();
+    expect(time.now()).toBe(7);
   });
 });
