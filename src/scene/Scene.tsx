@@ -15,6 +15,7 @@ import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
 import { PlanetDiscs } from './PlanetDiscs';
 import { Planets } from './Planets';
+import { SatelliteNames } from './SatelliteNames';
 import { Satellites } from './Satellites';
 import { Sky } from './Sky';
 import { SkyCompass } from './SkyCompass';
@@ -66,6 +67,7 @@ export function Scene({ world }: { world: World }) {
       <CameraRig world={world} />
       <Picker world={world} />
       <SkyCompass />
+      <SatelliteNames world={world} />
       <Atmosphere />
 
       <group rotation={[...TEME_GROUP_ROTATION]} scale={TEME_GROUP_SCALE}>

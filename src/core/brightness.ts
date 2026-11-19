@@ -1,7 +1,7 @@
 import { shadowDepth } from './astro';
 import type { SatelliteRecord } from './catalog';
 import { constellationOf } from './constellation';
-import type { Vec3 } from './kinematics';
+import { extrapolatePosition, hasState, type Vec3 } from './kinematics';
 
 /**
  * How bright satellites look. A satellite shines by the sunlight it sends
@@ -19,12 +19,20 @@ import type { Vec3 } from './kinematics';
 /** A satellite's standard magnitude is how bright it is from this far off, km, half lit. */
 const STANDARD_RANGE_KM = 1000;
 
-/** The few that are known by name, and far from typical. */
-const KNOWN: readonly { pattern: RegExp; magnitude: number }[] = [
-  { pattern: /^ISS \(ZARYA\)$/, magnitude: -1.8 },
-  { pattern: /^CSS \(TIANHE\)$/, magnitude: -0.3 },
-  { pattern: /^HST$/, magnitude: 2.2 },
+/**
+ * The few that are known by name, and far from typical: how bright each is,
+ * and what people call it, which is not what the catalog does.
+ */
+const KNOWN: readonly { pattern: RegExp; magnitude: number; called: string }[] = [
+  { pattern: /^ISS \(ZARYA\)$/, magnitude: -1.8, called: 'ISS' },
+  { pattern: /^CSS \(TIANHE\)$/, magnitude: -0.3, called: 'Tiangong' },
+  { pattern: /^HST$/, magnitude: 2.2, called: 'Hubble' },
 ];
+
+/** What one of the few famous satellites is called, or null for any other. */
+export function famousName(record: SatelliteRecord): string | null {
+  return KNOWN.find(({ pattern }) => pattern.test(record.name))?.called ?? null;
+}
 
 /**
  * The standard magnitude of a satellite, by what it is: the big
@@ -154,4 +162,54 @@ export function isSeen(
   return (
     shadowDepth(position, sun) < 0.5 && magnitudeFrom(standard, eye, position, sun) <= faintest
   );
+}
+
+/** Other than the famous ones, a satellite is named in the sky once it is this bright: as a bright star. */
+export const NAMED_BRIGHTER_THAN = 3;
+
+export interface OverheadQuery {
+  /** State buffer, see `STATE_STRIDE`. */
+  state: Float32Array;
+  count: number;
+  /** Seconds between the state buffer's instant and the instant being drawn. */
+  dtSeconds: number;
+  /** Non-zero where a satellite is not filtered out. */
+  shown: Uint8Array;
+  standardMagnitudes: Float32Array;
+  /** Non-zero for the famous ones, which are named whenever they can be seen. */
+  famous: Uint8Array;
+  /** Where the viewer is, km, and which way is up there, in the satellites' frame. */
+  eye: Vec3;
+  up: Vec3;
+  /** Toward the Sun, a unit vector. */
+  sun: Vec3;
+  /** The faintest magnitude that can be seen at the moment. */
+  faintest: number;
+}
+
+const position: Vec3 = { x: 0, y: 0, z: 0 };
+
+/**
+ * The satellites worth putting a name to in the sky: above the horizon, seen,
+ * and either famous or as bright as a bright star. At most `limit` of them,
+ * the brightest first.
+ */
+export function namedOverhead(query: OverheadQuery, limit: number): number[] {
+  const { state, eye, up, sun } = query;
+  const found: { index: number; magnitude: number }[] = [];
+  for (let index = 0; index < query.count; index++) {
+    if (!query.shown[index] || !hasState(state, index)) continue;
+    extrapolatePosition(state, index, query.dtSeconds, position);
+    const above =
+      (position.x - eye.x) * up.x + (position.y - eye.y) * up.y + (position.z - eye.z) * up.z;
+    if (above <= 0) continue;
+    const magnitude = magnitudeFrom(query.standardMagnitudes[index], eye, position, sun);
+    const cutoff = query.famous[index]
+      ? query.faintest
+      : Math.min(query.faintest, NAMED_BRIGHTER_THAN);
+    if (magnitude > cutoff || shadowDepth(position, sun) >= 0.5) continue;
+    found.push({ index, magnitude });
+  }
+  found.sort((a, b) => a.magnitude - b.magnitude);
+  return found.slice(0, limit).map(({ index }) => index);
 }

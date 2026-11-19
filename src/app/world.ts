@@ -1,4 +1,4 @@
-import { standardMagnitude } from '../core/brightness';
+import { famousName, standardMagnitude } from '../core/brightness';
 import { type Catalog, OBJECT_TYPES, type ObjectType, type SatelliteRecord } from '../core/catalog';
 import {
   CONSTELLATION_IDS,
@@ -32,6 +32,8 @@ export interface World {
   readonly constellations: Uint8Array;
   /** How bright each satellite is, as far as its kind says; see `standardMagnitude`. */
   readonly standardMagnitudes: Float32Array;
+  /** 1 for the few satellites everyone has heard of; see `famousName`. */
+  readonly famous: Uint8Array;
   readonly indexByNoradId: ReadonlyMap<number, number>;
   readonly countByType: Readonly<Record<ObjectType, number>>;
   readonly countByRegime: Readonly<Record<OrbitRegime, number>>;
@@ -67,6 +69,7 @@ export async function createWorld(catalog: Catalog): Promise<World> {
     ],
     constellations: Uint8Array.from(memberships, (id) => CONSTELLATION_IDS.indexOf(id)),
     standardMagnitudes: Float32Array.from(satellites, standardMagnitude),
+    famous: Uint8Array.from(satellites, (satellite) => (famousName(satellite) === null ? 0 : 1)),
     indexByNoradId: new Map(satellites.map((satellite, index) => [satellite.noradId, index])),
     countByType: tally(
       OBJECT_TYPES,
