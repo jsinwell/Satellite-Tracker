@@ -12,13 +12,20 @@ import {
   type WebGLRenderer,
 } from 'three';
 import { currentSimTime } from '../app/store';
-import { type PlanetDisc, planetDiscs } from '../core/bodies';
+import {
+  angularDiameter,
+  BODY_NAMES,
+  BODY_SHAPES,
+  type PlanetDisc,
+  planetDiscs,
+  type SkyBody,
+} from '../core/bodies';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { isOccludedByEarth, type Vec3 } from '../core/kinematics';
-import { NAKED_EYE_MAGNITUDE, PLANET_NAMES, PLANETS, type Planet } from '../core/planets';
+import { NAKED_EYE_MAGNITUDE, PLANETS, type Planet } from '../core/planets';
 import { TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
 import { labelLayer } from './labelLayer';
-import { areDiscsDrawn, placeBody, setLatestDiscs } from './skyBodies';
+import { areDiscsDrawn, bodyPosition, placeBody, setLatestDiscs } from './skyBodies';
 
 /**
  * The planets are drawn at a stand-in distance from the camera, inside the
@@ -99,6 +106,14 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+/** What gets a name beside it: the planets, in their order, and then the Moon. */
+const NAMED: readonly SkyBody[] = [...PLANETS, 'moon'];
+const MOON = PLANETS.length;
+/** The Moon's name goes once the Moon is wider than this on screen, CSS px: there is no mistaking it. */
+const MOON_NAMED_UNTIL = 40;
+/** For the order names are placed in: the Moon's comes first. */
+const MOON_MAGNITUDE = -12;
+
 /** Roughly how wide a name is, CSS px, at the label's size. */
 const labelWidth = (name: string) => name.length * 6 + 2;
 const LABEL_HEIGHT = 12;
@@ -112,7 +127,8 @@ const tempPoint: Vec3 = { x: 0, y: 0, z: 0 };
  * Mercury to Neptune where they are in the sky at the simulated instant, each
  * a dot sized by how bright it is, named beside it. Zoomed in far enough for
  * a planet's own disc to show, `PlanetDiscs` draws that and the dot goes.
- * Lives in the TEME group.
+ * The Moon's name is put beside it here too, with theirs, so that the names
+ * keep out of each other's way. Lives in the TEME group.
  */
 export function Planets() {
   const { dots, positions, sizes, shown } = useMemo(() => {
@@ -209,10 +225,10 @@ export function Planets() {
 
     const layer = labelLayer();
     if (layer && labels.current.length === 0) {
-      labels.current = PLANETS.map((planet) => {
+      labels.current = NAMED.map((body) => {
         const label = document.createElement('span');
-        label.dataset.planet = planet;
-        label.textContent = PLANET_NAMES[planet];
+        label.dataset.body = body;
+        label.textContent = BODY_NAMES[body];
         label.className =
           'absolute top-0 left-0 hidden text-[0.65rem] leading-none text-slate-300 [text-shadow:0_1px_3px_#000]';
         return layer.appendChild(label);
@@ -221,23 +237,38 @@ export function Planets() {
 
     // Named only where the planet itself shows: not behind the Earth, and on
     // screen. Too faint to see by eye, the name is dimmer. Planets do pass
-    // close by each other, so names keep clear of the other planets and of
-    // each other, the brightest placed first.
+    // close by each other, and by the Moon, so names keep clear of the
+    // other bodies and of each other, the brightest placed first.
     tempEye.x = eye.x;
     tempEye.y = eye.y;
     tempEye.z = eye.z;
+    const moonAt = bodyPosition('moon');
+    let moonWidth = 0;
     const onScreen: { index: number; x: number; y: number }[] = [];
     labels.current.forEach((label, i) => {
-      const planet = placed.current.planets[i];
-      tempPoint.x = positions[i * 3];
-      tempPoint.y = positions[i * 3 + 1];
-      tempPoint.z = positions[i * 3 + 2];
+      let known = placed.current.planets[i] !== undefined;
+      if (i === MOON) {
+        // The Moon is drawn where it is, not at a stand-in distance.
+        known = moonAt !== null;
+        if (moonAt) {
+          tempPoint.x = moonAt.x;
+          tempPoint.y = moonAt.y;
+          tempPoint.z = moonAt.z;
+          const away = Math.hypot(moonAt.x - eye.x, moonAt.y - eye.y, moonAt.z - eye.z);
+          moonWidth = angularDiameter(BODY_SHAPES.moon.radiusKm, away) / pixel;
+          known = moonWidth < MOON_NAMED_UNTIL;
+        }
+      } else {
+        tempPoint.x = positions[i * 3];
+        tempPoint.y = positions[i * 3 + 1];
+        tempPoint.z = positions[i * 3 + 2];
+      }
       point
         .set(tempPoint.x, tempPoint.y, tempPoint.z)
         .applyMatrix4(WORLD_FROM_TEME)
         .project(camera);
       const visible =
-        planet !== undefined &&
+        known &&
         point.z < 1 &&
         Math.abs(point.x) <= 1 &&
         Math.abs(point.y) <= 1 &&
@@ -252,17 +283,19 @@ export function Planets() {
 
     // Boxes already spoken for, as label-height rows: every dot, then each
     // name as it is placed.
-    const width = (index: number) => Math.max(sizes[index], discWidths[index]);
+    const width = (index: number) =>
+      index === MOON ? moonWidth : Math.max(sizes[index], discWidths[index]);
     const taken = onScreen.map(({ index, x, y }) => ({
       x: x - width(index) / 2,
       y: y - LABEL_HEIGHT / 2,
       width: width(index),
     }));
-    const magnitude = (index: number) => placed.current.planets[index]?.magnitude ?? 0;
+    const magnitude = (index: number) =>
+      index === MOON ? MOON_MAGNITUDE : (placed.current.planets[index]?.magnitude ?? 0);
     onScreen.sort((a, b) => magnitude(a.index) - magnitude(b.index));
     for (const { index, x: dotX, y: dotY } of onScreen) {
       const label = labels.current[index];
-      const name = PLANET_NAMES[PLANETS[index]];
+      const name = BODY_NAMES[NAMED[index]];
       const nameWidth = labelWidth(name);
       const gap = width(index) / 2 + 4;
       const free = (x: number, y: number) =>
@@ -276,7 +309,7 @@ export function Planets() {
       // planet's name; else a line further down, and so on.
       let x = dotX + gap;
       let y = dotY - LABEL_HEIGHT / 2;
-      for (let line = 0; line < PLANETS.length; line++) {
+      for (let line = 0; line < NAMED.length; line++) {
         y = dotY - LABEL_HEIGHT / 2 + line * LABEL_HEIGHT;
         if (free(dotX + gap, y)) {
           x = dotX + gap;

@@ -52,6 +52,14 @@ const SUN_BRIGHTNESS = 150;
 const GLARE_BRIGHTNESS = 6;
 /** The view goes over to a telescope's exposure as it narrows from the second of these to the first, degrees. */
 const CLOSE_UP_FOV = [1.5, 12] as const;
+/**
+ * The clouds overhead thin out as the view narrows from the second of these
+ * to the first, degrees, and are gone below it. A view that narrow is a
+ * telescope's, on something far above the weather, and a cloud in front of
+ * it would be all there was to see. Binoculars' views, which is as far as
+ * the view goes with nothing to close in on, keep their clouds.
+ */
+const CLOUDS_PART_FOV = [4, 14] as const;
 /** The clouds are drawn after the Moon (-0.3, see `SunAndMoon`) and before the satellites. */
 const CLOUDS_ORDER = -0.2;
 /** The Moon's shadow can only be on the Earth with the two this close in the sky, radians. */
@@ -242,6 +250,8 @@ export function Atmosphere() {
       uSunGlare: { value: new Vector3() },
       uStarKeep: { value: 1 },
       uSkyAmbient: { value: new Vector3() },
+      /** How much of the clouds overhead is drawn, 0 to 1: see `CLOUDS_PART_FOV`. */
+      uCloudsShown: { value: 1 },
     };
     // One triangle that covers the screen.
     const geometry = new BufferGeometry();
@@ -302,7 +312,13 @@ export function Atmosphere() {
     const height = Math.max(camera.position.length() - 1, 1e-6);
     const ground = groundView(height);
     cover.visible = ground > 0;
-    clouds.visible = ground > 0 && uniforms.uLandClouded.value > 0;
+    // Closing in on the Moon or a planet, the clouds part.
+    const cloudsShown =
+      camera instanceof PerspectiveCamera
+        ? MathUtils.smoothstep(camera.fov, CLOUDS_PART_FOV[0], CLOUDS_PART_FOV[1])
+        : 1;
+    uniforms.uCloudsShown.value = cloudsShown;
+    clouds.visible = ground > 0 && uniforms.uLandClouded.value > 0 && cloudsShown > 0;
 
     sunDirection(simMs, sun);
     sunPosition(simMs, sunKm);

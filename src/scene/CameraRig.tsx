@@ -21,7 +21,16 @@ import { CAMERA_FOV, directionToWorld, TEME_FROM_WORLD } from './frame';
 import { isSteering, type Steer, steerFrom, useSteeringKeys } from './keys';
 import { rideElevation } from './ride';
 import { createBodySight, sightOf } from './skyBodies';
-import { createStance, mixFov, SKY_FOV, SKY_FOV_RANGE, stand, zoomFov } from './standing';
+import {
+  createStance,
+  fovKeeping,
+  mixFov,
+  SKY_FOV,
+  SKY_FOV_RANGE,
+  stand,
+  turnLeft,
+  zoomFov,
+} from './standing';
 
 // Distances from the Earth's center, in Earth radii.
 const MIN_DISTANCE = 1.12;
@@ -51,8 +60,7 @@ const SKY_PIVOT = 1e-3;
 const SKY_START_ELEVATION = MathUtils.degToRad(25);
 /** How far below the horizon the view may tip, to keep the ground in sight. */
 const SKY_BELOW_HORIZON = MathUtils.degToRad(5);
-/** How fast the view turns to something it has been asked to watch, and zooms: shares per second. */
-const WATCH_TURN_RATE = 6;
+/** How fast the view zooms: shares of what is left per second. */
 const ZOOM_RATE = 7;
 /** A press that moves further than this (CSS px) is a drag, which lets go of what is watched. */
 const DRAG_SLOP = 6;
@@ -386,8 +394,17 @@ export function CameraRig({ world }: { world: World }) {
   const shownFov = useRef(SKY_FOV);
   /** How narrow it may go: a telescope's view while something is watched, binoculars' otherwise. */
   const narrowestFov = useRef<number>(SKY_FOV_RANGE[0]);
-  /** What the view is held on, and whether it has finished turning to it. */
-  const watched = useRef<{ body: SkyBody; settled: boolean } | null>(null);
+  /**
+   * What the view is held on. While it turns to it: how far off it was when
+   * asked, as the turn from where the body was to where the view faced, and
+   * for how long it has been turning.
+   */
+  const watched = useRef<{
+    body: SkyBody;
+    offset: Quaternion;
+    angle: number;
+    seconds: number;
+  } | null>(null);
   const keys = useSteeringKeys();
   const flight = useRef<Flight | null>(null);
   const mode = useRef<Mode>({ kind: 'globe' });
@@ -652,11 +669,9 @@ export function CameraRig({ world }: { world: World }) {
         held === null
           ? null
           : sightOf(held, eyeTeme.copy(stance.eye).applyMatrix4(TEME_FROM_WORLD), bodySight);
+      // How far the view still has to turn to it, radians.
+      let turning = 0;
       if (held !== null && sight) {
-        if (watched.current?.body !== held) {
-          watched.current = { body: held, settled: false };
-          skyFov.current = framingFov(held, sight.diameter);
-        }
         narrowestFov.current = closestFov(sight.diameter);
         // Where the stand-in has to sit to look at it: opposite it, in the
         // observer's own axes.
@@ -664,18 +679,29 @@ export function CameraRig({ world }: { world: World }) {
         goal
           .set(-direction.dot(stance.east), -direction.dot(stance.up), direction.dot(stance.north))
           .multiplyScalar(SKY_PIVOT);
-        if (watched.current.settled) {
-          sky.object.position.copy(goal);
-        } else {
+        if (watched.current?.body !== held) {
           const from = sky.object.position;
-          const left = from.angleTo(goal);
-          turn.setFromUnitVectors(direction.copy(from).normalize(), goal.clone().normalize());
-          from.applyQuaternion(
-            step.identity().slerp(turn, 1 - Math.exp(-WATCH_TURN_RATE * deltaSeconds)),
-          );
-          // Near enough that the last of the way will not show as a jump.
-          watched.current.settled = left < 0.002 * MathUtils.degToRad(camera.fov);
+          watched.current = {
+            body: held,
+            offset: new Quaternion().setFromUnitVectors(
+              direction.copy(goal).normalize(),
+              from.clone().normalize(),
+            ),
+            angle: from.angleTo(goal),
+            seconds: 0,
+          };
+          skyFov.current = framingFov(held, sight.diameter);
         }
+        // The view is placed from where the body is now, less and less far
+        // off it, rather than sent chasing after it: the sky does not stand
+        // still, and with time running fast a chase never catches up.
+        const watch = watched.current;
+        watch.seconds += deltaSeconds;
+        const left = turnLeft(watch.seconds);
+        turning = left * watch.angle;
+        sky.object.position.copy(goal);
+        if (left > 0)
+          sky.object.position.applyQuaternion(step.identity().slerp(watch.offset, left));
       } else if (watched.current) {
         // Let go: back to a view wide enough to find one's way around in.
         watched.current = null;
@@ -684,11 +710,14 @@ export function CameraRig({ world }: { world: World }) {
       }
 
       sky.update();
+      // Closing in on something the view is still turning to waits for the
+      // turn, so that it comes into view and grows, and is not zoomed past.
+      const wantedFov = Math.max(skyFov.current, Math.min(shownFov.current, fovKeeping(turning)));
       const toGo = 1 - Math.exp(-ZOOM_RATE * deltaSeconds);
       shownFov.current =
-        Math.abs(shownFov.current / skyFov.current - 1) < 1e-4
-          ? skyFov.current
-          : mixFov(shownFov.current, skyFov.current, toGo);
+        Math.abs(shownFov.current / wantedFov - 1) < 1e-4
+          ? wantedFov
+          : mixFov(shownFov.current, wantedFov, toGo);
       rideTurn.setFromRotationMatrix(basis).multiply(sky.object.quaternion);
       now.blend = approach(camera, now.blend, stance.eye, rideTurn, shownFov.current, deltaSeconds);
       return;

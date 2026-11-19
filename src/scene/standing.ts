@@ -49,6 +49,28 @@ export function mixFov(from: number, to: number, share: number): number {
   return from * (to / from) ** share;
 }
 
+/** How long the view takes to turn to something it has been asked to watch, seconds. */
+export const WATCH_TURN_SECONDS = 0.6;
+
+/**
+ * How much of that turn is still to go, 1 to 0, `seconds` into it: away
+ * quickly and onto its target gently.
+ */
+export function turnLeft(seconds: number): number {
+  const done = Math.min(1, Math.max(0, seconds / WATCH_TURN_SECONDS));
+  return (1 - done) ** 3;
+}
+
+/**
+ * The narrowest field of view, degrees, that still has in it something
+ * `angle` radians from the middle of the view, with room to spare: the view
+ * closes in on what it is turning to no faster than this, so that it is
+ * there to be seen the whole way.
+ */
+export function fovKeeping(angle: number): number {
+  return (3 * angle * 180) / Math.PI;
+}
+
 /** An observer's eye and local axes, in world coordinates (Earth radii). */
 export interface Stance {
   eye: Vector3;
