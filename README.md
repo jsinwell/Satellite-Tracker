@@ -35,12 +35,22 @@
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/big-sur.jpg" alt="The Sun setting over the Pacific, with a path of glitter on the water and satellites overhead" />
-      <p>Looking up from Big Sur at sunset. The markers are the satellites overhead at that moment.</p>
+      <img src="docs/big-sur.jpg" alt="The Sun setting over the Pacific, with a path of glitter on the water and a sky full of small lights with tails" />
+      <p>Sunset off Big Sur, with every satellite overhead shown. By eye you'd see none of them yet.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under an evening sky with satellites" />
+      <img src="docs/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under a clear evening sky" />
       <p>Near Monument Valley, Utah, a little before sunset.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/sky-by-eye.jpg" alt="A dusk sky with the Moon, Saturn and a dozen faint points of light, each with a short tail" />
+      <p>Los Angeles an hour after sunset. The points with tails are the satellites you could see.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/moonlight.jpg" alt="A full Moon with a wide glow around it in a blue-gray sky, with few stars and moonlit clouds below" />
+      <p>A full Moon over Honolulu. It lights the sky and the clouds and drowns out most of the stars.</p>
     </td>
   </tr>
   <tr>
@@ -100,7 +110,7 @@
 - The space stations and Hubble get a name beside them when they're in sight, and so does
   anything else as bright as a bright star.
 - The button next to the search box switches that to what binoculars would show, or to every
-  satellite overhead drawn as a marker.
+  satellite overhead. The ones you couldn't see are then small lights in their legend colors.
 - How bright each one looks is an estimate. Distance and the angle of the Sun are worked out;
   size isn't in the catalog, so it goes by what kind of object it is.
 - The sky panel says which planets are up and how bright they are, for when you can't tell a
