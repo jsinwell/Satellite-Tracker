@@ -60,6 +60,13 @@ const SKY_PIVOT = 1e-3;
 const SKY_START_ELEVATION = MathUtils.degToRad(25);
 /** How far below the horizon the view may tip, to keep the ground in sight. */
 const SKY_BELOW_HORIZON = MathUtils.degToRad(5);
+/**
+ * The keys move the camera by how long each frame took, up to this, seconds.
+ * A frame that takes longer, on a slow machine or while a shader compiles,
+ * would otherwise turn a tap into a lurch: half a second's worth of turning
+ * in one step, and the thing being looked at gone off the screen.
+ */
+const STEER_STEP_MOST = 0.1;
 /** How fast the view zooms: shares of what is left per second. */
 const ZOOM_RATE = 7;
 
@@ -606,10 +613,11 @@ export function CameraRig({ world }: { world: World }) {
     // and in or out. Looking up there is no moving, so they turn the view.
     const steer = steerFrom(keys.current);
     const steering = isSteering(steer);
+    const steerSeconds = Math.min(deltaSeconds, STEER_STEP_MOST);
     if (now.kind === 'riding') {
       if (steering) {
-        const turn = KEY_TURN_RATE * deltaSeconds;
-        orbitBy(ride, steer.right * turn, steer.up * turn, zoomFactor(steer, deltaSeconds));
+        const turn = KEY_TURN_RATE * steerSeconds;
+        orbitBy(ride, steer.right * turn, steer.up * turn, zoomFactor(steer, steerSeconds));
       }
       ride.update();
       locate(world, now.index);
@@ -631,11 +639,11 @@ export function CameraRig({ world }: { world: World }) {
       if (steering) {
         // The stand-in sits opposite the way the view faces, so it goes
         // the other way round.
-        const turn = KEY_LOOK_RATE * MathUtils.degToRad(camera.fov) * deltaSeconds;
+        const turn = KEY_LOOK_RATE * MathUtils.degToRad(camera.fov) * steerSeconds;
         if (watching === null) orbitBy(sky, -steer.right * turn, -steer.up * turn, 1);
         skyFov.current = zoomFov(
           skyFov.current,
-          zoomFactor(steer, deltaSeconds),
+          zoomFactor(steer, steerSeconds),
           narrowestFov.current,
         );
       }
@@ -715,8 +723,8 @@ export function CameraRig({ world }: { world: World }) {
     if (steering) {
       // Taking hold of the camera cancels any flight, as a drag does.
       flight.current = null;
-      const turn = KEY_TURN_RATE * globe.rotateSpeed * deltaSeconds;
-      orbitBy(globe, steer.right * turn, steer.up * turn, zoomFactor(steer, deltaSeconds));
+      const turn = KEY_TURN_RATE * globe.rotateSpeed * steerSeconds;
+      orbitBy(globe, steer.right * turn, steer.up * turn, zoomFactor(steer, steerSeconds));
     }
     if (flight.current && !advanceFlight(camera, world, flight.current, deltaSeconds)) {
       flight.current = null;
