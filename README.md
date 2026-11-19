@@ -18,58 +18,58 @@
   <a href="https://github.com/jsinwell/Satellite-Tracker/actions/workflows/ci.yml"><img src="https://github.com/jsinwell/Satellite-Tracker/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
 </p>
 
-![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/globe.jpg)
+![The ISS selected over Africa, with its orbit, its ground track and the area that can see it](docs/screenshots/globe.jpg)
 
 ## Screenshots
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/ride.jpg" alt="The view from just behind the ISS, with East Africa below and the horizon ahead" />
+      <img src="docs/screenshots/ride.jpg" alt="The view from just behind the ISS, with East Africa below and the horizon ahead" />
       <p>Riding along with the ISS over East Africa.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/constellations.jpg" alt="The globe with satellites colored by constellation, most of them Starlink" />
+      <img src="docs/screenshots/constellations.jpg" alt="The globe with satellites colored by constellation, most of them Starlink" />
       <p>Colored by constellation. Almost all of the cyan is Starlink.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/big-sur.jpg" alt="The Sun setting over the Pacific, with a path of glitter on the water and a sky full of small lights with tails" />
-      <p>Sunset off Big Sur, with every satellite overhead shown. By eye you'd see none of them yet.</p>
+      <img src="docs/screenshots/cloud-sunset.jpg" alt="The Sun setting into the Atlantic under broken cloud lit gold from below, with a path of glitter on the water" />
+      <p>Sunset over the Atlantic near Lisbon. How much cloud there is comes from weather-satellite data.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under a clear evening sky" />
+      <img src="docs/screenshots/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under a clear evening sky" />
       <p>Near Monument Valley, Utah, a little before sunset.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/dusk-by-eye.jpg" alt="A dusk sky with the Moon, Saturn and a dozen points of light, each with a tail" />
+      <img src="docs/screenshots/dusk-by-eye.jpg" alt="A dusk sky with the Moon, Saturn and a dozen points of light, each with a tail" />
       <p>Los Angeles an hour after sunset. The points with tails are the satellites you could see.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/moonlight.jpg" alt="A full Moon with a wide glow around it in a blue-gray sky, with few stars and moonlit clouds below" />
+      <img src="docs/screenshots/moonlight.jpg" alt="A full Moon with a wide glow around it in a blue-gray sky, with few stars and moonlit clouds below" />
       <p>A full Moon over Honolulu. It lights the sky and the clouds and drowns out most of the stars.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/saturn-zoomed.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
+      <img src="docs/screenshots/saturn.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
       <p>Zoomed in on Saturn from the ground.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/moon-zoomed.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
+      <img src="docs/screenshots/moon.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
       <p>The Moon the same way, a day past first quarter.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/night-side.jpg" alt="South America at night from space, its cities lit, with daylight along one edge of the Earth" />
+      <img src="docs/screenshots/night-side.jpg" alt="South America at night from space, its cities lit, with daylight along one edge of the Earth" />
       <p>South America at night.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/solar-eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
+      <img src="docs/screenshots/eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
       <p>The total solar eclipse of August 2, 2027, seen from Luxor. Venus and Mercury are the two dots next to it.</p>
     </td>
   </tr>
