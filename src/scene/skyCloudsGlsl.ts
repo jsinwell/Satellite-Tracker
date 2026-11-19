@@ -1,4 +1,4 @@
-import { CLOUD_COVER, CLOUD_LATITUDES, SKY_CLOUDS } from '../core/clouds';
+import { CLOUD_COVER, CLOUD_DRIFT, CLOUD_LATITUDES, SKY_CLOUDS } from '../core/clouds';
 import { ATMOSPHERE_GLSL } from './atmosphereGlsl';
 import { LANDSCAPE_GLSL } from './landscapeGlsl';
 
@@ -28,6 +28,7 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
 
   const float CLOUD_HEIGHT = ${float(SKY_CLOUDS.heightKm)};
   const float CLOUD_HAZE = ${float(SKY_CLOUDS.hazeKm)};
+  const float CLOUD_SHEAR = ${float(CLOUD_DRIFT.shear)};
 
   // How brightly a cloud shows a light coming from "toLight", for one as
   // bright as the Sun: the underside of the cloud, the side of each lump that
@@ -73,8 +74,11 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
 
     // The clouds: lumps from 9 km across down to 300 m, each size dropped
     // where it is too fine for the screen. More cover lowers the bar for
-    // what counts as cloud, until at full cover everything does.
-    vec2 p = at + uLandOrigin;
+    // what counts as cloud, until at full cover everything does. They drift
+    // with the wind, the finer lumps a little faster each than the coarser,
+    // so that the clouds change shape as they go.
+    vec2 p = at + uLandOrigin - uLandCloudDrift;
+    vec2 ahead = vec2(0.0);
     float lumps = 0.0;
     vec2 slope = vec2(0.0);
     float across = 9.0;
@@ -83,12 +87,13 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
     for (int i = 0; i < 6; i++) {
       float keep = 1.0 - smoothstep(0.15, 0.5, footprint / across);
       if (keep <= 0.0) break;
-      vec3 n = landNoise(p / across + 17.0);
+      vec3 n = landNoise((p - ahead) / across + 17.0);
       lumps += keep * weight * n.x;
       // Only the larger lumps have sides for the Sun to light: the small
       // ones would make every cloud look brushed toward it.
       if (i < 3) slope += keep * weight * (back * n.yz);
       p = LAND_TURN * p + 9.1;
+      ahead += CLOUD_SHEAR * uLandCloudDrift;
       back = back * transpose(LAND_TURN);
       across *= 0.45;
       weight *= 0.55;

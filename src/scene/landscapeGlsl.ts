@@ -27,6 +27,8 @@ function createUniforms() {
     /** The picture of the Earth's clouds, and how much they are shown: both from `Earth`. */
     uLandClouds: { value: null as Texture | null },
     uLandClouded: { value: 0 },
+    /** How far the clouds overhead have drifted, km east and north: see `driftClouds`. */
+    uLandCloudDrift: { value: new Vector2() },
   };
 }
 
@@ -65,6 +67,7 @@ export const LANDSCAPE_GLSL = /* glsl */ `
   uniform float uLandTime;
   uniform sampler2D uLandClouds;
   uniform float uLandClouded;
+  uniform vec2 uLandCloudDrift;
 
   const vec3 LAND_MAP_WATER = ${vec3(MAP_WATER.map(Math.sqrt))};
   const vec2 LAND_MAP_WATER_WITHIN = vec2(${float(MAP_WATER_WITHIN[0])}, ${float(MAP_WATER_WITHIN[1])});
