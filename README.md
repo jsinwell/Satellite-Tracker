@@ -55,11 +55,11 @@
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/saturn.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
+      <img src="docs/saturn-zoomed.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
       <p>Zoomed in on Saturn from the ground.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/moon.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
+      <img src="docs/moon-zoomed.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
       <p>The Moon the same way, a day past first quarter.</p>
     </td>
   </tr>
@@ -69,7 +69,7 @@
       <p>South America at night.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
+      <img src="docs/solar-eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
       <p>The total solar eclipse of August 2, 2027, seen from Luxor. Venus and Mercury are the two dots next to it.</p>
     </td>
   </tr>
