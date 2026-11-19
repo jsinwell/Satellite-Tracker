@@ -137,3 +137,46 @@ describe('sampleOrbit', () => {
     expect(sampleOrbit(unusable, epochOf(iss), 16)).toBeNull();
   });
 });
+
+describe('reentry', () => {
+  it('drops an object that SGP4 has brought down into the atmosphere', () => {
+    // A circular orbit 70 km up: about 16.77 revolutions a day. SGP4 will
+    // still propagate it, but nothing stays in orbit there.
+    const reentering: SatelliteRecord = {
+      ...iss,
+      noradId: 99999,
+      elements: { ...iss.elements, meanMotion: 16.77, eccentricity: 0.0001 },
+    };
+    const epoch = Date.parse(iss.elements.epoch);
+    expect(samplePositions(reentering, [epoch])).toBeNull();
+    expect(samplePositions(iss, [epoch])).not.toBeNull();
+  });
+
+  it('drops a state SGP4 has sent faster than escape velocity', () => {
+    // Real elements from CelesTrak, 2026-11-16, for a Starlink launched that
+    // September and still climbing. Nine months on, SGP4 has it 57,000 km up
+    // at a million km/s, without reporting an error.
+    const runaway: SatelliteRecord = {
+      noradId: 100753,
+      name: 'STARLINK-38381',
+      intlDesignator: '2026-219A',
+      objectType: 'payload',
+      owner: 'US',
+      launchDate: '2026-09-20',
+      elements: {
+        epoch: '2026-11-15T23:46:39.723456Z',
+        meanMotion: 15.6835223,
+        eccentricity: 0.00032743,
+        inclination: 70.001,
+        raan: 300.2539,
+        argOfPericenter: 261.5525,
+        meanAnomaly: 98.5298,
+        bstar: 0.001939139,
+        meanMotionDot: 0.00224348,
+        meanMotionDdot: 0,
+      },
+    };
+    expect(samplePositions(runaway, [Date.parse('2026-11-17T00:00:00Z')])).not.toBeNull();
+    expect(samplePositions(runaway, [Date.parse('2027-08-02T17:10:09Z')])).toBeNull();
+  });
+});

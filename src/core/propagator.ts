@@ -1,6 +1,6 @@
 import { json2satrec, type OMMJsonObject, type SatRec, sgp4 } from 'satellite.js';
 import type { SatelliteRecord } from './catalog';
-import { EARTH_RADIUS_KM, MS_PER_DAY, UNIX_EPOCH_JD } from './constants';
+import { EARTH_MU, EARTH_RADIUS_KM, MS_PER_DAY, UNIX_EPOCH_JD } from './constants';
 import type { Vec3 } from './kinematics';
 
 /**
@@ -10,8 +10,13 @@ import type { Vec3 } from './kinematics';
 export const STATE_STRIDE = 6;
 
 const MS_PER_MINUTE = 60_000;
-/** Anything SGP4 places this far inside the Earth has decayed or diverged. */
-const MIN_RADIUS_SQUARED_KM = (EARTH_RADIUS_KM * 0.98) ** 2;
+/**
+ * Anything SGP4 places lower than this has come down: 80 km is where
+ * reentering objects burn up. Left in, they would be drawn skimming the
+ * ground, which happens when elements are propagated months past their epoch
+ * and SGP4's drag model sinks a low orbit without yet giving up on it.
+ */
+const MIN_RADIUS_SQUARED_KM = (EARTH_RADIUS_KM + 80) ** 2;
 
 /** Converts a catalog record back to the OMM shape satellite.js initializes from. */
 export function toOmm(record: SatelliteRecord): OMMJsonObject {
@@ -67,6 +72,12 @@ function writeState(
   const radiusSquared = position.x ** 2 + position.y ** 2 + position.z ** 2;
   // Written this way round so that NaN fails the check.
   if (!(radiusSquared > MIN_RADIUS_SQUARED_KM)) return false;
+  // Faster than escape velocity is no orbit at all. SGP4 can get there when
+  // it runs a fast-decaying orbit months past its elements without quite
+  // failing: one Starlink launched in 2026 comes out 57,000 km up at a
+  // million km/s by mid-2027.
+  const speedSquared = velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2;
+  if (!(speedSquared * Math.sqrt(radiusSquared) < 2 * EARTH_MU)) return false;
   out[offset] = position.x;
   out[offset + 1] = position.y;
   out[offset + 2] = position.z;
