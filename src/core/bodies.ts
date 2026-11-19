@@ -248,6 +248,33 @@ export const FULL_MOONLIGHT = 2.5e-6;
 export const MOONLIGHT_COLOR = [1.06, 1.0, 0.88] as const;
 
 /**
+ * How strong the Moon's light is drawn, for how strong it is. Stronger, and
+ * more evenly from one phase to the next: at night the eye makes up for far
+ * more of the dark than the picture's exposure does (see `skyExposure`,
+ * which stops well short of it, or dusk would never get dark), and a half
+ * Moon's night does not look a tenth as bright as a full Moon's, though it
+ * is. Without this a moonlit sky is as good as black.
+ */
+export const MOONLIGHT_SEEN = { gain: 6, evenness: 0.6 } as const;
+
+/** `share`, which is `moonlight`, as it is drawn: see `MOONLIGHT_SEEN`. */
+export function moonlightSeen(share: number): number {
+  if (!(share > 0)) return 0;
+  return MOONLIGHT_SEEN.gain * FULL_MOONLIGHT * (share / FULL_MOONLIGHT) ** MOONLIGHT_SEEN.evenness;
+}
+
+/**
+ * How dazzling the Moon is, 0 to 1, in a picture exposed by `exposure`,
+ * sending `share` of the Sun's light: nothing by day, or through a
+ * telescope set for its face, and the brightest thing there is by night.
+ * It is how strong the glow around it is drawn.
+ */
+export function moonGlare(share: number, exposure: number): number {
+  return 1 - Math.exp(-MOON_GLARE * Math.max(0, share) * exposure);
+}
+const MOON_GLARE = 60;
+
+/**
  * How much of the stars' light is left to see with the Moon up, 0 to 1. A
  * full Moon high in the sky takes most of the faint ones: its light in the
  * air is a veil in front of them. `share` is `moonlight`, and `elevation`
@@ -256,7 +283,7 @@ export const MOONLIGHT_COLOR = [1.06, 1.0, 0.88] as const;
 export function starsByMoonlight(share: number, elevationDeg: number): number {
   const up = Math.min(1, Math.max(0, (elevationDeg + 2) / 12));
   const strength = Math.sqrt(Math.min(1, share / FULL_MOONLIGHT));
-  return 1 - 0.6 * strength * up * up * (3 - 2 * up);
+  return 1 - 0.75 * strength * up * up * (3 - 2 * up);
 }
 
 export interface BodyView {

@@ -24,14 +24,22 @@ import {
   meterView,
   NIGHT_EXPOSURE,
   type Rgb,
+  seenByNight,
   skyExposure,
   skyViewHorizon,
   skyViewReach,
   sunlightReaching,
 } from '../core/atmosphere';
-import { bodyExposure, MOONLIGHT_COLOR, moonlight, starsByMoonlight } from '../core/bodies';
+import {
+  bodyExposure,
+  MOONLIGHT_COLOR,
+  moonGlare,
+  moonlight,
+  moonlightSeen,
+  starsByMoonlight,
+} from '../core/bodies';
 import { EARTH_RADIUS_KM } from '../core/constants';
-import { SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
+import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
 import { groundOrigin } from '../core/landscape';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
@@ -63,13 +71,14 @@ const CLOUDS_PART_FOV = [4, 14] as const;
 /** The clouds are drawn after the Moon (-0.3, see `SunAndMoon`) and before the satellites. */
 const CLOUDS_ORDER = -0.2;
 /**
- * The Moon's light is worked into the sky only with the Sun this far down
- * and the Moon not this far down itself, as sines of their heights (4° and
- * 2° below level). Before that the last of the twilight is a thousand times
- * brighter and it would make no difference; it costs a second pass through
- * the air for every line of sight in the sky's map.
+ * The Moon's light is worked into the sky only with the Sun below the first
+ * of these heights, coming in as it goes down to the second, and the Moon
+ * not below the third: sines of 4°, 9° and 2° below level. Before that the
+ * twilight is far brighter and it would make no difference; it costs a
+ * second pass through the air for every line of sight in the sky's map.
  */
 const MOONLIGHT_WITH_SUN_BELOW = -Math.sin(MathUtils.degToRad(4));
+const MOONLIGHT_FULL_WITH_SUN_BELOW = -Math.sin(MathUtils.degToRad(9));
 const MOONLIGHT_WITH_MOON_ABOVE = -Math.sin(MathUtils.degToRad(2));
 /** The Moon's shadow can only be on the Earth with the two this close in the sky, radians. */
 const ECLIPSE_SEPARATION = 0.03;
@@ -92,6 +101,8 @@ const fragmentShader = /* glsl */ `
   uniform float uSunRadius;
   // The color and strength of the glare around the Sun.
   uniform vec3 uSunGlare;
+  // The Moon's radius in the sky, radians, for the glow around it.
+  uniform float uMoonRadius;
   // How much of the stars' light is left, for eyes used to this sky.
   uniform float uStarKeep;
   // The light of the sky above the camera, averaged: what lights ground in shade.
@@ -113,6 +124,14 @@ const fragmentShader = /* glsl */ `
   float sunGlare(float x) {
     float away = max(x, 1.0);
     return 2.0 / (1.0 + away * away) * (1.0 - smoothstep(30.0, 70.0, x));
+  }
+
+  // The glow around the Moon by night, the same way: tight against it, as
+  // the Sun's is, and a wide faint one from the haze in the air, which the
+  // map of the sky is too coarse to hold.
+  float moonGlow(float x) {
+    float away = max(x, 1.0);
+    return 1.6 / (1.0 + away * away) + 0.1 * exp(-x / 36.0);
   }
 
   void main() {
@@ -166,6 +185,12 @@ const fragmentShader = /* glsl */ `
 
     float x = atan(length(cross(direction, uSunFromEye)), dot(direction, uSunFromEye)) / uSunRadius;
     vec3 glare = uSunGlare * sunGlare(x);
+    vec3 moonGlare = vec3(0.0);
+    if (uSkyMoonGlare.g > 0.0) {
+      float fromMoon = atan(length(cross(direction, uSkyMoon)), dot(direction, uSkyMoon)) / uMoonRadius;
+      moonGlare = uSkyMoonGlare * moonGlow(fromMoon);
+      glare = skyAdd(glare, moonGlare);
+    }
 
     vec3 color;
     float alpha;
@@ -194,8 +219,10 @@ const fragmentShader = /* glsl */ `
         vec3 sun = (1.0 - exp(-SUN_BRIGHTNESS * through * darkened)) * disc;
         color = skyAdd(skyAdd(air, sun), glare);
         // What is behind the sky: stars, lost in the light of it by day.
+        // And in the glow around the Moon.
         float keep = skyLuminance(through) * mix(1.0, uStarKeep, uSkyGround)
-          * (1.0 - smoothstep(0.02, 0.2, skyLuminance(air)));
+          * (1.0 - smoothstep(0.02, 0.2, skyLuminance(air)))
+          * (1.0 - min(1.0, 4.0 * skyLuminance(moonGlare)));
         alpha = max(1.0 - keep, disc);
       }
       if (alpha <= 0.0 && max(color.r, max(color.g, color.b)) <= 0.0) discard;
@@ -220,6 +247,7 @@ const toSun: Vec3 = { x: 0, y: 0, z: 0 };
 const toMoon: Vec3 = { x: 0, y: 0, z: 0 };
 const ambient: Rgb = [0, 0, 0];
 const byMoon: Rgb = [0, 0, 0];
+const reachingMoon: Rgb = [0, 0, 0];
 /** The Moon's light, and the simulated instant it was worked out for: it changes over hours. */
 const moonShare = { atMs: Number.NaN, value: 0 };
 const MOONLIGHT_REFRESH_MS = 60_000;
@@ -262,6 +290,7 @@ export function Atmosphere() {
       uSunFromEye: { value: new Vector3(1, 0, 0) },
       uSunRadius: { value: 0.00465 },
       uSunGlare: { value: new Vector3() },
+      uMoonRadius: { value: 0.0045 },
       uStarKeep: { value: 1 },
       uSkyAmbient: { value: new Vector3() },
       /** How much of the clouds overhead is drawn, 0 to 1: see `CLOUDS_PART_FOV`. */
@@ -374,6 +403,9 @@ export function Atmosphere() {
     let exposure: number = EXPOSURE.space;
     uniforms.uStarKeep.value = 1;
     uniforms.uSkyMoonlight.value.set(0, 0, 0);
+    uniforms.uSkyMoonGlare.value.set(0, 0, 0);
+    // The Moon's light as it is, for the glow around it, once the exposure is known.
+    let moonShines = 0;
     if (ground > 0) {
       // The Moon, from here: by night it is the light there is.
       const moonRange = Math.hypot(moonKm.x - eye.x, moonKm.y - eye.y, moonKm.z - eye.z);
@@ -385,12 +417,21 @@ export function Atmosphere() {
       const sunHeight = (eye.x * sun.x + eye.y * sun.y + eye.z * sun.z) / eyeRadius;
       const moonHeight = (eye.x * toMoon.x + eye.y * toMoon.y + eye.z * toMoon.z) / eyeRadius;
       let moonlit = 0;
-      if (sunHeight < MOONLIGHT_WITH_SUN_BELOW && moonHeight > MOONLIGHT_WITH_MOON_ABOVE) {
+      if (moonHeight > MOONLIGHT_WITH_MOON_ABOVE) {
         if (!(Math.abs(simMs - moonShare.atMs) < MOONLIGHT_REFRESH_MS)) {
           moonShare.atMs = simMs;
           moonShare.value = moonlight(simMs);
         }
-        moonlit = moonShare.value;
+        moonShines = moonShare.value;
+      }
+      if (sunHeight < MOONLIGHT_WITH_SUN_BELOW && moonShines > 0) {
+        moonlit =
+          moonlightSeen(moonShines) *
+          MathUtils.smoothstep(
+            -sunHeight,
+            -MOONLIGHT_WITH_SUN_BELOW,
+            -MOONLIGHT_FULL_WITH_SUN_BELOW,
+          );
         uniforms.uSkyMoonlight.value.set(
           MOONLIGHT_COLOR[0] * moonlit,
           MOONLIGHT_COLOR[1] * moonlit,
@@ -408,7 +449,9 @@ export function Atmosphere() {
       if (moonlit > 0) {
         // The same sky as the Sun makes, that much fainter.
         meterSky(tables, eye, toMoon, byMoon);
-        for (let c = 0; c < 3; c++) ambient[c] += byMoon[c] * MOONLIGHT_COLOR[c] * moonlit;
+        for (let c = 0; c < 3; c++) byMoon[c] *= MOONLIGHT_COLOR[c] * moonlit;
+        seenByNight(byMoon);
+        for (let c = 0; c < 3; c++) ambient[c] += byMoon[c];
         view += meterView(tables, eye, toMoon, looking) * moonlit;
       }
       const sky = luminance(ambient);
@@ -420,9 +463,15 @@ export function Atmosphere() {
       uniforms.uStarKeep.value =
         (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4 *
         starsByMoonlight(
-          moonlit,
+          moonlit > 0 ? moonShines : 0,
           MathUtils.radToDeg(Math.asin(MathUtils.clamp(moonHeight, -1, 1))),
         );
+
+      // The Moon as it looks from here, for the glow around it: how big,
+      // and how much of its light arrives past the Earth and the air.
+      const moonRadius = Math.asin(MOON_RADIUS_KM / moonRange);
+      uniforms.uMoonRadius.value = moonRadius;
+      sunlightReaching(tables, eye, toMoon, moonRadius, reachingMoon);
     }
     // Closed in on the Moon or a planet, the picture is exposed for that, as
     // through a telescope, if it is brighter than the sky: by night the sky
@@ -435,6 +484,16 @@ export function Atmosphere() {
       exposure = exposure ** (1 - closeUp) * fitted ** closeUp;
     }
     uniforms.uSkyExposure.value = exposure;
+    if (moonShines > 0) {
+      // Whiter than the Moon is where it is low and red: glare is in the eye.
+      const dazzle = ground * moonGlare(moonShines, exposure);
+      const white = Math.max(reachingMoon[0], reachingMoon[1], reachingMoon[2]);
+      uniforms.uSkyMoonGlare.value.set(
+        dazzle * (0.3 * reachingMoon[0] + 0.7 * white),
+        dazzle * (0.3 * reachingMoon[1] + 0.7 * white),
+        dazzle * (0.3 * reachingMoon[2] + 0.7 * white),
+      );
+    }
     renderSkyView(gl);
 
     // The ground, for when it is in view: which way the Earth is turned

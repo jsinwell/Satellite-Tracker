@@ -14,6 +14,7 @@ import {
 } from 'three';
 import { currentSimTime } from '../app/store';
 import { moonPosition, obliquity, sunPosition } from '../core/astro';
+import { SURFACE_BRIGHTNESS } from '../core/bodies';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
@@ -107,6 +108,12 @@ const moonVertexShader = /* glsl */ `
 // Seen through the air, it is dimmed and reddened like the Sun, and the light
 // of the sky lies in front of it: by day its dark part is not black but the
 // blue of the sky, which is why a daytime Moon looks cut out of it.
+//
+// Its face is drawn as a picture exposed for it would show it, by day, in
+// space and through a telescope. A picture exposed for the night sky shows
+// it as the eye sees it at night: far too bright to make anything out on,
+// a white disc. Not in an eclipse of the Moon, when it is no brighter than
+// the stars.
 const moonFragmentShader = /* glsl */ `
   uniform sampler2D uMap;
 
@@ -116,11 +123,16 @@ const moonFragmentShader = /* glsl */ `
 
   ${ATMOSPHERE_GLSL}
 
+  const float MOON_BRIGHTNESS = ${SURFACE_BRIGHTNESS.moon.toFixed(4)};
+
   void main() {
     float facing = max(dot(normalize(vWorldNormal), uSkySun), 0.0);
     float left = 1.0 - sunHiddenByEarth(vWorldPosition, uSkySunPosition);
     vec3 sunlight = mix(vec3(0.16, 0.055, 0.025), vec3(1.0), left);
-    vec3 color = texture2D(uMap, vUv).rgb * (0.02 + 1.3 * facing * sunlight);
+    vec3 map = texture2D(uMap, vUv).rgb;
+    vec3 lit = min(map * 1.3 * facing * sunlight, 1.0);
+    float over = max(uSkyExposure * MOON_BRIGHTNESS - 1.0, 0.0) * left * left;
+    vec3 color = 0.02 * map + 1.0 - (1.0 - lit) * exp(-lit * over);
 
     vec3 direction = normalize(vWorldPosition - cameraPosition);
     float start;
@@ -132,6 +144,8 @@ const moonFragmentShader = /* glsl */ `
       skyView(direction, ground, air, through);
       color = skyAdd(air, color * through);
     }
+    // The glow around it by night is in the eye, and lies over all of it.
+    color = skyAdd(color, 0.9 * uSkyMoonGlare);
 
     gl_FragColor = vec4(color, 1.0);
     #include <colorspace_fragment>

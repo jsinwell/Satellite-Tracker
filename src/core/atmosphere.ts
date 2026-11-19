@@ -166,6 +166,26 @@ export function luminance(color: Readonly<Rgb>): number {
   return color[0] * LUMINANCE[0] + color[1] * LUMINANCE[1] + color[2] * LUMINANCE[2];
 }
 
+/**
+ * How the eye sees light as faint as the Moon's: mostly with the cells that
+ * tell no colors apart, and that answer best to blue-green. So a moonlit
+ * night is silver-blue, though the light itself is a little warmer than the
+ * Sun's, and a Moon on the horizon does not set the sky on fire as the Sun
+ * does, though its light is reddened just the same. `colorless` is how much
+ * of the color goes, and `tint` what is seen in its place: as bright, by
+ * `luminance`, as the light was.
+ */
+export const NIGHT_VISION = { colorless: 0.85, tint: [0.62, 1.0, 2.12] } as const;
+
+/** `light`, in place, as it looks by night: see `NIGHT_VISION`. */
+export function seenByNight(light: Rgb): Rgb {
+  const gray = luminance(light);
+  for (let c = 0; c < 3; c++) {
+    light[c] += NIGHT_VISION.colorless * (gray * NIGHT_VISION.tint[c] - light[c]);
+  }
+  return light;
+}
+
 const ozoneDensity = (height: number) =>
   Math.max(0, 1 - Math.abs(height - ATMOSPHERE.ozoneCenterKm) / ATMOSPHERE.ozoneHalfWidthKm);
 

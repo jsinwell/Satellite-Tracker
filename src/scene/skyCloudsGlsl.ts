@@ -109,7 +109,7 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
     if (uSkyEclipse > 0.5) left -= sunHiddenByMoon(up, uSkySunPosition, uSkyMoonPosition);
     vec3 sunlight = skySunlight(shell, sunHeight) * left;
     // And by the Moon, the same way, when it is the light there is.
-    vec3 moonlight = skySunlight(shell, dot(up, uSkyMoon)) * uSkyMoonlight;
+    vec3 moonlight = skyByNight(skySunlight(shell, dot(up, uSkyMoon)) * uSkyMoonlight);
     float under = mix(1.0, 0.3, thick);
     vec3 light = sunlight * cloudLit(direction, slope, uSkySun, under, thick)
       + moonlight * cloudLit(direction, slope, uSkyMoon, under, thick)

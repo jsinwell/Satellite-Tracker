@@ -51,12 +51,13 @@ const fragmentShader = /* glsl */ `
         }
         skyMarch(direction, start, end, uSkySun, true, light, through);
         // By night, the Moon's light in the air as well: the same blue sky
-        // as by day, a few hundred thousand times fainter.
+        // as by day, a few hundred thousand times fainter, and seen with
+        // little of its color.
         if (!wantThrough && uSkyMoonlight.g > 0.0) {
           vec3 byMoon;
           vec3 unused;
           skyMarch(direction, start, end, uSkyMoon, false, byMoon, unused);
-          light += byMoon * uSkyMoonlight;
+          light += skyByNight(byMoon * uSkyMoonlight);
         }
       }
     }

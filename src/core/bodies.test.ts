@@ -10,7 +10,9 @@ import {
   isSkyBody,
   JUPITER_MOONS,
   jupiterMoonOffsets,
+  moonGlare,
   moonlight,
+  moonlightSeen,
   NARROWEST_FOV,
   type PlanetDisc,
   planetDiscs,
@@ -279,6 +281,37 @@ describe('moonlight', () => {
   });
 });
 
+describe('moonlightSeen', () => {
+  it('is nothing with no Moon', () => {
+    expect(moonlightSeen(0)).toBe(0);
+    expect(moonlightSeen(-1)).toBe(0);
+  });
+
+  it('draws a full Moon several times stronger than it is', () => {
+    expect(moonlightSeen(2.5e-6) / 2.5e-6).toBeCloseTo(6);
+  });
+
+  it('draws a half Moon about a quarter as strong as a full one, not a tenth', () => {
+    const share = moonlightSeen(2.5e-7) / moonlightSeen(2.5e-6);
+    expect(share).toBeGreaterThan(0.2);
+    expect(share).toBeLessThan(0.3);
+  });
+});
+
+describe('moonGlare', () => {
+  // The exposures of a dark night, of day, and of a telescope on the Moon.
+  it('is strong on a dark night and gone by day or through a telescope', () => {
+    expect(moonGlare(2.5e-6, 30_000)).toBeGreaterThan(0.9);
+    expect(moonGlare(2.5e-7, 30_000)).toBeGreaterThan(0.3);
+    expect(moonGlare(2.5e-6, 14)).toBeLessThan(0.01);
+    expect(moonGlare(2.5e-6, 26)).toBeLessThan(0.01);
+  });
+
+  it('is nothing with no Moon', () => {
+    expect(moonGlare(0, 80_000)).toBe(0);
+  });
+});
+
 describe('starsByMoonlight', () => {
   it('leaves the stars alone with no Moon, or with it down', () => {
     expect(starsByMoonlight(0, 60)).toBe(1);
@@ -286,8 +319,8 @@ describe('starsByMoonlight', () => {
   });
 
   it('takes most of them with a full Moon high up', () => {
-    expect(starsByMoonlight(2.5e-6, 50)).toBeCloseTo(0.4, 6);
-    expect(starsByMoonlight(9e-6, 50)).toBeCloseTo(0.4, 6);
+    expect(starsByMoonlight(2.5e-6, 50)).toBeCloseTo(0.25, 6);
+    expect(starsByMoonlight(9e-6, 50)).toBeCloseTo(0.25, 6);
   });
 
   it('takes fewer the thinner the Moon and the lower it is', () => {
