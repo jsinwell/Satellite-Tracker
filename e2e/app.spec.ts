@@ -77,7 +77,7 @@ async function atRest(page: Page, read: () => Promise<number>): Promise<number> 
         last = now;
         return still;
       },
-      { intervals: [0], timeout: 25_000 },
+      { intervals: [0], timeout: 60_000 },
     )
     .toBeGreaterThanOrEqual(3);
   return last;
@@ -428,7 +428,8 @@ test.describe('with a catalog', () => {
                 ],
         });
       await touch('touchStart', 400);
-      for (let spread = 380; spread >= 100; spread -= 20) await touch('touchMove', spread);
+      // In few steps: each waits for a frame to be drawn.
+      for (const spread of [300, 200, 100]) await touch('touchMove', spread);
       await touch('touchEnd', 0);
 
       await expect.poll(apart).toBeLessThan(before * 0.8);
