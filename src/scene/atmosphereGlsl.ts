@@ -184,6 +184,9 @@ const SHARED_GLSL = /* glsl */ `
     return dot(color, vec3(0.2126, 0.7152, 0.0722));
   }
 
+  // None of the tables has smaller copies of itself, and saying so when
+  // reading them (textureLod) lets them be read from inside a branch or a loop.
+
   // Where along a table's side to read it, for a place from 0 to 1 across its entries.
   vec2 skyTableUv(vec2 place, vec2 size) {
     return (clamp(place, 0.0, 1.0) * (size - 1.0) + 0.5) / size;
@@ -197,7 +200,7 @@ const SHARED_GLSL = /* glsl */ `
     float farthest = rho + SKY_REACH;
     float toTop = max(0.0, -radius * mu + sqrt(max(0.0, radius * radius * (mu * mu - 1.0) + SKY_TOP * SKY_TOP)));
     vec2 place = vec2((toTop - nearest) / (farthest - nearest), rho / SKY_REACH);
-    return texture2D(uSkyTransmittance, skyTableUv(place, SKY_TRANSMITTANCE_SIZE)).rgb;
+    return textureLod(uSkyTransmittance, skyTableUv(place, SKY_TRANSMITTANCE_SIZE), 0.0).rgb;
   }
 
   // Mirrors sunlightAt.
@@ -213,7 +216,7 @@ const SHARED_GLSL = /* glsl */ `
       (mu - SKY_MULTISCATTER_MIN_SUN) / (1.0 - SKY_MULTISCATTER_MIN_SUN),
       (r - SKY_BOTTOM) / (SKY_TOP - SKY_BOTTOM)
     );
-    return texture2D(uSkyMultiscatter, skyTableUv(place, SKY_MULTISCATTER_SIZE)).rgb / SKY_MULTISCATTER_SCALE;
+    return textureLod(uSkyMultiscatter, skyTableUv(place, SKY_MULTISCATTER_SIZE), 0.0).rgb / SKY_MULTISCATTER_SCALE;
   }
 
   // Mirrors spanOf, for a line of sight from the camera: the part of it in
@@ -346,8 +349,8 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
     float rows = SKY_VIEW_ABOVE + SKY_VIEW_BELOW;
     vec2 place = vec2(turn + 0.5, (skyViewRow(angle, ground) + 0.5) / (2.0 * rows));
     // Kept as square roots: see skyView.ts.
-    vec3 a = texture2D(uSkyView, place).rgb;
-    vec3 b = texture2D(uSkyView, place + vec2(0.0, 0.5)).rgb;
+    vec3 a = textureLod(uSkyView, place, 0.0).rgb;
+    vec3 b = textureLod(uSkyView, place + vec2(0.0, 0.5), 0.0).rgb;
     air = a * a;
     through = b * b;
   }
