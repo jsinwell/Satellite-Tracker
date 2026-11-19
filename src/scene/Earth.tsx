@@ -106,18 +106,16 @@ export function Earth() {
   }, [dayMap, nightMap]);
   useEffect(() => () => material.dispose(), [material]);
 
-  // The same maps say what the ground is like, looking up from it.
+  // The same map says what the ground is like, looking up from it.
   useEffect(() => {
     const landscape = landscapeUniforms();
     landscape.uLandDay.value = dayMap;
-    landscape.uLandNight.value = nightMap;
     landscape.uLandMapped.value = 1;
     return () => {
       landscape.uLandMapped.value = 0;
       landscape.uLandDay.value = null;
-      landscape.uLandNight.value = null;
     };
-  }, [dayMap, nightMap]);
+  }, [dayMap]);
 
   useFrame(() => {
     if (spin.current) spin.current.rotation.z = gmst(currentSimTime());

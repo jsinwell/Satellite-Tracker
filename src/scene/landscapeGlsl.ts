@@ -2,9 +2,7 @@ import { Matrix3, type Texture, Vector2, Vector3 } from 'three';
 import {
   BARE_GROUND,
   EARTH_ECCENTRICITY_SQUARED,
-  LAMPS,
   LAND_ALBEDO,
-  MAP_UNLIT,
   MAP_WATER,
   MAP_WATER_WITHIN,
   SEA,
@@ -13,9 +11,8 @@ import {
 
 function createUniforms() {
   return {
-    /** The Earth's maps by day and by night, once they have loaded. */
+    /** The Earth's map by day, once it has loaded. */
     uLandDay: { value: null as Texture | null },
-    uLandNight: { value: null as Texture | null },
     uLandMapped: { value: 0 },
     /** Turns a direction in the world to one fixed to the Earth: z north, x through 0° longitude. */
     uLandFromWorld: { value: new Matrix3() },
@@ -50,14 +47,12 @@ const vec3 = (value: readonly number[]) => `vec3(${value.map(float).join(', ')})
  * where that has the same thing; the two must be kept in step. Goes after
  * `ATMOSPHERE_GLSL`, and needs `uSkyAmbient`: the light of the sky, averaged.
  *
- * The maps say what is there, to about 10 km: sand, forest, ice or water,
- * and how built-up. Anything finer is made up, the same way each time for a
- * given place: rolling relief on land, swell on water, and lamps where the
- * night map has light.
+ * The map says what is there, to about 10 km: sand, forest, ice or water.
+ * Anything finer is made up, the same way each time for a given place:
+ * rolling relief on land, and swell on water.
  */
 export const LANDSCAPE_GLSL = /* glsl */ `
   uniform sampler2D uLandDay;
-  uniform sampler2D uLandNight;
   uniform float uLandMapped;
   uniform mat3 uLandFromWorld;
   uniform vec3 uLandEast;
@@ -72,18 +67,10 @@ export const LANDSCAPE_GLSL = /* glsl */ `
   const vec3 LAND_BARE = ${vec3(BARE_GROUND)};
   const float SHORE_WITHIN = ${float(SHORE.within)};
   const vec3 SHORE_SAND = ${vec3(SHORE.sand)};
-  const float LAND_MAP_UNLIT = ${float(MAP_UNLIT)};
   const float SEA_ROUGHNESS = ${float(SEA.roughness)};
   const float SEA_GLINT = ${float(SEA.glint)};
   const vec3 SEA_COLOR = ${vec3(SEA.color)};
-  const float LAMPS_PER_SQUARE_KM = ${float(LAMPS.perSquareKm)};
-  const float LAMP_SPACING = ${float(LAMPS.spacing)};
-  const float LAMP_LIGHT = ${float(LAMPS.light)};
-  const float LAMP_CROWDING = ${float(LAMPS.crowding)};
   const float LAND_FLATTENING = ${float(1 - EARTH_ECCENTRICITY_SQUARED)};
-  // Sodium's orange, and the white of newer lamps.
-  const vec3 LAMP_WARM = vec3(1.0, 0.68, 0.36);
-  const vec3 LAMP_WHITE = vec3(0.92, 0.96, 1.0);
   // A turn, and a fifth again: no two layers of the pattern line up.
   const mat2 LAND_TURN = mat2(0.8, 0.6, -0.6, 0.8);
 
@@ -237,59 +224,11 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     return mix(body, sky, seaReflectance(cosView)) + glitter;
   }
 
-  // Lamps, where the night map has light. They are laid out by where they
-  // are seen, a patch of view at a time, so that they are as far apart on
-  // the screen at any distance: near, a patch holds one lamp or none; toward
-  // the horizon it takes in a whole district and is all light. "pixel" is
-  // how far apart the screen's pixels are, radians.
-  vec3 landLamps(vec3 direction, vec3 eyeUp, float glow, float pixel) {
-    float sine = clamp(-dot(direction, eyeUp), 1e-3, 1.0);
-    float depression = asin(sine);
-    float bearing = atan(dot(direction, uLandEast), dot(direction, uLandNorth));
-    float level = sqrt(1.0 - sine * sine);
-    // Mirrors lampsInView.
-    float lamps = glow * LAMPS_PER_SQUARE_KM * pow(uSkyEyeHeight * LAMP_SPACING, 2.0) / (sine * sine)
-      * min(1.0 / sine, LAMP_CROWDING);
-    if (lamps <= 0.0) return vec3(0.0);
-
-    // One lamp looks this bright; a lit patch has at least one.
-    float each = sine * sine;
-    float full = 1.0 - exp(-lamps / 8.0);
-    // A lamp is about a pixel across however far off.
-    float dot2 = 0.8 * pixel * pixel;
-    vec3 light = vec3(0.0);
-    float row = floor(depression / LAMP_SPACING - 0.5);
-    for (int j = 0; j < 2; j++) {
-      // Fewer patches fit round the compass the lower the row looks.
-      float around = cos((row + float(j) + 0.5) * LAMP_SPACING) / LAMP_SPACING;
-      float column = floor(bearing * around - 0.5);
-      for (int i = 0; i < 2; i++) {
-        vec2 id = vec2(column + float(i), row + float(j));
-        if (landHash(id + 0.37) < 1.0 - exp(-lamps)) {
-          vec2 spot = id + vec2(landHash(id + 11.1), landHash(id + 23.7));
-          vec2 off = vec2((spot.x / around - bearing) * level, spot.y * LAMP_SPACING - depression);
-          // Most lamps are dim and a few are bright; patches of many differ less.
-          float one = 0.2 + 2.8 * pow(landHash(id + 5.5), 2.5);
-          float bright = mix(1.0, one, inversesqrt(max(lamps, 1.0)));
-          vec3 color = mix(LAMP_WARM, LAMP_WHITE, step(0.72, landHash(id + 41.3)));
-          light += bright * color * exp(-dot(off, off) / dot2) * lamps / (1.0 - exp(-lamps));
-        }
-      }
-    }
-    // Where a patch is all lamps, it is lit all over, unevenly: brighter
-    // streets and darker blocks, with the nearest of the lamps still picked out.
-    vec3 blend = mix(LAMP_WARM, LAMP_WHITE, 0.28);
-    float spread = SKY_PI * dot2 / (LAMP_SPACING * LAMP_SPACING);
-    float uneven = 1.0 + 1.2 * landNoise(vec2(bearing * level, depression) / (LAMP_SPACING * 2.3)).x;
-    return LAMP_LIGHT * each * (light * (1.0 - 0.6 * full) + blend * lamps * spread * uneven * full);
-  }
-
   // The light the ground sends toward the camera from where a line of sight
   // meets it, "reach" km along "direction", before the air between dims it.
   // "at" is where that is, km east and north of the camera, and "footprint"
   // how much ground a pixel takes in there, km.
-  vec3 landLight(vec3 direction, float reach, vec2 at, float footprint, float pixel) {
-    vec3 eyeUp = normalize(uSkyEye);
+  vec3 landLight(vec3 direction, float reach, vec2 at, float footprint) {
     vec3 up = normalize(uSkyEye + direction * reach);
     float sunHeight = dot(up, uSkySun);
     float left = 1.0;
@@ -299,7 +238,6 @@ export const LANDSCAPE_GLSL = /* glsl */ `
     vec2 pattern = at + uLandOrigin;
     vec3 albedo = LAND_BARE;
     float water = 0.0;
-    float glow = 0.0;
     if (uLandMapped > 0.5) {
       vec3 earth = uLandFromWorld * up;
       // Mirrors mapLatitude: the Earth is flattened, and the maps go by the
@@ -320,12 +258,10 @@ export const LANDSCAPE_GLSL = /* glsl */ `
       water = 1.0 - smoothstep(LAND_MAP_WATER_WITHIN.x, LAND_MAP_WATER_WITHIN.y, shore);
       albedo = mix(SHORE_SAND, LAND_ALBEDO_FLOOR + LAND_ALBEDO_SCALE * day,
         smoothstep(LAND_MAP_WATER_WITHIN.y, SHORE_WITHIN, off));
-      glow = max(0.0, textureLod(uLandNight, place, 0.0).r - LAND_MAP_UNLIT) / (1.0 - LAND_MAP_UNLIT);
     }
     vec3 light = vec3(0.0);
     if (water < 1.0) {
-      light += (1.0 - water) * (landDry(albedo, pattern, footprint, up, sunlight)
-        + landLamps(direction, eyeUp, glow, pixel));
+      light += (1.0 - water) * landDry(albedo, pattern, footprint, up, sunlight);
     }
     if (water > 0.0) {
       light += water * landSea(direction, pattern, footprint, up, sunlight, sunHeight);

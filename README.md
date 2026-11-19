@@ -40,8 +40,8 @@
       <p><strong>Look up from where you are.</strong> The camera stands on the ground under the real sky. Sunset over the Pacific from Big Sur, with the satellites that are overhead.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/chicago.jpg" alt="City lights stretching to the horizon under a twilight sky full of satellites" />
-      <p><strong>Stand somewhere real.</strong> The ground is the place you picked. Chicago at dusk, looking west, when satellites still catch the Sun.</p>
+      <img src="docs/monument-valley.jpg" alt="Red desert hills lit from the side by a low Sun, under an evening sky with satellites" />
+      <p><strong>Stand somewhere real.</strong> The ground is the place you picked. The desert near Monument Valley, Utah, with the Sun low in the west.</p>
     </td>
   </tr>
   <tr>
@@ -85,9 +85,8 @@
   scroll or pinch to widen or narrow the view.
 - The ground there is the place you're standing on. Its color comes from the Earth map, so
   it's sand in the Sahara, forest in the Amazon and ice in Greenland, with hills that catch
-  the light when the Sun is low. Water mirrors the sky and glitters under the Sun, and at
-  night towns and cities show as lamps out to the horizon. The map is only good to about
-  10 km, so the hills and the individual lamps are made up.
+  the light when the Sun is low. Water mirrors the sky and glitters under the Sun. The map
+  is only good to about 10 km, so the hills themselves are made up.
 - In that view satellites are drawn as small satellite shapes heading the way they're going,
   with a short trail behind, lit from the Sun's side. Sunlit ones glow against a dark sky,
   ones in the Earth's shadow go dark, and now and then one flares as a flat face catches the

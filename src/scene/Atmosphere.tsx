@@ -122,7 +122,6 @@ const fragmentShader = /* glsl */ `
       // the pixels next to it.
       vec2 landAt = end * vec2(dot(direction, uLandEast), dot(direction, uLandNorth));
       float landFootprint = max(length(dFdx(landAt)), length(dFdy(landAt)));
-      float landPixel = length(dFdx(direction));
     #endif
     // How much of this pixel is this pass's to draw.
     float share = 1.0;
@@ -153,7 +152,7 @@ const fragmentShader = /* glsl */ `
       if (below <= 0.0) discard;
       vec3 surface = vec3(0.0);
       if (ground) {
-        surface = through * landLight(direction, end, landAt, landFootprint, landPixel);
+        surface = through * landLight(direction, end, landAt, landFootprint);
       }
       color = skyAdd(skyAdd(air, skyTone(surface)), glare);
       alpha = below * uSkyGround;
