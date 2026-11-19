@@ -224,6 +224,13 @@ test.describe('with a catalog', () => {
       .poll(async () => (await south.boundingBox())?.x ?? Number.NaN)
       .toBeGreaterThan(from + 100);
 
+    // A click on empty sky clears a selection, as it does on the globe.
+    await page.getByRole('combobox').fill('iss (zarya)');
+    await page.getByRole('option', { name: /ISS \(ZARYA\)/ }).click();
+    await expect(selection(page)).toContainText('ISS (ZARYA)');
+    await page.mouse.click(700, 110);
+    await expect(selection(page)).toBeHidden();
+
     // Escape comes back up, as the button does.
     await page.locator('canvas').focus();
     await page.keyboard.press('Escape');
