@@ -103,8 +103,9 @@ export function App() {
   // Opening one closes the other: there is not room for both and the globe.
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  // Open from the start for anyone who has said where they are before.
-  const [skyOpen, setSkyOpen] = useState(() => useApp.getState().observer !== null);
+  // Closed at the start, even with a place remembered: it covers part of the
+  // globe, and is one click away on the moon button.
+  const [skyOpen, setSkyOpen] = useState(false);
   const skyRef = useRef<HTMLDivElement>(null);
   const filtersRef = useRef<HTMLDivElement>(null);
   useRoomAbove(skyRef, filtersRef, skyOpen && phase === 'ready');
