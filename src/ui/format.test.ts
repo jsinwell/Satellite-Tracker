@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAgo,
+  formatAngularSize,
+  formatBodyDistance,
   formatCompass,
   formatDuration,
   formatInteger,
   formatLatitude,
+  formatLightTime,
   formatLongitude,
   formatPeriod,
   formatUtc,
   fromUtcField,
+  litWords,
   toUtcField,
 } from './format';
 
@@ -74,6 +78,35 @@ describe('formatAgo', () => {
       'N',
       'NW',
     ]);
+  });
+});
+
+describe('the sky', () => {
+  const arcsecond = Math.PI / 180 / 3600;
+
+  it('measures the Moon in minutes of arc and planets in seconds', () => {
+    expect(formatAngularSize(31.4 * 60 * arcsecond)).toBe('31.4′');
+    expect(formatAngularSize(44.52 * arcsecond)).toBe('44.5″');
+    expect(formatAngularSize(2.3 * arcsecond)).toBe('2.3″');
+  });
+
+  it('gives the distance of the Moon in km and of planets in AU', () => {
+    expect(formatBodyDistance(384_412)).toBe('384,400 km');
+    expect(formatBodyDistance(4.21 * 149_597_870.7)).toBe('4.21 AU');
+    expect(formatBodyDistance(0.38 * 149_597_870.7)).toBe('0.38 AU');
+  });
+
+  it('says how much of a disc is lit', () => {
+    expect(litWords(0.999)).toBe('full');
+    expect(litWords(0.004)).toBe('new');
+    expect(litWords(0.5)).toBe('50% lit');
+    expect(litWords(0.123)).toBe('12% lit');
+  });
+
+  it('gives the time light takes in whatever unit suits', () => {
+    expect(formatLightTime(384_400)).toBe('1.3 s');
+    expect(formatLightTime(4.21 * 149_597_870.7)).toBe('35 min');
+    expect(formatLightTime(30 * 149_597_870.7)).toBe('4.2 h');
   });
 });
 

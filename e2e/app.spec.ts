@@ -243,7 +243,7 @@ test.describe('with a catalog', () => {
     // celestial equator, which for these does not change for months.
     await page.goto(`/?t=${FIXTURE_TIME}`);
     await setPlace(page, '90, 0');
-    const planets = page.getByRole('list', { name: 'Planets above the horizon' });
+    const planets = page.getByRole('list', { name: 'Moon and planets above the horizon' });
     for (const name of ['Mars', 'Jupiter', 'Saturn']) {
       await expect(planets).toContainText(name);
     }
@@ -251,6 +251,46 @@ test.describe('with a catalog', () => {
       await expect(planets).not.toContainText(name);
     }
     await expect(planets.getByText('Jupiter')).toBeVisible();
+  });
+
+  test('looks at a planet up close', async ({ page }) => {
+    // From the North Pole, as above: Jupiter and Saturn are up.
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '90, 0');
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    const watching = page.getByRole('region', { name: /^Watching/ });
+
+    // Choosing one goes down to the ground to look at it, and says what is seen.
+    await sky.getByRole('button', { name: /^Jupiter/ }).click();
+    await expect(watching).toHaveAccessibleName('Watching Jupiter');
+    await expect(watching).toContainText(/Planet · in \w+/);
+    await expect(watching).toContainText(/Distance\s*\d\.\d\d AU/);
+    await expect(watching).toContainText(/\d\d\.\d″ wide/);
+    await expect(watching).toContainText('full');
+    await expect(sky.getByRole('button', { name: 'Back to the globe' })).toBeVisible();
+    await expect(sky.getByRole('button', { name: /^Jupiter/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    // Another takes its place.
+    await sky.getByRole('button', { name: /^Saturn/ }).click();
+    await expect(watching).toHaveAccessibleName('Watching Saturn');
+    await expect(sky.getByRole('button', { name: /^Jupiter/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // Escape lets go of it, and leaves the view on the ground, looking up.
+    await page.keyboard.press('Escape');
+    await expect(watching).toBeHidden();
+    await expect(sky.getByRole('button', { name: 'Back to the globe' })).toBeVisible();
+
+    // Going back to the globe lets go as well.
+    await sky.getByRole('button', { name: /^Saturn/ }).click();
+    await expect(watching).toBeVisible();
+    await sky.getByRole('button', { name: 'Back to the globe' }).click();
+    await expect(watching).toBeHidden();
   });
 
   test('says when an eclipse is happening overhead', async ({ page }) => {

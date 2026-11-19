@@ -2,17 +2,26 @@ import { type FormEvent, type ReactNode, useId, useState } from 'react';
 import { satelliteColor } from '../app/palette';
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
+import { BODY_NAMES, type SkyBody } from '../core/bodies';
 import { soleEnabled } from '../core/constellation';
 import { type Observer, parseCoordinates, skyState } from '../core/observer';
-import { brightnessWords, PLANET_NAMES } from '../core/planets';
+import { brightnessWords } from '../core/planets';
 import {
   formatCompass,
   formatInteger,
   formatLocalClock,
   formatLocalTime,
   formatPlace,
+  litWords,
 } from './format';
-import { useEclipse, usePlanetsUp, useSimTime, useSkyNow, useViewingWindow } from './hooks';
+import {
+  useBodyView,
+  useEclipse,
+  usePlanetsUp,
+  useSimTime,
+  useSkyNow,
+  useViewingWindow,
+} from './hooks';
 import { Panel } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
@@ -205,32 +214,73 @@ function WhenToLook({ observer }: { observer: Observer }) {
   );
 }
 
+/** One line of the list below: click it to look at that body up close. */
+function BodyRow({
+  body,
+  note,
+  elevation,
+  azimuth,
+}: {
+  body: SkyBody;
+  note: string;
+  elevation: number;
+  azimuth: number;
+}) {
+  const watching = useApp((state) => state.watching === body);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => useApp.getState().watch(body)}
+        aria-pressed={watching}
+        title={`Look at ${body === 'moon' ? 'the Moon' : BODY_NAMES[body]} up close`}
+        className="flex w-full items-baseline gap-2.5 rounded-md px-2 py-0.5 text-left text-xs hover:bg-white/10 aria-pressed:bg-accent/15"
+      >
+        <span className="text-slate-100">{BODY_NAMES[body]}</span>
+        <span className="min-w-0 flex-1 truncate text-slate-500">{note}</span>
+        <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
+          {Math.round(elevation)}° {formatCompass(azimuth)}
+        </span>
+      </button>
+    </li>
+  );
+}
+
 /**
- * The planets in the sky, brightest first. They are the brightest points of
- * light after the Moon, so they are what a moving satellite is most easily
- * mistaken for, and the first thing to rule out.
+ * The Moon, if it is up, and the planets in the sky, brightest first. The
+ * planets are the brightest points of light after the Moon, so they are what
+ * a moving satellite is most easily mistaken for, and the first thing to rule
+ * out. Clicking one turns the view to it and closes in.
  */
 function PlanetsUp({ observer }: { observer: Observer }) {
   const planets = usePlanetsUp(observer);
+  const moon = useBodyView('moon', observer);
+  const moonUp = moon.elevation > 0;
   return (
     <div className="border-t border-white/10 px-2 py-2.5">
       <div className="px-2">
-        <Heading>Planets</Heading>
+        <Heading>Moon and planets</Heading>
       </div>
-      {planets.length === 0 ? (
+      {planets.length === 0 && !moonUp ? (
         <p className="px-2 text-xs text-slate-400">None above the horizon right now.</p>
       ) : (
-        <ul aria-label="Planets above the horizon">
+        <ul aria-label="Moon and planets above the horizon">
+          {moonUp && (
+            <BodyRow
+              body="moon"
+              note={litWords(moon.litFraction)}
+              elevation={moon.elevation}
+              azimuth={moon.azimuth}
+            />
+          )}
           {planets.map(({ planet, magnitude, azimuth, elevation }) => (
-            <li key={planet} className="flex items-baseline gap-2.5 px-2 py-0.5 text-xs">
-              <span className="text-slate-100">{PLANET_NAMES[planet]}</span>
-              <span className="min-w-0 flex-1 truncate text-slate-500">
-                {brightnessWords(magnitude)}
-              </span>
-              <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
-                {Math.round(elevation)}° {formatCompass(azimuth)}
-              </span>
-            </li>
+            <BodyRow
+              key={planet}
+              body={planet}
+              note={brightnessWords(magnitude)}
+              elevation={elevation}
+              azimuth={azimuth}
+            />
           ))}
         </ul>
       )}

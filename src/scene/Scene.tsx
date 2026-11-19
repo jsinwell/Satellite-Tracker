@@ -1,7 +1,7 @@
 import { addAfterEffect, addEffect, Canvas } from '@react-three/fiber';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { ACCENT_COLOR } from '../app/palette';
-import { holdSimTime, releaseSimTime } from '../app/store';
+import { holdSimTime, releaseSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { Atmosphere } from './Atmosphere';
 import { CameraRig } from './CameraRig';
@@ -13,6 +13,7 @@ import { Marker } from './Marker';
 import { ObserverMarker } from './ObserverMarker';
 import { OrbitPath } from './OrbitPath';
 import { Picker } from './Picker';
+import { PlanetDiscs } from './PlanetDiscs';
 import { Planets } from './Planets';
 import { Satellites } from './Satellites';
 import { Sky } from './Sky';
@@ -25,7 +26,21 @@ const UnsupportedNotice = (
   </p>
 );
 
+/**
+ * Whether a planet has been looked at closely yet. Their maps are a couple
+ * of megabytes that most visits never need, so they wait for the first time.
+ */
+function useDiscsWanted(): boolean {
+  const watchingPlanet = useApp((state) => state.watching !== null && state.watching !== 'moon');
+  const [wanted, setWanted] = useState(false);
+  useEffect(() => {
+    if (watchingPlanet) setWanted(true);
+  }, [watchingPlanet]);
+  return wanted;
+}
+
 export function Scene({ world }: { world: World }) {
+  const discsWanted = useDiscsWanted();
   // Everything in a frame is drawn for one instant: see `holdSimTime`.
   useEffect(() => {
     const stopHolding = addEffect(holdSimTime);
@@ -62,6 +77,11 @@ export function Scene({ world }: { world: World }) {
           <SunAndMoon />
         </Suspense>
         <Planets />
+        {discsWanted && (
+          <Suspense fallback={null}>
+            <PlanetDiscs />
+          </Suspense>
+        )}
         <Suspense fallback={<EarthPlaceholder />}>
           <Earth />
         </Suspense>

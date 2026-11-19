@@ -1,6 +1,15 @@
-import { useLoader, useThree } from '@react-three/fiber';
-import { useMemo } from 'react';
-import { BackSide, Matrix4, Quaternion, TextureLoader } from 'three';
+import { useFrame, useLoader, useThree } from '@react-three/fiber';
+import { useMemo, useRef } from 'react';
+import {
+  BackSide,
+  Color,
+  MathUtils,
+  Matrix4,
+  type MeshBasicMaterial,
+  PerspectiveCamera,
+  Quaternion,
+  TextureLoader,
+} from 'three';
 import { currentSimTime } from '../app/store';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { j2000ToDate } from '../core/planets';
@@ -15,7 +24,14 @@ const MAPS = {
 /** Far beyond any orbit, inside the camera's far plane (both in Earth radii). */
 const SKY_RADIUS_KM = 900 * EARTH_RADIUS_KM;
 /** Dimmed so the satellites stay the brightest things on screen. */
-const SKY_BRIGHTNESS = '#c8c8c8';
+const SKY_BRIGHTNESS = new Color('#c8c8c8').r;
+/**
+ * The map is a photograph of the whole sky, a twentieth of a degree to the
+ * pixel. Zoomed in on a planet there is nothing in it to see but its pixels,
+ * so it fades out as the view narrows from the second of these to the first,
+ * degrees.
+ */
+const SKY_FADES = [2, 12] as const;
 
 /**
  * The real night sky: NASA's Deep Star Maps, drawn on a sphere around the
@@ -44,11 +60,18 @@ export function Sky() {
     );
   }, []);
 
+  const material = useRef<MeshBasicMaterial>(null);
+  useFrame(({ camera }) => {
+    if (!material.current || !(camera instanceof PerspectiveCamera)) return;
+    const shown = MathUtils.smoothstep(camera.fov, SKY_FADES[0], SKY_FADES[1]);
+    material.current.color.setScalar(SKY_BRIGHTNESS * shown);
+  });
+
   return (
     <group quaternion={toDate}>
       <mesh rotation={[...SPHERE_POLES_TO_Z]} frustumCulled={false} renderOrder={-1}>
         <sphereGeometry args={[SKY_RADIUS_KM, 64, 32]} />
-        <meshBasicMaterial map={map} color={SKY_BRIGHTNESS} side={BackSide} depthWrite={false} />
+        <meshBasicMaterial ref={material} map={map} side={BackSide} depthWrite={false} />
       </mesh>
     </group>
   );

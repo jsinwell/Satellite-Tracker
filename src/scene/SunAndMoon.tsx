@@ -20,6 +20,7 @@ import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse'
 import type { Vec3 } from '../core/kinematics';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { CAMERA_FOV, SPHERE_POLES_TO_Z, TEME_FROM_WORLD } from './frame';
+import { placeBody } from './skyBodies';
 
 const MOON_MAP_URL = `${import.meta.env.BASE_URL}textures/moon_1024.jpg`;
 
@@ -96,6 +97,8 @@ function createCoronaTexture(): CanvasTexture {
 const MOON_LABEL_HEIGHT = 0.013;
 /** How far below the Moon the tag hangs, in tag heights. */
 const MOON_LABEL_DROP = 2.6;
+/** The tag goes once the Moon is wider than this on screen, CSS px: it would lie across its face. */
+const MOON_LABEL_UNTIL = 40;
 
 function createLabelTexture(text: string): { texture: CanvasTexture; aspect: number } {
   const fontPx = 44;
@@ -206,10 +209,11 @@ export function SunAndMoon() {
   }, [moonMap]);
   useEffect(() => () => moonMaterial.dispose(), [moonMaterial]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, size }) => {
     const simMs = currentSimTime();
     sunPosition(simMs, sunKm);
     moonPosition(simMs, moonKm);
+    placeBody('moon', moonKm.x, moonKm.y, moonKm.z);
 
     // The corona shows only when the Moon has nearly all of the Sun covered,
     // as seen from the camera. From the ground that is not quite where the
@@ -236,6 +240,10 @@ export function SunAndMoon() {
     if (moonTag.current && camera instanceof PerspectiveCamera) {
       const zoom =
         Math.tan(MathUtils.degToRad(camera.fov) / 2) / Math.tan(MathUtils.degToRad(CAMERA_FOV) / 2);
+      const toMoon = Math.hypot(moonKm.x - eye.x, moonKm.y - eye.y, moonKm.z - eye.z);
+      const width =
+        (2 * Math.asin(MOON_RADIUS_KM / toMoon)) / (MathUtils.degToRad(camera.fov) / size.height);
+      moonTag.current.visible = width < MOON_LABEL_UNTIL;
       moonTag.current.scale.set(
         MOON_LABEL_HEIGHT * moonLabel.aspect * EARTH_RADIUS_KM * zoom,
         MOON_LABEL_HEIGHT * EARTH_RADIUS_KM * zoom,

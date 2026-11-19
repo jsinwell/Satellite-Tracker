@@ -1,15 +1,28 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { type Camera, Matrix4, Raycaster, Sphere, Vector2, Vector3 } from 'three';
+import {
+  type Camera,
+  MathUtils,
+  Matrix4,
+  PerspectiveCamera,
+  Raycaster,
+  Sphere,
+  Vector2,
+  Vector3,
+} from 'three';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { subSatellitePoint } from '../core/astro';
+import { SKY_BODIES, type SkyBody } from '../core/bodies';
 import type { Observer } from '../core/observer';
 import { pickSatellite } from '../core/picking';
-import { TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
+import { directionToWorld, TEME_FROM_WORLD, WORLD_FROM_TEME } from './frame';
+import { createBodySight, sightOf } from './skyBodies';
 
 /** How close (CSS px) the pointer must be to a satellite to hit it. */
 const PICK_RADIUS = { mouse: 9, touch: 22 };
+/** The same for the Moon and the planets, which are fewer and wanted more. */
+const BODY_PICK_RADIUS = { mouse: 12, touch: 24 };
 /** A press that moves further than this (CSS px) is a drag, not a click. */
 const CLICK_SLOP = 5;
 
@@ -52,6 +65,48 @@ function pick(
     radiusPx,
   });
   return index === -1 ? null : index;
+}
+
+const sight = createBodySight();
+const toward = new Vector3();
+const facing = new Vector3();
+const overhead = new Vector3();
+
+/**
+ * The Moon or planet under the pointer, looking up from the ground, or null.
+ * Within `radiusPx` of its middle counts, or anywhere on its disc when that
+ * is wider.
+ */
+function pickBody(
+  camera: Camera,
+  element: HTMLElement,
+  pointer: Point,
+  radiusPx: number,
+): SkyBody | null {
+  if (!(camera instanceof PerspectiveCamera)) return null;
+  camera.updateMatrixWorld();
+  eye.copy(camera.position).applyMatrix4(TEME_FROM_WORLD);
+  camera.getWorldDirection(facing);
+  overhead.copy(camera.position).normalize();
+  const pixel = MathUtils.degToRad(camera.fov) / element.clientHeight;
+
+  let nearest: SkyBody | null = null;
+  let nearestOff = Number.POSITIVE_INFINITY;
+  for (const body of SKY_BODIES) {
+    if (!sightOf(body, eye, sight)) continue;
+    directionToWorld(sight.direction, toward);
+    // Behind the camera, or below the horizon with the ground in the way.
+    if (toward.dot(facing) <= 0 || toward.dot(overhead) < -0.02) continue;
+    toward.add(camera.position).project(camera);
+    const x = ((toward.x + 1) / 2) * element.clientWidth;
+    const y = ((1 - toward.y) / 2) * element.clientHeight;
+    const off = Math.hypot(x - pointer.x, y - pointer.y);
+    if (off <= Math.max(radiusPx, sight.diameter / 2 / pixel) && off < nearestOff) {
+      nearest = body;
+      nearestOff = off;
+    }
+  }
+  return nearest;
 }
 
 const raycaster = new Raycaster();
@@ -118,13 +173,34 @@ export function Picker({ world }: { world: World }) {
         if (place) setObserver(place);
         return;
       }
-      const radius = event.pointerType === 'mouse' ? PICK_RADIUS.mouse : PICK_RADIUS.touch;
-      const hit = pick(world, camera, element, released, radius);
+      const mouse = event.pointerType === 'mouse';
+      const { riding, select, lookingUp, watching, watch } = useApp.getState();
+      // Looking up, the Moon and planets come first: there are few of them,
+      // and a satellite passing in front of one is not what was meant.
+      const body = lookingUp
+        ? pickBody(
+            camera,
+            element,
+            released,
+            mouse ? BODY_PICK_RADIUS.mouse : BODY_PICK_RADIUS.touch,
+          )
+        : null;
+      if (body !== null) {
+        watch(body);
+        return;
+      }
+      const hit = pick(
+        world,
+        camera,
+        element,
+        released,
+        mouse ? PICK_RADIUS.mouse : PICK_RADIUS.touch,
+      );
       // A click on nothing clears the selection, except during a ride, where
       // there is no satellite-free sky to click on that is not part of the
       // trip. (Drags never get here: they are told apart from clicks above.)
-      const { riding, select } = useApp.getState();
       if (hit !== null || !riding) select(hit);
+      if (hit === null && watching !== null) watch(null);
     };
     const onPointerLeave = () => {
       hoverPoint.current = null;
@@ -153,7 +229,11 @@ export function Picker({ world }: { world: World }) {
     const point = hoverPoint.current;
     const hovered = point ? pick(world, camera, element, point, PICK_RADIUS.mouse) : null;
     hover(hovered);
-    element.style.cursor = hovered === null ? 'grab' : 'pointer';
+    const overBody =
+      point !== null &&
+      useApp.getState().lookingUp &&
+      pickBody(camera, element, point, BODY_PICK_RADIUS.mouse) !== null;
+    element.style.cursor = hovered === null && !overBody ? 'grab' : 'pointer';
   });
 
   return null;

@@ -9,10 +9,11 @@ import {
   Mesh,
   OneFactor,
   OneMinusSrcAlphaFactor,
+  PerspectiveCamera,
   ShaderMaterial,
   Vector3,
 } from 'three';
-import { currentSimTime } from '../app/store';
+import { currentSimTime, useApp } from '../app/store';
 import { gmst, moonPosition, sunDirection, sunPosition } from '../core/astro';
 import {
   ATMOSPHERE,
@@ -28,6 +29,7 @@ import {
   skyViewReach,
   sunlightReaching,
 } from '../core/atmosphere';
+import { bodyExposure } from '../core/bodies';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
@@ -47,6 +49,8 @@ import { groundView } from './standing';
 const SUN_BRIGHTNESS = 150;
 /** The same for the glare around it, which goes sooner. */
 const GLARE_BRIGHTNESS = 6;
+/** The view goes over to a telescope's exposure as it narrows from the second of these to the first, degrees. */
+const CLOSE_UP_FOV = [1.5, 12] as const;
 /** The Moon's shadow can only be on the Earth with the two this close in the sky, radians. */
 const ECLIPSE_SEPARATION = 0.03;
 
@@ -339,6 +343,16 @@ export function Atmosphere() {
       uniforms.uSkyAmbient.value.set(ambient[0], ambient[1], ambient[2]);
       // Stars are drawn as a dark-adapted eye sees them. Short of that, less.
       uniforms.uStarKeep.value = (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4;
+    }
+    // Closed in on the Moon or a planet, the picture is exposed for that, as
+    // through a telescope, if it is brighter than the sky: by night the sky
+    // around it goes black. Not more than for the sky, by day, when the sky
+    // is what the eye is used to. It comes in as the view narrows.
+    const { watching } = useApp.getState();
+    if (watching !== null && ground > 0 && camera instanceof PerspectiveCamera) {
+      const closeUp = 1 - MathUtils.smoothstep(camera.fov, CLOSE_UP_FOV[0], CLOSE_UP_FOV[1]);
+      const fitted = Math.min(exposure, bodyExposure(watching));
+      exposure = exposure ** (1 - closeUp) * fitted ** closeUp;
     }
     uniforms.uSkyExposure.value = exposure;
     renderSkyView(gl);
