@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Rgb } from './atmosphere';
 import {
-  cityGlow,
   colorFromFile,
   GROUND_PERIOD_KM,
   groundOrigin,
   LAND_ALBEDO,
-  lampsInView,
   landAlbedo,
   MAP_WATER,
   mapLatitude,
@@ -30,13 +28,6 @@ const DAY = {
   greenland: colorFromFile(225, 225, 225),
   arcticIce: colorFromFile(212, 216, 228),
   scandinavia: colorFromFile(82, 77, 55),
-};
-const NIGHT = {
-  pacific: colorFromFile(4, 6, 21),
-  sahara: colorFromFile(14, 16, 29),
-  boreal: colorFromFile(23, 26, 33),
-  uk: colorFromFile(141, 125, 89),
-  losAngeles: colorFromFile(253, 249, 222),
 };
 
 describe('waterShare', () => {
@@ -98,20 +89,6 @@ describe('landAlbedo', () => {
   });
 });
 
-describe('cityGlow', () => {
-  it('is nothing over sea, desert and forest', () => {
-    expect(cityGlow(NIGHT.pacific)).toBe(0);
-    expect(cityGlow(NIGHT.sahara)).toBe(0);
-    expect(cityGlow(NIGHT.boreal)).toBe(0);
-  });
-
-  it('is all of it in a big city, and some of it in a lived-in countryside', () => {
-    expect(cityGlow(NIGHT.losAngeles)).toBeGreaterThan(0.95);
-    expect(cityGlow(NIGHT.uk)).toBeGreaterThan(0.15);
-    expect(cityGlow(NIGHT.uk)).toBeLessThan(0.5);
-  });
-});
-
 describe('seaReflectance', () => {
   it('is a few percent looking straight down', () => {
     expect(seaReflectance(1)).toBeCloseTo(0.02, 6);
@@ -131,33 +108,6 @@ describe('seaReflectance', () => {
   it('is a full mirror at a glancing angle only if the sea is flat', () => {
     expect(seaReflectance(0, 0)).toBeCloseTo(1, 6);
     expect(seaReflectance(0, SEA.roughness * 2)).toBeLessThan(seaReflectance(0));
-  });
-});
-
-describe('lampsInView', () => {
-  const height = 0.64;
-
-  it('is single lamps close by, even in a city', () => {
-    expect(lampsInView(1, height, 12 * DEG)).toBeLessThan(1);
-    expect(lampsInView(1, height, 30 * DEG)).toBeLessThan(0.1);
-  });
-
-  it('is many lamps to a patch toward the horizon', () => {
-    expect(lampsInView(1, height, 1.5 * DEG)).toBeGreaterThan(20);
-    expect(lampsInView(0.05, height, 1.5 * DEG)).toBeGreaterThan(1);
-  });
-
-  it('grows the lower the look', () => {
-    let last = 0;
-    for (const depression of [60, 30, 12, 5, 2, 1]) {
-      const lamps = lampsInView(0.5, height, depression * DEG);
-      expect(lamps).toBeGreaterThan(last);
-      last = lamps;
-    }
-  });
-
-  it('is none where nothing is built', () => {
-    expect(lampsInView(0, height, 1 * DEG)).toBe(0);
   });
 });
 

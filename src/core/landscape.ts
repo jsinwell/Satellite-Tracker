@@ -80,18 +80,6 @@ export function landAlbedo(day: Rgb, out: Rgb): Rgb {
 export const BARE_GROUND: Rgb = [0.16, 0.14, 0.11];
 
 /**
- * The night map is dark blue where there are no lights, a little lighter over
- * land than sea. Its red has the least of that, so the lights are read from
- * it: nothing at or below the first level, and all of them at white.
- */
-export const MAP_UNLIT = 0.015;
-
-/** How built-up a place is, 0 to 1, from the night map's color there. */
-export function cityGlow(night: Rgb): number {
-  return Math.max(0, night[0] - MAP_UNLIT) / (1 - MAP_UNLIT);
-}
-
-/**
  * The sea: how rough it is, as the spread of its waves' slopes (about that
  * of a moderate breeze), and what the water itself sends back from below the
  * surface.
@@ -114,35 +102,6 @@ export function seaReflectance(cosView: number, roughness: number = SEA.roughnes
   return (
     0.02 + (0.98 * (1 - c) ** (5 * Math.exp(-2.69 * roughness))) / (1 + 22.7 * roughness ** 1.5)
   );
-}
-
-/**
- * Lamps: how many to a square km where the night map is white, how far apart
- * the eye can tell them (radians), and how bright one is drawn.
- */
-export const LAMPS = {
-  perSquareKm: 260,
-  spacing: 0.0048,
-  light: 8e-4,
-  /**
-   * Looking low across a city, lamps hide behind buildings and each other:
-   * past this many times the ground a straight-down look would take in, a
-   * patch of view holds no more of them.
-   */
-  crowding: 14,
-} as const;
-
-/**
- * How many lamps are expected in one patch of ground `LAMPS.spacing` across
- * as seen from `height` km up, looking `depression` radians below level. The
- * lower the look, the more ground the same patch of view takes in: near the
- * horizon a city is one band of light, and underfoot it is single lamps.
- */
-export function lampsInView(glow: number, height: number, depression: number): number {
-  const sine = Math.max(Math.sin(depression), 1e-3);
-  // The patch is this far off, and seen this much on the slant.
-  const ground = (height * LAMPS.spacing) ** 2 / (sine * sine);
-  return glow * LAMPS.perSquareKm * ground * Math.min(1 / sine, LAMPS.crowding);
 }
 
 /** How far the Earth is from round: the square of its eccentricity (WGS 84). */
