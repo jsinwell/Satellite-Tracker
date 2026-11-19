@@ -4,13 +4,16 @@ import {
   apparentMagnitude,
   FAINTEST,
   faintestSeen,
+  famousName,
   isSeen,
   magnitudeFrom,
+  namedOverhead,
   phaseShare,
   standardMagnitude,
   twilightLoss,
 } from './brightness';
 import { EARTH_RADIUS_KM } from './constants';
+import { STATE_STRIDE } from './propagator';
 
 describe('standardMagnitude', () => {
   it('knows the space station for the brightest thing up there', () => {
@@ -123,5 +126,57 @@ describe('isSeen', () => {
   it('sees nothing in the shadow of the Earth, however bright', () => {
     // The Sun under the viewer's feet: midnight, and the satellite in the dark.
     expect(isSeen(-2, eye, overhead, { x: -1, y: 0, z: 0 }, 6)).toBe(false);
+  });
+});
+
+describe('famousName', () => {
+  it('calls the famous ones what people call them, and the rest nothing', () => {
+    expect(famousName(iss)).toBe('ISS');
+    expect(famousName({ ...iss, name: 'CSS (TIANHE)' })).toBe('Tiangong');
+    expect(famousName({ ...iss, name: 'HST' })).toBe('Hubble');
+    expect(famousName(starlink)).toBeNull();
+    expect(famousName({ ...iss, name: 'ISS DEB' })).toBeNull();
+  });
+});
+
+describe('namedOverhead', () => {
+  const eye = { x: EARTH_RADIUS_KM, y: 0, z: 0 };
+  const up = { x: 1, y: 0, z: 0 };
+  const duskSun = { x: 0, y: 1, z: 0 };
+  // Four overhead, 500 km up, a little apart, and one on the far side of the Earth.
+  const state = new Float32Array(5 * STATE_STRIDE);
+  for (let i = 0; i < 4; i++) state.set([EARTH_RADIUS_KM + 500, 0, 50 * i], i * STATE_STRIDE);
+  state.set([-EARTH_RADIUS_KM - 500, 0, 0], 4 * STATE_STRIDE);
+  const query = {
+    state,
+    count: 5,
+    dtSeconds: 0,
+    shown: Uint8Array.of(1, 1, 1, 1, 1),
+    // A space station, a bright rocket, a faint famous one, an ordinary one, and a station out of sight.
+    standardMagnitudes: Float32Array.of(-1.8, 4, 6.5, 6.5, -1.8),
+    famous: Uint8Array.of(1, 0, 1, 0, 1),
+    eye,
+    up,
+    sun: duskSun,
+    faintest: 6,
+  };
+
+  it('names the bright and the famous, brightest first, and nothing below the horizon', () => {
+    expect(namedOverhead(query, 5)).toEqual([0, 1, 2]);
+  });
+
+  it('stops at as many as asked for', () => {
+    expect(namedOverhead(query, 1)).toEqual([0]);
+    expect(namedOverhead(query, 0)).toEqual([]);
+  });
+
+  it('leaves out what the filters hide, and what the sky is too bright for', () => {
+    expect(namedOverhead({ ...query, shown: Uint8Array.of(0, 1, 1, 1, 1) }, 5)).toEqual([1, 2]);
+    // In twilight only the station is left.
+    expect(namedOverhead({ ...query, faintest: 1 }, 5)).toEqual([0]);
+  });
+
+  it('names nothing in the shadow of the Earth', () => {
+    expect(namedOverhead({ ...query, sun: { x: -1, y: 0, z: 0 } }, 5)).toEqual([]);
   });
 });

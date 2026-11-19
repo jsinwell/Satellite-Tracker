@@ -97,6 +97,8 @@
 - Satellites in this view are points of light with a short trail, about as bright as they'd
   really look. You only get the ones you could see from there, so none by day and none in the
   Earth's shadow. They turn red as they fade into it, and once in a while one flares.
+- The space stations and Hubble get a name beside them when they're in sight, and so does
+  anything else as bright as a bright star.
 - The button next to the search box switches that to what binoculars would show, or to every
   satellite overhead drawn as a marker.
 - How bright each one looks is an estimate. Distance and the angle of the Sun are worked out;
