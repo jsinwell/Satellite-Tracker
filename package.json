@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "data": "node scripts/fetch-catalog.ts",
+    "data": "node scripts/fetch-data.ts",
     "typecheck": "tsc -b",
     "lint": "biome check .",
     "format": "biome check --write .",

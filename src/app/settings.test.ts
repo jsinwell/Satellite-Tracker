@@ -21,6 +21,7 @@ describe('parseSettings', () => {
         launchedBy: 1998,
       },
       overlays: { orbit: true, groundTrack: false, coverage: false },
+      clouds: false,
     };
     expect(parseSettings(saved)).toEqual(saved);
   });
