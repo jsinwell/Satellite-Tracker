@@ -9,31 +9,49 @@ computed live in the browser.
 
 ## Features
 
+### Satellites
+
 - Search by name or NORAD ID, or click a satellite, to see where it is, how fast it's moving,
   whether it's in sunlight, and the orbit it's on.
-- Ride along with a satellite. The camera sits just behind it and follows it around its orbit,
-  with the horizon ahead and the ground going by underneath. Drag to look around.
 - A selected satellite shows its ground track for the next orbit, marked with the times it'll
   pass over each place, and its coverage: the part of the Earth that has it above the horizon
   right now. Either one, and the orbit, can be switched off.
+- Ride along with a satellite. The camera sits just behind it and follows it around its orbit,
+  with the horizon ahead and the ground going by underneath. Drag to look around.
+- Filter by type (payloads, rocket bodies, debris) or by orbit. The counts and the search
+  follow whatever is on screen.
+- Color by constellation to pick out Starlink, OneWeb and Kuiper, or show any one of eight
+  constellations by itself.
+- Drag the "Launched by" slider to see what was up in a given year, or press play and watch
+  orbit fill in. It only covers objects that are still up there.
+
+### From where you are
+
 - Tell it where you are (your device's location, a click on the globe, or typed coordinates)
-  to see what's above you right now and which of those you could spot by eye. Select a
-  satellite to see when it next passes over, with the passes you could see marked. Click one
-  to jump to it.
+  to see what's above you right now and which of those you could spot by eye.
+- Select a satellite to see when it next passes over, with the passes you could see marked.
+  Click one to jump to it.
 - Look up from where you are: the camera stands on the ground and shows the real sky, with
-  the satellites, stars, planets, Sun and Moon where they'd be. The sky panel lists which
-  planets are up and how bright they are, so you can tell them from satellites. Satellites
-  are drawn as small satellite shapes heading the way they're going, with a short trail
-  behind, lit from the Sun's side. Sunlit ones glow against a dark sky, ones in the Earth's
-  shadow go dark, and now and then one flares as a flat face catches the Sun. Drag to look
-  around, and scroll or pinch to widen or narrow the view.
+  the satellites, stars, planets, Sun and Moon where they'd be. Drag to look around, and
+  scroll or pinch to widen or narrow the view.
+- In that view satellites are drawn as small satellite shapes heading the way they're going,
+  with a short trail behind, lit from the Sun's side. Sunlit ones glow against a dark sky,
+  ones in the Earth's shadow go dark, and now and then one flares as a flat face catches the
+  Sun.
+- The sky panel lists which planets are up and how bright they are, so you can tell them from
+  satellites.
+
+![Sunset from Luxor, looking west, with the sky running from orange at the horizon to blue overhead](docs/sunset.png)
+
+Sunset from Luxor on 3 August 2027, looking west.
+
+### Sky, Sun and Moon
+
 - The sky is worked out from the air itself: how sunlight scatters off air molecules and
   haze on its way down, and how the ozone layer soaks up some of it. That gives a blue sky
   by day with no stars showing, a Sun that yellows and reddens as it sets, a band of orange
   along the horizon afterward, and stars coming out as twilight fades. From orbit the same
   air is the thin blue line around the Earth.
-- Pause time or run it at up to 1000x, or click the date to go to any moment from 1957 to 2100. Above 10x the satellites leave short trails, so you can
-  see which way everything is going.
 - The background is NASA's star map lined up with the real sky, so the Milky Way and the
   constellations are where they should be. The Sun and Moon are in their real positions too,
   and the Moon shows the right phase.
@@ -43,28 +61,24 @@ computed live in the browser.
   Moon's shadow crosses the globe in a solar eclipse, and from inside it the sky goes dark
   around the corona. In a lunar eclipse the Moon turns dim and red. Try 2 August 2027 at
   10:06 UTC from Luxor (`?t=2027-08-02T10:06:00Z`, then set your place to 25.5, 33.2).
-- Filter by type (payloads, rocket bodies, debris) or by orbit. The counts and the search
-  follow whatever is on screen.
-- Color by constellation to pick out Starlink, OneWeb and Kuiper, or show any one of eight
-  constellations by itself.
-- Drag the "Launched by" slider to see what was up in a given year, or press play and watch
-  orbit fill in. It only covers objects that are still up there.
-- Works on a phone.
-- Move the camera with WASD or the arrow keys, and zoom with Q and E. Looking up, the same
-  keys turn your view.
-- Remembers your filters, color scheme, what's drawn on the globe and your location from one
-  visit to the next.
-- Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
-  moment in time with `?t=2026-11-16T06:30:00Z`.
-
-![Sunset from Luxor, looking west, with the sky running from orange at the horizon to blue overhead](docs/sunset.png)
-
-Sunset from Luxor on 3 August 2027, looking west.
 
 ![The total solar eclipse of 2 August 2027 seen from Luxor, with Venus and Mercury beside the Sun](docs/eclipse.png)
 
 The total solar eclipse of 2 August 2027, looking up from Luxor at mid-eclipse. Venus and
 Mercury are out in the darkened sky beside the Sun.
+
+### Time and controls
+
+- Pause time or run it at up to 1000x, or click the date to go to any moment from 1957 to
+  2100. Above 10x the satellites leave short trails, so you can see which way everything is
+  going.
+- Move the camera with WASD or the arrow keys, and zoom with Q and E. Looking up, the same
+  keys turn your view.
+- Works on a phone.
+- Remembers your filters, color scheme, what's drawn on the globe and your location from one
+  visit to the next.
+- Link straight to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
+  moment in time with `?t=2026-11-16T06:30:00Z`.
 
 ## Running it
 
