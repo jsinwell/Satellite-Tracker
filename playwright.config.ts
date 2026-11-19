@@ -8,8 +8,14 @@ export default defineConfig({
   testDir: 'e2e',
   // One at a time: each page renders WebGL in software at full frame rate, and
   // several of them at once starve each other into timeouts. The whole suite
-  // takes about ten seconds serially.
+  // takes about a minute serially with a GPU, and six without.
   workers: 1,
+  // Without a GPU, which is how CI runs, the view from the ground is drawn
+  // about once a second, and every step that waits on the page waits a
+  // frame. Nothing there is slow that would be fast if it worked: the time
+  // allowed is for the frames.
+  timeout: process.env.CI ? 120_000 : 30_000,
+  expect: { timeout: process.env.CI ? 30_000 : 5_000 },
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',

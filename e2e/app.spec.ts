@@ -37,6 +37,52 @@ function trackErrors(page: Page): string[] {
 
 const selection = (page: Page) => page.getByRole('region', { name: 'Selected satellite' });
 
+/** How far across the page something is, or NaN while it is not on it. */
+const acrossOf = async (target: Locator) => (await target.boundingBox())?.x ?? Number.NaN;
+
+/** Run in the page: done once it has drawn three more frames. Text, as there is no page to check it against here. */
+const THREE_FRAMES = `new Promise((done) => {
+  let left = 3;
+  const frame = () => {
+    left -= 1;
+    if (left > 0) requestAnimationFrame(frame);
+    else done();
+  };
+  requestAnimationFrame(frame);
+})`;
+
+/**
+ * Waits for the camera to come to rest, and gives what `read` makes of the
+ * page then: until it is a number, and has been the same one three times
+ * running, half a second and a few frames apart.
+ *
+ * All of that, because less will not do. Without a GPU the scene is drawn a
+ * few times a second, and stops altogether for a second or two when a new
+ * shader is compiled, as on first looking up: two looks half a second apart
+ * can be at one and the same frame, with the camera half way through a move.
+ * With a GPU three frames are a twentieth of a second. And the camera's
+ * moves ease in, so that for the first half second of one there is next to
+ * nothing to see of it.
+ */
+async function atRest(page: Page, read: () => Promise<number>): Promise<number> {
+  let last = await read();
+  let still = 0;
+  await expect
+    .poll(
+      async () => {
+        await page.waitForTimeout(500);
+        await page.evaluate(THREE_FRAMES);
+        const now = await read();
+        still = Number.isFinite(now) && Math.abs(now - last) < 0.5 ? still + 1 : 0;
+        last = now;
+        return still;
+      },
+      { intervals: [0], timeout: 60_000 },
+    )
+    .toBeGreaterThanOrEqual(3);
+  return last;
+}
+
 /** Opens the sky panel and sets the place by typing its coordinates. */
 async function setPlace(page: Page, coordinates: string): Promise<void> {
   await page.getByRole('button', { name: 'Your sky' }).click();
@@ -223,16 +269,13 @@ test.describe('with a catalog', () => {
 
     // Dragging pulls the sky along with the pointer, as in a panorama.
     const south = compass.filter({ hasText: /^S$/ });
-    await page.waitForTimeout(1600); // the way down takes 1.4 s
-    const from = (await south.boundingBox())?.x ?? Number.NaN;
+    const from = await atRest(page, () => acrossOf(south));
     await page.mouse.move(640, 300);
     await page.mouse.down();
     await page.mouse.move(740, 300, { steps: 5 });
     await page.mouse.move(840, 300, { steps: 5 });
     await page.mouse.up();
-    await expect
-      .poll(async () => (await south.boundingBox())?.x ?? Number.NaN)
-      .toBeGreaterThan(from + 100);
+    await expect.poll(() => acrossOf(south)).toBeGreaterThan(from + 100);
 
     // A click on empty sky clears a selection, as it does on the globe.
     await page.getByRole('combobox').fill('iss (zarya)');
@@ -363,18 +406,13 @@ test.describe('with a catalog', () => {
       // Facing south, south-west is off to the right. A wider view brings it
       // closer to the middle, so its distance from south shrinks.
       const point = (name: string) => page.locator(`[data-compass-point="${name}"]`);
+      // Not a number while either is off the screen, as on the way down.
       const apart = async () => {
-        const [south, southWest] = await Promise.all([
-          point('S').boundingBox(),
-          point('SW').boundingBox(),
-        ]);
-        if (!south || !southWest) throw new Error('A compass point is off screen.');
-        return southWest.x - south.x;
+        const [south, southWest] = await Promise.all([acrossOf(point('S')), acrossOf(point('SW'))]);
+        return southWest - south;
       };
-      await expect(point('SW')).toBeVisible();
-      await page.waitForTimeout(1600); // the way down takes 1.4 s
-      const before = await apart();
-      const southBefore = (await point('S').boundingBox())?.x ?? Number.NaN;
+      const before = await atRest(page, apart);
+      const southBefore = await acrossOf(point('S'));
 
       // Two fingers 400 px apart, drawn together to 100 px, about the middle.
       const cdp = await page.context().newCDPSession(page);
@@ -390,12 +428,13 @@ test.describe('with a catalog', () => {
                 ],
         });
       await touch('touchStart', 400);
-      for (let spread = 380; spread >= 100; spread -= 20) await touch('touchMove', spread);
+      // In few steps: each waits for a frame to be drawn.
+      for (const spread of [300, 200, 100]) await touch('touchMove', spread);
       await touch('touchEnd', 0);
 
       await expect.poll(apart).toBeLessThan(before * 0.8);
       // A pinch zooms about the middle and turns nothing: south stays put.
-      const southAfter = (await point('S').boundingBox())?.x ?? Number.NaN;
+      const southAfter = await atRest(page, () => acrossOf(point('S')));
       expect(Math.abs(southAfter - southBefore)).toBeLessThan(40);
     });
   });
@@ -403,29 +442,24 @@ test.describe('with a catalog', () => {
   test('moves with the keyboard', async ({ page }) => {
     await page.goto(`/?t=${FIXTURE_TIME}`);
     await setPlace(page, '41.88, -87.63'); // the globe turns to show it, marked "You"
-    const holdD = async () => {
+    // Held until it has had its effect, not for a set time: how many frames
+    // a set time is depends on what is drawing them.
+    const holdDUntilLeftOf = async (target: Locator, from: number) => {
       await page.keyboard.down('d');
-      await page.waitForTimeout(500);
+      await expect.poll(() => acrossOf(target), { intervals: [50] }).toBeLessThan(from - 30);
       await page.keyboard.up('d');
     };
-    const x = async (target: Locator) => (await target.boundingBox())?.x ?? Number.NaN;
 
+    // The camera goes right around the globe, so the ground slides left.
     const you = page.getByText('You', { exact: true });
     await expect(you).toBeVisible();
-    await page.waitForTimeout(1500); // the turn takes 1.2 s
-    const before = await x(you);
-    await holdD();
-    // The camera goes right around the globe, so the ground slides left.
-    await expect.poll(() => x(you)).toBeLessThan(before - 30);
+    await holdDUntilLeftOf(you, await atRest(page, () => acrossOf(you)));
 
     // Looking up, the same key turns the view right, and south slides left.
     await page.getByRole('button', { name: 'Look up from here' }).click();
     const south = page.locator('[data-compass-point="S"]');
     await expect(south).toBeVisible();
-    await page.waitForTimeout(1600); // the way down takes 1.4 s
-    const facing = await x(south);
-    await holdD();
-    await expect.poll(() => x(south)).toBeLessThan(facing - 30);
+    await holdDUntilLeftOf(south, await atRest(page, () => acrossOf(south)));
   });
 
   test('keeps the sky panel clear of the filters', async ({ page }) => {
