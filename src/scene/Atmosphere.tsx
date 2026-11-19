@@ -5,6 +5,7 @@ import {
   CustomBlending,
   Float32BufferAttribute,
   MathUtils,
+  Matrix4,
   Mesh,
   OneFactor,
   OneMinusSrcAlphaFactor,
@@ -12,7 +13,7 @@ import {
   Vector3,
 } from 'three';
 import { currentSimTime } from '../app/store';
-import { moonPosition, sunDirection, sunPosition } from '../core/astro';
+import { gmst, moonPosition, sunDirection, sunPosition } from '../core/astro';
 import {
   ATMOSPHERE,
   atmosphereTables,
@@ -30,8 +31,10 @@ import {
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
+import { groundOrigin } from '../core/landscape';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { directionToWorld, OVERLAY_ORDER, TEME_FROM_WORLD } from './frame';
+import { LANDSCAPE_GLSL, landscapeUniforms } from './landscapeGlsl';
 import { renderSkyView } from './skyView';
 import { groundView } from './standing';
 
@@ -73,10 +76,11 @@ const fragmentShader = /* glsl */ `
   varying vec3 vRay;
 
   ${ATMOSPHERE_GLSL}
+  #ifdef COVER
+    ${LANDSCAPE_GLSL}
+  #endif
 
   const float SUN_BRIGHTNESS = ${SUN_BRIGHTNESS.toFixed(1)};
-  // What the ground sends back of the light that falls on it: bare earth.
-  const vec3 GROUND_COLOR = vec3(0.16, 0.14, 0.11);
 
   // The glare around the Sun, by how far from its center, in its own radii:
   // as bright as the Sun against its edge, and falling off as the square of
@@ -111,6 +115,15 @@ const fragmentShader = /* glsl */ `
       }
     #endif
     bool inAir = skySpan(direction, start, end, ground);
+    #ifdef COVER
+      // Where this line of sight meets the ground, km east and north of the
+      // camera, and how much ground and how much of the view a pixel takes
+      // in there. Worked out for every pixel, as each is measured against
+      // the pixels next to it.
+      vec2 landAt = end * vec2(dot(direction, uLandEast), dot(direction, uLandNorth));
+      float landFootprint = max(length(dFdx(landAt)), length(dFdy(landAt)));
+      float landPixel = length(dFdx(direction));
+    #endif
     // How much of this pixel is this pass's to draw.
     float share = 1.0;
     #ifndef COVER
@@ -140,12 +153,7 @@ const fragmentShader = /* glsl */ `
       if (below <= 0.0) discard;
       vec3 surface = vec3(0.0);
       if (ground) {
-        vec3 up = normalize(uSkyEye + direction * end);
-        float sunHeight = dot(up, uSkySun);
-        float left = 1.0;
-        if (uSkyEclipse > 0.5) left -= sunHiddenByMoon(up, uSkySunPosition, uSkyMoonPosition);
-        vec3 falling = skySunlight(SKY_BOTTOM, sunHeight) * max(sunHeight, 0.0) * left / SKY_PI + uSkyAmbient;
-        surface = through * GROUND_COLOR * falling;
+        surface = through * landLight(direction, end, landAt, landFootprint, landPixel);
       }
       color = skyAdd(skyAdd(air, skyTone(surface)), glare);
       alpha = below * uSkyGround;
@@ -190,6 +198,12 @@ const ambient: Rgb = [0, 0, 0];
 const reaching: Rgb = [0, 0, 0];
 const forward = new Vector3();
 const upward = new Vector3();
+const POLE = new Vector3(0, 1, 0);
+/** Turns the world's axes to the TEME frame's: the scene's turn, undone. */
+const TEME_AXES_FROM_WORLD = new Matrix4().makeRotationX(Math.PI / 2);
+const earthFromWorld = new Matrix4();
+const fixed = new Vector3();
+const origin = { x: 0, y: 0 };
 const looking: Vec3 = { x: 0, y: 0, z: 0 };
 const moonShadow = (point: Vec3) => 1 - sunHiddenByMoon(point, sunKm, moonKm);
 
@@ -216,6 +230,7 @@ export function Atmosphere() {
   const { sky, cover, uniforms } = useMemo(() => {
     const uniforms = {
       ...atmosphereUniforms(),
+      ...landscapeUniforms(),
       uSunFromEye: { value: new Vector3(1, 0, 0) },
       uSunRadius: { value: 0.00465 },
       uSunGlare: { value: new Vector3() },
@@ -328,6 +343,28 @@ export function Atmosphere() {
     }
     uniforms.uSkyExposure.value = exposure;
     renderSkyView(gl);
+
+    // The ground, for when it is in view: which way the Earth is turned
+    // under the camera, which ways are east and north there, and where in
+    // the ground's pattern that is.
+    if (ground > 0) {
+      earthFromWorld.makeRotationZ(-gmst(simMs)).multiply(TEME_AXES_FROM_WORLD);
+      uniforms.uLandFromWorld.value.setFromMatrix4(earthFromWorld);
+      const east = uniforms.uLandEast.value.crossVectors(POLE, upward);
+      // At a pole every way is south, or north; any will do.
+      if (east.lengthSq() < 1e-12) east.set(1, 0, 0);
+      east.normalize();
+      uniforms.uLandNorth.value.crossVectors(upward, east);
+      fixed.copy(upward).applyMatrix4(earthFromWorld);
+      groundOrigin(
+        MathUtils.radToDeg(Math.asin(MathUtils.clamp(fixed.z, -1, 1))),
+        MathUtils.radToDeg(Math.atan2(fixed.y, fixed.x)),
+        origin,
+      );
+      uniforms.uLandOrigin.value.set(origin.x, origin.y);
+      // Wrapped, to keep the number small enough to stay exact.
+      uniforms.uLandTime.value = (performance.now() / 1000) % 3600;
+    }
 
     // The Sun as it looks from the camera: where, how big, and how much of
     // its light arrives past the Earth, the air and the Moon.

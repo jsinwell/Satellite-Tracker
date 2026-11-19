@@ -34,6 +34,11 @@ computed live in the browser.
 - Look up from where you are: the camera stands on the ground and shows the real sky, with
   the satellites, stars, planets, Sun and Moon where they'd be. Drag to look around, and
   scroll or pinch to widen or narrow the view.
+- The ground there is the place you're standing on. Its color comes from the Earth map, so
+  it's sand around Luxor, forest in the Amazon and ice in Greenland, with hills that catch
+  the light when the Sun is low. Water mirrors the sky and glitters under the Sun, and at
+  night towns and cities show as lamps out to the horizon. The map is only good to about
+  10 km, so the hills and the individual lamps are made up.
 - In that view satellites are drawn as small satellite shapes heading the way they're going,
   with a short trail behind, lit from the Sun's side. Sunlit ones glow against a dark sky,
   ones in the Earth's shadow go dark, and now and then one flares as a flat face catches the

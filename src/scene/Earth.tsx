@@ -6,6 +6,7 @@ import { gmst } from '../core/astro';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { SPHERE_POLES_TO_Z } from './frame';
+import { landscapeUniforms } from './landscapeGlsl';
 
 const DAY_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_day_4096.jpg`;
 const NIGHT_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_night_4096.jpg`;
@@ -104,6 +105,19 @@ export function Earth() {
     });
   }, [dayMap, nightMap]);
   useEffect(() => () => material.dispose(), [material]);
+
+  // The same maps say what the ground is like, looking up from it.
+  useEffect(() => {
+    const landscape = landscapeUniforms();
+    landscape.uLandDay.value = dayMap;
+    landscape.uLandNight.value = nightMap;
+    landscape.uLandMapped.value = 1;
+    return () => {
+      landscape.uLandMapped.value = 0;
+      landscape.uLandDay.value = null;
+      landscape.uLandNight.value = null;
+    };
+  }, [dayMap, nightMap]);
 
   useFrame(() => {
     if (spin.current) spin.current.rotation.z = gmst(currentSimTime());
