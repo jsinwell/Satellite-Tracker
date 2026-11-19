@@ -1,6 +1,6 @@
 import { geodeticToEcf } from 'satellite.js';
 import { gmst, shadowDepth, sunDirection } from './astro';
-import { faintestSeen, magnitudeFrom, standardMagnitude } from './brightness';
+import { FAINTEST, faintestSeen, magnitudeFrom, standardMagnitude } from './brightness';
 import type { SatelliteRecord } from './catalog';
 import { EARTH_RADIUS_KM, MS_PER_DAY } from './constants';
 import { extrapolatePosition, hasState, type Vec3 } from './kinematics';
@@ -194,14 +194,11 @@ export function canBeSeen(
   );
 }
 
-/** A Sun low enough that the sky costs nothing: see `twilightLoss`. */
-const FULLY_DARK_SUN_ELEVATION = -90;
-
 export interface SkyEntry {
   index: number;
   azimuth: number;
   elevation: number;
-  /** Whether it could be seen with the naked eye right now; see `canBeSeen`. */
+  /** Whether it shows right now, by eye or in binoculars as asked: see `skyNow`. */
   seeable: boolean;
 }
 
@@ -212,7 +209,7 @@ export interface SkyNow {
   /** How many of `above` can be seen. */
   seeable: number;
   /**
-   * How many of `above` are bright enough and high enough to see, sunlit or
+   * How many of `above` are bright enough to see under a dark sky, sunlit or
    * not. The difference from `seeable` is the ones that would be seen but
    * for the Earth's shadow, or the sky being too bright.
    */
@@ -227,6 +224,11 @@ const angles: LookAngles = { azimuth: 0, elevation: 0, rangeKm: 0 };
  * Everything above the observer's horizon at `timeMs`, from the simulation's
  * state buffer (see `kinematics.ts`), leaving out satellites `shown` marks 0.
  * `standardMagnitudes` has each satellite's: see `standardMagnitude`.
+ *
+ * What counts as seen is what the view from the ground draws, so that the
+ * two agree: sunlit, and bright enough for the eye, or for binoculars if
+ * that is what `seenWith` says. Not, as for a pass worth going out for, only
+ * what is well clear of the horizon: see `canBeSeen`.
  */
 export function skyNow(
   frame: ObserverFrame,
@@ -236,9 +238,11 @@ export function skyNow(
   dtSeconds: number,
   shown: Uint8Array,
   standardMagnitudes: Float32Array,
+  seenWith: keyof typeof FAINTEST = 'eye',
 ): SkyNow {
   sunDirection(timeMs, sun);
   const sunHeight = sunElevation(frame, sun);
+  const faintest = faintestSeen(seenWith, sunHeight);
   const above: SkyEntry[] = [];
   let seen = 0;
   let withinReach = 0;
@@ -253,10 +257,10 @@ export function skyNow(
       index,
       azimuth: angles.azimuth,
       elevation: angles.elevation,
-      seeable: canBeSeen(angles, lit, sunHeight, magnitude),
+      seeable: lit && magnitude <= faintest,
     };
     if (entry.seeable) seen++;
-    if (canBeSeen(angles, true, FULLY_DARK_SUN_ELEVATION, magnitude)) withinReach++;
+    if (magnitude <= FAINTEST[seenWith]) withinReach++;
     above.push(entry);
   }
   above.sort((a, b) => Number(b.seeable) - Number(a.seeable) || b.elevation - a.elevation);

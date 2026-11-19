@@ -289,7 +289,10 @@ function PlanetsUp({ observer }: { observer: Observer }) {
 }
 
 function UpNow({ world, observer }: { world: World; observer: Observer }) {
-  const sky = useSkyNow(world, observer);
+  // What is said to be seen is what the view from the ground is showing:
+  // through binoculars if that is what it is set to, and by eye otherwise.
+  const binoculars = useApp((state) => state.skyShows === 'binoculars');
+  const sky = useSkyNow(world, observer, binoculars ? 'binoculars' : 'eye');
   const colorBy = useApp((state) => state.colorBy);
   const alone = useApp((state) => soleEnabled(state.filters.constellations));
   const dark = skyState(sky.sunElevation) !== 'day';
@@ -322,15 +325,16 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
               <>
                 {' · '}
                 <span className={sky.seeable > 0 ? 'text-emerald-300' : undefined}>
-                  {sky.seeable === 0 ? 'none' : formatInteger(sky.seeable)} you could see
+                  {sky.seeable === 0 ? 'none' : formatInteger(sky.seeable)}{' '}
+                  {binoculars ? 'in binoculars' : 'you could see'}
                 </span>
               </>
             )}
           </p>
           {skyState(sky.sunElevation) === 'dark' && sky.seeable === 0 && sky.withinReach > 0 && (
             <p className="mb-1.5 text-xs text-slate-400">
-              The {formatInteger(sky.withinReach)} close enough to see are all in the Earth's shadow
-              at this hour.
+              The {formatInteger(sky.withinReach)} bright enough{' '}
+              {binoculars ? 'for binoculars' : 'to see'} are all in the Earth's shadow at this hour.
             </p>
           )}
         </div>
@@ -352,9 +356,13 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
                 {entry.seeable && (
                   <span
                     className="shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[0.65rem] text-emerald-300"
-                    title="Sunlit, well up, and in a dark sky: look for a moving star"
+                    title={
+                      binoculars
+                        ? 'Sunlit, and bright enough for binoculars'
+                        : 'Sunlit, and bright enough to see: look for a moving star'
+                    }
                   >
-                    visible
+                    {binoculars ? 'binoculars' : 'visible'}
                   </span>
                 )}
                 <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
