@@ -10,9 +10,14 @@ import {
   meterView,
   NIGHT_EXPOSURE,
   type Rgb,
+  SKY_VIEW,
   SUN_ANGULAR_RADIUS,
   skyExposure,
   skyLight,
+  skyViewAngle,
+  skyViewHorizon,
+  skyViewReach,
+  skyViewRow,
   sunlightReaching,
   transmittanceToSpace,
   transmittanceToTop,
@@ -146,6 +151,66 @@ describe('the sky from the ground', () => {
     const half = luminance(meterSky(tables, eye, sun, rgb(), () => 0.5));
     expect(half).toBeGreaterThan(0.45 * open);
     expect(half).toBeLessThan(0.55 * open);
+  });
+});
+
+describe('the map of the sky', () => {
+  const standing = ATMOSPHERE.bottomKm + 0.6;
+  const orbit = ATMOSPHERE.bottomKm + 420;
+  const far = ATMOSPHERE.bottomKm * 4;
+  const rows = SKY_VIEW.above + SKY_VIEW.below;
+
+  it('puts the horizon just below level from the ground, and well below from orbit', () => {
+    expect(skyViewHorizon(standing) / DEG).toBeGreaterThan(90.5);
+    expect(skyViewHorizon(standing) / DEG).toBeLessThan(91);
+    expect(skyViewHorizon(orbit) / DEG).toBeCloseTo(110.2, 0);
+  });
+
+  it('runs its rows from straight down, through the horizon, to straight up', () => {
+    for (const r of [standing, ATMOSPHERE.bottomKm + 30]) {
+      expect(skyViewAngle(0, r)).toBeCloseTo(Math.PI, 12);
+      expect(skyViewAngle(SKY_VIEW.below - 1, r)).toBeCloseTo(skyViewHorizon(r), 12);
+      expect(skyViewAngle(SKY_VIEW.below, r)).toBeCloseTo(skyViewHorizon(r), 12);
+      expect(skyViewAngle(rows - 1, r)).toBeCloseTo(0, 12);
+    }
+  });
+
+  it('stops at the top of the air from out in space', () => {
+    for (const r of [orbit, far]) {
+      // The last row's line of sight just touches the top of the atmosphere.
+      const nearest = r * Math.sin(skyViewAngle(rows - 1, r));
+      expect(nearest).toBeCloseTo(ATMOSPHERE.topKm, 6);
+      expect(skyViewReach(r)).toBeLessThan(0.2);
+    }
+  });
+
+  it('finds the row for an angle, and the angle for a row', () => {
+    for (const r of [standing, orbit, far]) {
+      for (let row = 0; row < rows; row++) {
+        const ground = row < SKY_VIEW.below;
+        expect(skyViewRow(skyViewAngle(row, r), ground, r)).toBeCloseTo(row, 6);
+      }
+    }
+  });
+
+  it('has its rows closest together at the horizon', () => {
+    const gap = (row: number) =>
+      Math.abs(skyViewAngle(row + 1, standing) - skyViewAngle(row, standing));
+    expect(gap(SKY_VIEW.below)).toBeLessThan(0.05 * DEG);
+    expect(gap(SKY_VIEW.below - 2)).toBeLessThan(0.05 * DEG);
+    expect(gap(rows - 2)).toBeGreaterThan(1 * DEG);
+    expect(gap(rows - 2)).toBeLessThan(3 * DEG);
+  });
+
+  it('keeps either side of the horizon to its own rows', () => {
+    const horizon = skyViewHorizon(standing);
+    // The same angle, as a line that meets the ground and as one that clears it.
+    expect(skyViewRow(horizon, true, standing)).toBe(SKY_VIEW.below - 1);
+    expect(skyViewRow(horizon, false, standing)).toBe(SKY_VIEW.below);
+    // And past either end, the last row.
+    expect(skyViewRow(horizon - 0.01, true, standing)).toBe(SKY_VIEW.below - 1);
+    expect(skyViewRow(horizon + 0.01, false, standing)).toBe(SKY_VIEW.below);
+    expect(skyViewRow(0, false, far)).toBe(rows - 1);
   });
 });
 

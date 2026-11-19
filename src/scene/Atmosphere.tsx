@@ -14,6 +14,7 @@ import {
 import { currentSimTime } from '../app/store';
 import { moonPosition, sunDirection, sunPosition } from '../core/astro';
 import {
+  ATMOSPHERE,
   atmosphereTables,
   EXPOSURE,
   luminance,
@@ -22,6 +23,8 @@ import {
   NIGHT_EXPOSURE,
   type Rgb,
   skyExposure,
+  skyViewHorizon,
+  skyViewReach,
   sunlightReaching,
 } from '../core/atmosphere';
 import { EARTH_RADIUS_KM } from '../core/constants';
@@ -29,6 +32,7 @@ import { SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { directionToWorld, OVERLAY_ORDER, TEME_FROM_WORLD } from './frame';
+import { renderSkyView } from './skyView';
 import { groundView } from './standing';
 
 /**
@@ -88,7 +92,9 @@ const fragmentShader = /* glsl */ `
     float start;
     float end;
     bool ground;
-    vec3 light = vec3(0.0);
+    // The light of the air along this line of sight, as it is shown, and how
+    // much of what is behind the air gets through.
+    vec3 air = vec3(0.0);
     vec3 through = vec3(1.0);
     // How far this line of sight is below the horizon, in pixels.
     float r = SKY_BOTTOM + uSkyEyeHeight;
@@ -119,7 +125,7 @@ const fragmentShader = /* glsl */ `
       }
     #endif
     if (inAir && share > 0.0) {
-      skyMarch(direction, start, end, light, through);
+      skyView(direction, ground, air, through);
     }
 
     float x = atan(length(cross(direction, uSunFromEye)), dot(direction, uSunFromEye)) / uSunRadius;
@@ -141,10 +147,9 @@ const fragmentShader = /* glsl */ `
         vec3 falling = skySunlight(SKY_BOTTOM, sunHeight) * max(sunHeight, 0.0) * left / SKY_PI + uSkyAmbient;
         surface = through * GROUND_COLOR * falling;
       }
-      color = skyAdd(skyTone(light + surface), glare);
+      color = skyAdd(skyAdd(air, skyTone(surface)), glare);
       alpha = below * uSkyGround;
     #else
-      vec3 air = skyTone(light);
       if (ground) {
         color = skyAdd(air * share, glare);
         alpha = share;
@@ -184,6 +189,7 @@ const toSun: Vec3 = { x: 0, y: 0, z: 0 };
 const ambient: Rgb = [0, 0, 0];
 const reaching: Rgb = [0, 0, 0];
 const forward = new Vector3();
+const upward = new Vector3();
 const looking: Vec3 = { x: 0, y: 0, z: 0 };
 const moonShadow = (point: Vec3) => 1 - sunHiddenByMoon(point, sunKm, moonKm);
 
@@ -191,6 +197,10 @@ const moonShadow = (point: Vec3) => 1 - sunHiddenByMoon(point, sunKm, moonKm);
  * The air: the sky seen from the ground, the haze and the blue rim seen from
  * space, and the Sun, whose color is the air's doing. See `core/atmosphere.ts`
  * for the model.
+ *
+ * The stepping through the air is done once a frame for a small map of the
+ * whole sky (`skyView.ts`), which everything here and the Earth and Moon read
+ * from.
  *
  * It is drawn over the whole screen, twice. The first pass goes behind the
  * satellites, planets and Moon, over the stars: it adds the light of the air
@@ -257,7 +267,7 @@ export function Atmosphere() {
     [sky, cover],
   );
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, gl }) => {
     const simMs = currentSimTime();
     const height = Math.max(camera.position.length() - 1, 1e-6);
     const ground = groundView(height);
@@ -283,6 +293,21 @@ export function Atmosphere() {
     const eclipse = together > Math.cos(ECLIPSE_SEPARATION);
     uniforms.uSkyEclipse.value = eclipse ? 1 : 0;
 
+    // The map of the sky is laid out round the camera's own up, with its
+    // compass starting toward the Sun, or anywhere if the Sun is overhead.
+    const r = ATMOSPHERE.bottomKm + height * EARTH_RADIUS_KM;
+    uniforms.uSkyViewHorizon.value = skyViewHorizon(r);
+    uniforms.uSkyViewReach.value = skyViewReach(r);
+    upward.copy(camera.position).normalize();
+    const ahead = uniforms.uSkyViewAhead.value;
+    ahead.copy(uniforms.uSkySun.value).addScaledVector(upward, -upward.dot(uniforms.uSkySun.value));
+    if (ahead.lengthSq() < 1e-8) {
+      ahead.set(Math.abs(upward.x) < 0.9 ? 1 : 0, 0, Math.abs(upward.x) < 0.9 ? 0 : 1);
+      ahead.addScaledVector(upward, -upward.dot(ahead));
+    }
+    ahead.normalize();
+    uniforms.uSkyViewSide.value.crossVectors(upward, ahead);
+
     // Out in space the exposure is fixed. On the ground it follows the sky,
     // and the part of the sky the camera faces.
     let exposure: number = EXPOSURE.space;
@@ -302,6 +327,7 @@ export function Atmosphere() {
       uniforms.uStarKeep.value = (skyExposure(sky) / NIGHT_EXPOSURE) ** 0.4;
     }
     uniforms.uSkyExposure.value = exposure;
+    renderSkyView(gl);
 
     // The Sun as it looks from the camera: where, how big, and how much of
     // its light arrives past the Earth, the air and the Moon.

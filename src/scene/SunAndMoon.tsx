@@ -160,10 +160,10 @@ const moonFragmentShader = /* glsl */ `
     float end;
     bool ground;
     if (skySpan(direction, start, end, ground)) {
-      vec3 light;
+      vec3 air;
       vec3 through;
-      skyMarch(direction, start, end, light, through);
-      color = skyAdd(skyTone(light), color * through);
+      skyView(direction, ground, air, through);
+      color = skyAdd(air, color * through);
     }
 
     gl_FragColor = vec4(color, 1.0);

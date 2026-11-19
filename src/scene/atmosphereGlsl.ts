@@ -4,8 +4,12 @@ import {
   DataUtils,
   HalfFloatType,
   LinearFilter,
+  NoColorSpace,
+  RepeatWrapping,
   RGBAFormat,
+  UnsignedByteType,
   Vector3,
+  WebGLRenderTarget,
 } from 'three';
 import {
   ATMOSPHERE,
@@ -15,6 +19,7 @@ import {
   MULTISCATTER_SIZE,
   SKY_STEP_OFFSET,
   SKY_STEPS,
+  SKY_VIEW,
   SUN_ANGULAR_RADIUS,
   TRANSMITTANCE_SIZE,
 } from '../core/atmosphere';
@@ -42,9 +47,49 @@ function tableTexture(
   return texture;
 }
 
+/**
+ * The map of the sky the screen is drawn from: see `SKY_VIEW` for its layout
+ * and `skyView.ts` for the drawing of it. Twice as many rows as the layout
+ * has: the light of the air along each line of sight, then how much of what
+ * is behind the air gets through it.
+ *
+ * Eight bits a channel is enough, as what is kept is close to what goes on
+ * the screen, and every graphics card can draw to that. `skyView.ts` asks for
+ * more where there is more to be had.
+ */
+function createSkyView(): WebGLRenderTarget {
+  const target = new WebGLRenderTarget(SKY_VIEW.width, 2 * (SKY_VIEW.above + SKY_VIEW.below), {
+    type: UnsignedByteType,
+    format: RGBAFormat,
+    colorSpace: NoColorSpace,
+    depthBuffer: false,
+    generateMipmaps: false,
+    minFilter: LinearFilter,
+    magFilter: LinearFilter,
+    // Round the compass and back to the start.
+    wrapS: RepeatWrapping,
+    wrapT: ClampToEdgeWrapping,
+  });
+  return target;
+}
+
+let skyView: WebGLRenderTarget | undefined;
+
+export function skyViewTarget(): WebGLRenderTarget {
+  skyView ??= createSkyView();
+  return skyView;
+}
+
 function createUniforms() {
   const tables = atmosphereTables();
   return {
+    uSkyView: { value: skyViewTarget().texture },
+    /** Two level directions square to each other, which the map's compass is measured from. */
+    uSkyViewAhead: { value: new Vector3(1, 0, 0) },
+    uSkyViewSide: { value: new Vector3(0, 0, 1) },
+    /** `skyViewHorizon` and `skyViewReach` for where the camera is. */
+    uSkyViewHorizon: { value: Math.PI / 2 },
+    uSkyViewReach: { value: Math.PI / 2 },
     uSkyTransmittance: {
       value: tableTexture(tables.transmittance, TRANSMITTANCE_SIZE, 1),
     },
@@ -88,12 +133,11 @@ const float = (value: number) => value.toExponential(8);
 const vec3 = (value: readonly number[]) => `vec3(${value.map(float).join(', ')})`;
 
 /**
- * GLSL for light in the atmosphere, along lines of sight from the camera.
- * Mirrors `core/atmosphere.ts`, where the model is explained and tested; the
- * two must be kept in step. Distances are in km from the Earth's center, along
- * the world's axes. Includes `ECLIPSE_GLSL`.
+ * What both of the pieces below are built on. Mirrors `core/atmosphere.ts`,
+ * where the model is explained and tested; the two must be kept in step.
+ * Distances are in km from the Earth's center, along the world's axes.
  */
-export const ATMOSPHERE_GLSL = /* glsl */ `
+const SHARED_GLSL = /* glsl */ `
   uniform sampler2D uSkyTransmittance;
   uniform sampler2D uSkyMultiscatter;
   uniform vec3 uSkyEye;
@@ -104,6 +148,10 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
   uniform float uSkyEclipse;
   uniform float uSkyExposure;
   uniform float uSkyGround;
+  uniform vec3 uSkyViewAhead;
+  uniform vec3 uSkyViewSide;
+  uniform float uSkyViewHorizon;
+  uniform float uSkyViewReach;
 
   ${ECLIPSE_GLSL}
 
@@ -127,6 +175,9 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
   const float SKY_ECLIPSE_SKYLIGHT = ${float(ECLIPSE_SKYLIGHT)};
   const int SKY_STEPS = ${SKY_STEPS};
   const float SKY_STEP_OFFSET = ${float(SKY_STEP_OFFSET)};
+  const float SKY_VIEW_WIDTH = ${float(SKY_VIEW.width)};
+  const float SKY_VIEW_ABOVE = ${float(SKY_VIEW.above)};
+  const float SKY_VIEW_BELOW = ${float(SKY_VIEW.below)};
   const float SKY_PI = 3.14159265;
 
   float skyLuminance(vec3 color) {
@@ -184,6 +235,30 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
     return true;
   }
 
+  // Light as it is shown: exposed, then eased toward white as film is,
+  // rather than cut off at it.
+  vec3 skyTone(vec3 light) {
+    return 1.0 - exp(-light * uSkyExposure);
+  }
+`;
+
+/**
+ * GLSL for stepping along a line of sight through the atmosphere. Too slow to
+ * do for every pixel: only the map of the sky is made this way.
+ */
+export const ATMOSPHERE_MARCH_GLSL = /* glsl */ `
+  ${SHARED_GLSL}
+
+  // Mirrors skyViewAngle.
+  float skyViewAngle(float row) {
+    if (row < SKY_VIEW_BELOW) {
+      float past = 1.0 - row / (SKY_VIEW_BELOW - 1.0);
+      return uSkyViewHorizon + past * past * (SKY_PI - uSkyViewHorizon);
+    }
+    float clear = (row - SKY_VIEW_BELOW) / (SKY_VIEW_ABOVE - 1.0);
+    return uSkyViewHorizon - clear * clear * uSkyViewReach;
+  }
+
   // Mirrors march: the light scattered toward the camera from the air between
   // "start" and "end" along a line of sight, and how much of what lies beyond
   // gets through.
@@ -236,11 +311,45 @@ export const ATMOSPHERE_GLSL = /* glsl */ `
       through *= kept;
     }
   }
+`;
 
-  // Light as it is shown: exposed, then eased toward white as film is,
-  // rather than cut off at it.
-  vec3 skyTone(vec3 light) {
-    return 1.0 - exp(-light * uSkyExposure);
+/**
+ * GLSL for anything seen through the atmosphere: what the air adds along a
+ * line of sight from the camera and what it lets through, read from the map
+ * of the sky. Includes `ECLIPSE_GLSL`.
+ */
+export const ATMOSPHERE_GLSL = /* glsl */ `
+  ${SHARED_GLSL}
+
+  uniform sampler2D uSkyView;
+
+  // Mirrors skyViewRow.
+  float skyViewRow(float angle, bool ground) {
+    if (ground) {
+      float past = clamp((angle - uSkyViewHorizon) / (SKY_PI - uSkyViewHorizon), 0.0, 1.0);
+      return (SKY_VIEW_BELOW - 1.0) * (1.0 - sqrt(past));
+    }
+    float clear = clamp((uSkyViewHorizon - angle) / uSkyViewReach, 0.0, 1.0);
+    return SKY_VIEW_BELOW + (SKY_VIEW_ABOVE - 1.0) * sqrt(clear);
+  }
+
+  // The air along a line of sight from the camera, which ends on the ground
+  // or does not: its light, already as skyTone would give it, and how much of
+  // what is behind it gets through.
+  void skyView(vec3 direction, bool ground, out vec3 air, out vec3 through) {
+    float r = SKY_BOTTOM + uSkyEyeHeight;
+    float angle = acos(clamp(dot(uSkyEye, direction) / r, -1.0, 1.0));
+    float ahead = dot(direction, uSkyViewAhead);
+    float side = dot(direction, uSkyViewSide);
+    // Straight up and straight down have no compass bearing, and need none.
+    float turn = abs(ahead) + abs(side) > 1e-7 ? atan(side, ahead) / (2.0 * SKY_PI) : 0.0;
+    float rows = SKY_VIEW_ABOVE + SKY_VIEW_BELOW;
+    vec2 place = vec2(turn + 0.5, (skyViewRow(angle, ground) + 0.5) / (2.0 * rows));
+    // Kept as square roots: see skyView.ts.
+    vec3 a = texture2D(uSkyView, place).rgb;
+    vec3 b = texture2D(uSkyView, place + vec2(0.0, 0.5)).rgb;
+    air = a * a;
+    through = b * b;
   }
 
   // Two lights on one spot of the screen, without going past white.

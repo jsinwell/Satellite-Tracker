@@ -102,14 +102,16 @@ Positions stay in the inertial frame that SGP4 produces and the Earth rotates un
 them, lit from the sun's real position. React only draws the panels and never re-renders per
 frame.
 
-The sky isn't a painted gradient. A fragment shader steps along each line of sight through
-the atmosphere and adds up the sunlight scattered toward the camera: Rayleigh scattering off
-air molecules, Mie scattering off haze, absorption by ozone, and light that has bounced more
-than once. The slow parts are worked out once at startup into two small lookup tables, along
-the lines of Sébastien Hillaire's 2020 paper _A Scalable and Production Ready Sky and
-Atmosphere Rendering Technique_ and Eric Bruneton's earlier work. The same model is written
-in plain TypeScript so it can be tested, and so the exposure can follow the brightness of the
-sky the way your eyes would.
+The sky isn't a painted gradient. A shader steps along lines of sight through the
+atmosphere and adds up the sunlight scattered toward the camera: Rayleigh scattering off air
+molecules, Mie scattering off haze, absorption by ozone, and light that has bounced more than
+once. Doing that for every pixel is too slow for integrated graphics, so each frame it's done
+for a small map of the whole sky around the camera (256 by 160 directions, packed closest at
+the horizon) and the screen reads from the map. The parts that never change are worked out
+once at startup into two lookup tables. This follows Sébastien Hillaire's 2020 paper _A
+Scalable and Production Ready Sky and Atmosphere Rendering Technique_ and Eric Bruneton's
+earlier work. The same model is written in plain TypeScript so it can be tested, and so the
+exposure can follow the brightness of the sky the way your eyes would.
 
 The math is kept separate from the UI:
 

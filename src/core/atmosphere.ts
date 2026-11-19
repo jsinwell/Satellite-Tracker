@@ -81,6 +81,58 @@ export const SKY_STEPS = 24;
 export const SKY_STEP_OFFSET = 0.3;
 /** The Sun's radius in the sky, radians: it sets over this far either side of the horizon. */
 export const SUN_ANGULAR_RADIUS = 0.00465;
+
+/**
+ * Stepping along every line of sight on the screen is too much work for a
+ * modest graphics card. The sky is smooth, so it is worked out along far
+ * fewer lines, as a map of every direction from the camera, and the screen is
+ * drawn from the map: `width` directions round the compass, by `below` rows
+ * from straight down up to the horizon and `above` rows on from it.
+ *
+ * The rows are closest together at the horizon, where the sky changes
+ * fastest, and none straddles it: a line that just clears the ground and one
+ * that just meets it see quite different amounts of air. From out in space the
+ * rows above the horizon stop where the air does, so that all of them fall
+ * across the thin blue rim.
+ */
+export const SKY_VIEW = { width: 256, above: 96, below: 64 } as const;
+
+/** The angle from straight up at which the ground's horizon is seen, `r` km from the center. */
+export function skyViewHorizon(r: number): number {
+  return Math.PI - Math.asin(Math.min(1, ATMOSPHERE.bottomKm / r));
+}
+
+/** How far above that horizon there is any air to look through, radians. */
+export function skyViewReach(r: number): number {
+  if (r < ATMOSPHERE.topKm) return skyViewHorizon(r);
+  return Math.asin(ATMOSPHERE.topKm / r) - Math.asin(ATMOSPHERE.bottomKm / r);
+}
+
+/**
+ * The row of the map for a line of sight `angle` radians from straight up,
+ * which meets the ground or does not. Whole numbers are the rows themselves;
+ * between them, the two either side are blended.
+ */
+export function skyViewRow(angle: number, ground: boolean, r: number): number {
+  const horizon = skyViewHorizon(r);
+  if (ground) {
+    const past = clamp01((angle - horizon) / (Math.PI - horizon));
+    return (SKY_VIEW.below - 1) * (1 - Math.sqrt(past));
+  }
+  const clear = clamp01((horizon - angle) / skyViewReach(r));
+  return SKY_VIEW.below + (SKY_VIEW.above - 1) * Math.sqrt(clear);
+}
+
+/** The angle from straight up that a row of the map is for: `skyViewRow` backward. */
+export function skyViewAngle(row: number, r: number): number {
+  const horizon = skyViewHorizon(r);
+  if (row < SKY_VIEW.below) {
+    const past = 1 - row / (SKY_VIEW.below - 1);
+    return horizon + past * past * (Math.PI - horizon);
+  }
+  const clear = (row - SKY_VIEW.below) / (SKY_VIEW.above - 1);
+  return horizon - clear * clear * skyViewReach(r);
+}
 /**
  * In the Moon's shadow, light scattered more than once still arrives from the
  * sunlit air around it. This much of it, where the Sun is wholly hidden.
