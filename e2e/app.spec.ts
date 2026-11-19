@@ -6,12 +6,22 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
  * the fixture years past its epochs would eventually lose satellites to decay.
  */
 const FIXTURE = 'e2e/fixtures/catalog.json';
+const CLOUDS_FIXTURE = 'e2e/fixtures/clouds.jpg';
 const FIXTURE_TIME = '2026-11-16T06:30:00Z';
 const FIXTURE_SIZE = 251;
 
 async function serveFixture(page: Page): Promise<void> {
   await page.route('**/data/catalog.json', (route) =>
     route.fulfill({ path: FIXTURE, contentType: 'application/json' }),
+  );
+  // And a picture of the clouds, which a build may or may not have fetched.
+  await page.route('**/data/clouds.json', (route) =>
+    route.fulfill({
+      json: { schemaVersion: 1, fetchedAt: '2026-11-16T04:00:00Z', source: 'fixture' },
+    }),
+  );
+  await page.route('**/data/clouds-*.jpg', (route) =>
+    route.fulfill({ path: CLOUDS_FIXTURE, contentType: 'image/jpeg' }),
   );
 }
 
@@ -627,6 +637,24 @@ test.describe('with a catalog', () => {
     await picker.getByRole('button', { name: 'Go' }).click();
     await expect(picker).toBeHidden();
     await expect(timeBar.locator('time')).toContainText('Aug 02, 2027, 10:07');
+  });
+
+  test('shows the clouds, says where they are from, and can put them away', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const clouds = page.getByRole('button', { name: 'Clouds' });
+    await expect(clouds).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('contains modified EUMETSAT data')).toBeVisible();
+
+    await clouds.click();
+    await expect(clouds).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByText('contains modified EUMETSAT data')).toBeHidden();
+
+    // And they stay away on the next visit.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Clouds' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   test('controls simulated time', async ({ page }) => {

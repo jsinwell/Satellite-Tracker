@@ -89,6 +89,21 @@ function SkyIcon() {
   );
 }
 
+/** A cloud. */
+function CloudIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path
+        d="M6 15.5a3.5 3.5 0 0 1-.6-6.95 4.75 4.75 0 0 1 9.15 1.2A3 3 0 0 1 14 15.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const BOTTOM_ROW = [
   'absolute inset-x-3 bottom-3 grid items-end gap-x-3 gap-y-2',
   "grid-cols-[auto_1fr] [grid-template-areas:'filters_filters'_'toggle_status'_'time_time']",
@@ -101,6 +116,8 @@ export function App() {
   const world = useApp((state) => state.world);
   const selected = useApp((state) => state.selected);
   const watching = useApp((state) => state.watching);
+  const haveClouds = useApp((state) => state.cloudsAtMs !== null);
+  const showClouds = useApp((state) => state.showClouds);
   // Both only matter on narrow screens, where the filters are tucked behind a
   // button and the selected satellite shows a summary until asked for the rest.
   // Opening one closes the other: there is not room for both and the globe.
@@ -163,6 +180,18 @@ export function App() {
               >
                 <SkyIcon />
               </button>
+              {haveClouds && (
+                <button
+                  type="button"
+                  onClick={() => useApp.getState().setShowClouds(!showClouds)}
+                  aria-pressed={showClouds}
+                  aria-label="Clouds"
+                  title={showClouds ? 'Hide the clouds' : 'Show the clouds'}
+                  className="pointer-events-auto flex shrink-0 items-center rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-400 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white aria-pressed:text-slate-100"
+                >
+                  <CloudIcon />
+                </button>
+              )}
             </div>
             {skyOpen && (
               // On a phone the selected satellite takes this spot, and the

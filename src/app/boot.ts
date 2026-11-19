@@ -1,5 +1,6 @@
 import { CatalogError, parseCatalog } from '../core/catalog';
 import { realTimeClock, wallNow, withSimTime } from '../core/clock';
+import { CLOUDS_INFO_FILE, parseCloudsInfo } from '../core/clouds';
 import { useApp } from './store';
 import { createWorld, type World } from './world';
 
@@ -19,6 +20,23 @@ async function fetchCatalog(): Promise<unknown> {
     throw new CatalogError(`The satellite catalog could not be loaded (HTTP ${response.status}).`);
   }
   return response.json();
+}
+
+/**
+ * Finds out whether this build has a picture of the Earth's clouds, and when
+ * it is from. It may well not: the picture is fetched when the site is built,
+ * and a build goes on without one. Then there are simply no clouds.
+ */
+async function findClouds(): Promise<void> {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}data/${CLOUDS_INFO_FILE}`);
+    // A dev server answers a missing file with the app's HTML.
+    if (!response.ok || !response.headers.get('content-type')?.includes('json')) return;
+    const info = parseCloudsInfo(await response.json());
+    if (info) useApp.getState().setCloudsAt(Date.parse(info.fetchedAt));
+  } catch {
+    // No clouds, then.
+  }
 }
 
 /**
@@ -68,6 +86,8 @@ export async function boot(): Promise<void> {
     applyStartTimeFromUrl();
     ready(world);
     syncSelectionWithUrl(world);
+    // Not waited for: the app is ready without them.
+    void findClouds();
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
   }

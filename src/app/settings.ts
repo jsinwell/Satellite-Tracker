@@ -24,12 +24,15 @@ export interface Settings {
   colorBy: ColorBy;
   filters: Filters;
   overlays: Readonly<Record<Overlay, boolean>>;
+  /** Whether the Earth is drawn with its clouds. */
+  clouds: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   colorBy: 'type',
   filters: SHOW_EVERYTHING,
   overlays: allEnabled(OVERLAYS),
+  clouds: true,
 };
 
 const SETTINGS_KEY = 'satellite-tracker.settings';
@@ -93,6 +96,7 @@ export function parseSettings(raw: unknown): Settings {
       launchedBy: launchedBy(filters.launchedBy),
     },
     overlays: flags(OVERLAYS, saved.overlays, DEFAULT_SETTINGS.overlays),
+    clouds: typeof saved.clouds === 'boolean' ? saved.clouds : DEFAULT_SETTINGS.clouds,
   };
 }
 

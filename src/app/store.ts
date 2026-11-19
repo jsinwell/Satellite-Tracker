@@ -58,6 +58,10 @@ interface AppState {
   observerFocusRequests: number;
   /** Whether the camera is standing at `observer`, looking at the sky. */
   lookingUp: boolean;
+  /** When the picture of the Earth's clouds is from, ms; null if this build has none. */
+  cloudsAtMs: number | null;
+  /** Whether the clouds are drawn. Kept from one visit to the next. */
+  showClouds: boolean;
   /**
    * The Moon or planet the view is held on and zoomed in to, as through a
    * telescope, while looking up. Instead of a selected satellite, not as well.
@@ -98,6 +102,9 @@ interface AppActions {
   setPickingObserver(picking: boolean): void;
   /** Stands at the observer to look at the sky, or comes back to the globe. Ends a ride. */
   setLookingUp(lookingUp: boolean): void;
+  /** Records that there is a picture of the clouds, and when it is from. */
+  setCloudsAt(timeMs: number): void;
+  setShowClouds(show: boolean): void;
   /**
    * Turns the view to the Moon or a planet and closes in on it, standing at
    * the observer to do it if not there already; null lets go of it. Does
@@ -166,6 +173,8 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
     pickingObserver: false,
     observerFocusRequests: 0,
     lookingUp: false,
+    cloudsAtMs: null,
+    showClouds: saved.clouds,
     watching: null,
     colorBy: saved.colorBy,
     ...applyFilters(null, saved.filters),
@@ -203,6 +212,8 @@ export const useApp = create<AppState & AppActions>()((set, get) => {
       if (!lookingUp) set({ lookingUp, watching: null });
       else if (get().observer !== null) set({ lookingUp, riding: false });
     },
+    setCloudsAt: (cloudsAtMs) => set({ cloudsAtMs }),
+    setShowClouds: (showClouds) => set({ showClouds }),
     watch: (body) => {
       if (body === null) set({ watching: null });
       else if (get().observer !== null) {
@@ -255,9 +266,15 @@ useApp.subscribe((state, previous) => {
   if (
     state.colorBy !== previous.colorBy ||
     state.filters !== previous.filters ||
-    state.overlays !== previous.overlays
+    state.overlays !== previous.overlays ||
+    state.showClouds !== previous.showClouds
   ) {
-    saveSettings({ colorBy: state.colorBy, filters: state.filters, overlays: state.overlays });
+    saveSettings({
+      colorBy: state.colorBy,
+      filters: state.filters,
+      overlays: state.overlays,
+      clouds: state.showClouds,
+    });
   }
 });
 

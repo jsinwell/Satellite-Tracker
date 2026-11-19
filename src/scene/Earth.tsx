@@ -1,8 +1,16 @@
 import { useFrame, useLoader } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
-import { type Group, ShaderMaterial, SRGBColorSpace, TextureLoader } from 'three';
-import { currentSimTime } from '../app/store';
+import {
+  type Group,
+  NoColorSpace,
+  ShaderMaterial,
+  SRGBColorSpace,
+  type Texture,
+  TextureLoader,
+} from 'three';
+import { currentSimTime, useApp } from '../app/store';
 import { gmst } from '../core/astro';
+import { CLOUD_COVER, CLOUD_LATITUDES, CLOUD_MAPS } from '../core/clouds';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { SPHERE_POLES_TO_Z } from './frame';
@@ -10,6 +18,9 @@ import { landscapeUniforms } from './landscapeGlsl';
 
 const DAY_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_day_4096.jpg`;
 const NIGHT_MAP_URL = `${import.meta.env.BASE_URL}textures/earth_night_4096.jpg`;
+const CLOUD_MAP_URL = (file: string) => `${import.meta.env.BASE_URL}data/${file}`;
+/** How fast the clouds come and go when they are switched on or off, per second. */
+const CLOUDS_FADE_RATE = 3;
 
 const surfaceVertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -28,6 +39,10 @@ const surfaceVertexShader = /* glsl */ `
 const surfaceFragmentShader = /* glsl */ `
   uniform sampler2D uDayMap;
   uniform sampler2D uNightMap;
+  // The clouds, white on black, and how much they are shown: none of them
+  // until the picture has loaded, or with them switched off.
+  uniform sampler2D uCloudMap;
+  uniform float uClouds;
 
   ${ATMOSPHERE_GLSL}
 
@@ -44,6 +59,10 @@ const surfaceFragmentShader = /* glsl */ `
 
     vec3 day = texture2D(uDayMap, vUv).rgb;
     vec3 night = texture2D(uNightMap, vUv).rgb;
+    // Mirrors cloudCover and cloudsDrawnAt.
+    float cloud = uClouds
+      * (1.0 - smoothstep(${(CLOUD_LATITUDES.full / 90).toFixed(4)}, ${(CLOUD_LATITUDES.none / 90).toFixed(4)}, abs(2.0 * vUv.y - 1.0)))
+      * smoothstep(${CLOUD_COVER.from.toFixed(2)}, ${CLOUD_COVER.to.toFixed(2)}, texture2D(uCloudMap, vUv).r);
 
     // Sunlight as it reaches the ground: through more air the lower the Sun,
     // so warmer toward the edge of night. Not as red as the Sun itself gets,
@@ -54,10 +73,15 @@ const surfaceFragmentShader = /* glsl */ `
     vec3 overhead = skyTransmittanceToTop(SKY_BOTTOM, 1.0);
     vec3 direct = (skySunlight(SKY_BOTTOM, sun) + smoothstep(-0.02, 0.05, sun)) / (overhead + 1.0);
     vec3 skylight = skyMultiscatter(SKY_BOTTOM, sun) / skyMultiscatter(SKY_BOTTOM, 1.0);
-    vec3 lit = day * (0.8 * direct * max(sun, 0.0) + 0.3 * skylight) * left;
+    vec3 falling = (0.8 * direct * max(sun, 0.0) + 0.3 * skylight) * left;
+    // Under cloud the ground is in its shade, and its lights are hidden.
+    vec3 lit = day * falling * (1.0 - 0.5 * cloud);
     // Keep a trace of the surface at night so satellites there have context.
-    vec3 unlit = day * 0.04 + night * 0.9;
+    vec3 unlit = (day * 0.04 + night * 0.9) * (1.0 - 0.8 * cloud);
     vec3 color = lit + unlit * (1.0 - smoothstep(-0.1, 0.15, sun) * left);
+    // The clouds themselves: white, lit as the ground is, so they redden
+    // toward the edge of night, and by night all but dark.
+    color = mix(color, vec3(0.98) * falling + vec3(0.005, 0.007, 0.011), 0.92 * cloud);
 
     // The air between here and the camera: it dims what is behind it and
     // adds its own light, the blue haze over the day side.
@@ -99,6 +123,8 @@ export function Earth() {
         ...atmosphereUniforms(),
         uDayMap: { value: dayMap },
         uNightMap: { value: nightMap },
+        uCloudMap: { value: null as Texture | null },
+        uClouds: { value: 0 },
       },
       vertexShader: surfaceVertexShader,
       fragmentShader: surfaceFragmentShader,
@@ -117,8 +143,47 @@ export function Earth() {
     };
   }, [dayMap]);
 
-  useFrame(() => {
+  // The clouds are a picture fetched when the site was built, which a build
+  // may be without, and are not worth holding the Earth up for: they are
+  // loaded once it is known there are any, and drawn when they arrive.
+  const haveClouds = useApp((state) => state.cloudsAtMs !== null);
+  const cloudMap = useRef<Texture | null>(null);
+  useEffect(() => {
+    if (!haveClouds) return;
+    // Phones get the smaller picture, as they do of the stars: see `Sky`.
+    const small = window.matchMedia('(pointer: coarse)').matches;
+    let stale = false;
+    new TextureLoader().load(
+      CLOUD_MAP_URL(small ? CLOUD_MAPS.small : CLOUD_MAPS.large),
+      (map) => {
+        if (stale) {
+          map.dispose();
+          return;
+        }
+        map.colorSpace = NoColorSpace;
+        map.anisotropy = 8;
+        cloudMap.current = map;
+        material.uniforms.uCloudMap.value = map;
+      },
+      undefined,
+      // No clouds, then.
+      () => {},
+    );
+    return () => {
+      stale = true;
+      material.uniforms.uCloudMap.value = null;
+      material.uniforms.uClouds.value = 0;
+      cloudMap.current?.dispose();
+      cloudMap.current = null;
+    };
+  }, [haveClouds, material]);
+
+  useFrame((_, deltaSeconds) => {
     if (spin.current) spin.current.rotation.z = gmst(currentSimTime());
+    const wanted = cloudMap.current && useApp.getState().showClouds ? 1 : 0;
+    const clouds = material.uniforms.uClouds;
+    const step = CLOUDS_FADE_RATE * deltaSeconds;
+    clouds.value = Math.min(1, Math.max(0, clouds.value + (wanted > clouds.value ? step : -step)));
   });
 
   return (

@@ -108,6 +108,8 @@
   their real positions, and the Moon shows the right phase.
 - Day and night on the globe match the real Sun, and satellites dim when they pass into the
   Earth's shadow.
+- The clouds on the globe are the real ones, from weather satellite data that's a few hours
+  old at most. The cloud button next to the search box turns them off.
 - Eclipses show up when they really happen. In a solar eclipse you can watch the Moon's
   shadow cross the globe, or stand under it and see the corona. In a lunar eclipse the Moon
   goes dim and red. A good one to try is August 2, 2027 at 10:06 UTC from Luxor
@@ -197,6 +199,10 @@ CelesTrak blocks IPs that download more often than its data changes, so only the
 build fetches from it. Preview builds and `npm run data` copy the catalog from the live site
 instead. You can force a real download with `npm run data -- --fresh`, but don't do it often.
 
+The cloud map works the same way. The production build downloads it at most every three
+hours, which is how often it changes, and everything else copies it from the live site. If it
+can't be downloaded the build carries on and the globe just has no clouds.
+
 ## Credits
 
 Orbital data from [CelesTrak](https://celestrak.org), propagation by
@@ -204,4 +210,6 @@ Orbital data from [CelesTrak](https://celestrak.org), propagation by
 [Astronomy Engine](https://github.com/cosinekitty/astronomy), Earth and Moon textures from the
 [three.js](https://github.com/mrdoob/three.js) examples, planet maps from
 [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), star map from
-[NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851).
+[NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851), clouds from Matt
+Eason's [live cloud maps](https://github.com/matteason/live-cloud-maps) (contains modified
+EUMETSAT data).
