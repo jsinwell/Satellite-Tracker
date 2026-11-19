@@ -69,6 +69,9 @@
 
 ### Satellites
 
+- From space each satellite is a small light with a short tail pointing back the way it came.
+  Where they're packed together, like the Starlink shells around the edge of the globe, the
+  lights merge into a glow.
 - Search by name or NORAD ID, or just click one. You get its position, speed and orbit, and
   whether it's in sunlight.
 - Selecting a satellite draws its orbit, its ground track for the next lap with times along
@@ -130,7 +133,7 @@
 ### Time and controls
 
 - Pause, or run time at up to 1000x. Click the date to jump to any moment from 1957 to 2100.
-  Above 10x the satellites leave short trails so you can see which way they're going.
+  The satellites' tails get longer as time runs faster.
 - WASD or the arrow keys move the camera, and Q and E zoom.
 - Works on a phone.
 - Your filters, colors and location are saved between visits.
