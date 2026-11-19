@@ -61,11 +61,19 @@ const GLYPH_SIZE = { min: 6, outline: 10.5, max: 16 } as const;
 const GLOW_SPREAD = 2.4;
 /**
  * How much of what is behind a light it hides, for all of its own that it
- * adds: little, so that lights on top of each other add up, but some, or
- * over the white of the clouds, where there is nothing left to add, they
- * would not show at all.
+ * adds. Less than all, so that lights on top of each other add up. From
+ * space it is nearly all, though: half the Earth is white with cloud, where
+ * there is nothing left to add, and a light that hid little of it would be
+ * lost there.
  */
-const LIGHT_COVER = { space: 0.45, sky: 0.3, trail: 0.3 } as const;
+const LIGHT_COVER = { space: 0.95, sky: 0.3, trail: 0.6 } as const;
+/**
+ * From space a trail is its full length from this far off, in Earth radii,
+ * and shorter in proportion from nearer, down to a tenth: riding along with
+ * a satellite, the ones close by would otherwise trail lines right across
+ * the view.
+ */
+const FULL_TRAIL_FROM = 1.5;
 /**
  * From space every satellite trails where it was this many simulated seconds
  * ago, at any speed: about 150 km in low orbit, a tail a few pixels long,
@@ -94,6 +102,13 @@ const GROUND_TRAIL_SECONDS = 3;
 const LIGHT_SIZE = { min: 2.4, perMagnitude: 0.65, max: 9 } as const;
 /** The point drawn is this many times wider than that, for its glow. */
 const LIGHT_SPREAD = 2.6;
+/**
+ * With every satellite overhead shown, the ones that could not be seen are
+ * lights too, but faint ones, in the color the legend gives them: this much
+ * of a light, in the Earth's shadow this much of that, and this wide, CSS
+ * px, which is wide enough to find and to tell one color from another.
+ */
+const UNSEEN_LIGHT = { shown: 0.85, inShadow: 0.6, width: 3.4 } as const;
 /** A solar panel catching the Sun makes a satellite this many magnitudes brighter, at most. */
 const GLINT_MAGNITUDES = 5;
 
@@ -112,8 +127,9 @@ const SHARED_GLSL = /* glsl */ `
   /** Where the camera is, km, in the same frame as the satellites. */
   uniform vec3 uEye;
   /**
-   * 1 where the satellites are drawn as the lights they are, and only the
-   * ones bright enough to see: looking up, unless everything is asked for.
+   * Looking up, 1 where only the satellites bright enough to see are drawn,
+   * and 0 where all of them are: the rest then as faint lights in their own
+   * colors.
    */
   uniform float uLight;
   /** The faintest magnitude that shows then. */
@@ -229,7 +245,7 @@ const pointVertexShader = /* glsl */ `
       vSize = width * ${GLOW_SPREAD.toFixed(1)} * uPixelRatio;
       gl_PointSize = vSize;
       vColor = aColor * sunlight(p, uSunDirection, uShadowBrightness);
-      vShown = mix(0.6, 1.0, smoothstep(2.0, 4.5, width));
+      vShown = mix(0.8, 1.0, smoothstep(2.0, 4.5, width));
       return;
     }
 
@@ -265,29 +281,42 @@ const pointVertexShader = /* glsl */ `
       vGlint *= vLit;
     }
 
-    if (uLight > 0.5 && !isChosen()) {
-      // As the light it is, and only if it is bright enough to see: a point
-      // the size of its brightness, like a star or a planet. A glint can
-      // bring one into sight for the few seconds it lasts.
+    if (!isChosen()) {
+      // As the light it is: a point the size of its brightness, like a star
+      // or a planet. A glint can bring one into sight for the few seconds
+      // it lasts.
       float over = uFaintest - (magnitudeAt(p) - ${GLINT_MAGNITUDES.toFixed(1)} * vGlint);
-      vShown = lightShown(over) * vLit;
+      float seen = lightShown(over) * vLit;
+      vShown = seen;
+      vColor = lightColor(vLit);
+      float least = ${LIGHT_SIZE.min.toFixed(1)};
+      if (uLight < 0.5) {
+        // With all of them asked for, the ones that cannot be seen are
+        // there too: small and faint, fainter still in the Earth's shadow,
+        // and in the legend's colors, which is how they are told apart.
+        // The ones that can be seen stand out from them as they would
+        // alone, with their color left around the edge.
+        float unseen = ${UNSEEN_LIGHT.shown.toFixed(2)} * mix(${UNSEEN_LIGHT.inShadow.toFixed(2)}, 1.0, vLit);
+        vShown = max(seen, unseen);
+        vColor = mix(aColor, vColor, 0.65 * seen);
+        least = mix(${UNSEEN_LIGHT.width.toFixed(1)} * aSize, least, seen);
+      }
       if (vShown <= 0.0) {
         gl_Position = OUTSIDE_CLIP_VOLUME;
         gl_PointSize = 0.0;
         return;
       }
       float width = clamp(
-        ${LIGHT_SIZE.min.toFixed(1)} + ${LIGHT_SIZE.perMagnitude.toFixed(2)} * over,
-        ${LIGHT_SIZE.min.toFixed(1)},
+        least + ${LIGHT_SIZE.perMagnitude.toFixed(2)} * max(over, 0.0) * vLit,
+        least,
         ${LIGHT_SIZE.max.toFixed(1)});
       vGlyphSize = width * ${LIGHT_SPREAD.toFixed(1)} * uPixelRatio;
-      vColor = lightColor(vLit);
       // Only a glint from something already in plain sight has spikes to it.
       vGlint *= smoothstep(1.0, 3.0, over);
     } else {
-      // As a satellite: big enough to show its shape, largest for those
-      // passing close overhead, with room around it for its glow. Zooming
-      // in enlarges them too, so their shape and shading can be seen.
+      // The selected one, as a satellite: big enough to show its shape,
+      // larger passing close overhead, with room around it for its glow.
+      // Zooming in enlarges it too, so its shape and shading can be seen.
       float size = clamp(aSize * 1.6 / distance, ${GLYPH_SIZE.min.toFixed(1)}, ${GLYPH_SIZE.max.toFixed(1)}) * uZoom;
       vGlyphSize = size * ${GLYPH_SPREAD.toFixed(1)} * uPixelRatio;
       vColor = aColor;
@@ -350,7 +379,11 @@ const pointFragmentShader = /* glsl */ `
       gl_FragColor = vec4(vColor, alpha);
       #include <colorspace_fragment>
       gl_FragColor.rgb *= gl_FragColor.a;
-      gl_FragColor.a *= ${LIGHT_COVER.space.toFixed(2)};
+      // It hides more of what is behind it around its edge than it adds
+      // there: against the dark that is nothing, and against the white of
+      // the clouds it is a faint shadow around the light, which without it
+      // would hardly show there.
+      gl_FragColor.a = min(1.0, max(core, 1.6 * glow) * vShown) * ${LIGHT_COVER.space.toFixed(2)};
       return;
     }
 
@@ -437,6 +470,8 @@ const pointFragmentShader = /* glsl */ `
 // instants: now, and uTrailSeconds ago. `position.x` says which end this is.
 const trailVertexShader = /* glsl */ `
   uniform float uTrailSeconds;
+  /** 1 looking up from the ground, 0 out in space; see \`groundView\`. */
+  uniform float uGround;
   varying vec4 vColor;
   /** 0 at the satellite, 1 at the far end of its trail. */
   varying float vTail;
@@ -451,8 +486,16 @@ const trailVertexShader = /* glsl */ `
 
     float tail = position.x;
     vTail = tail;
-    vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * uTrailSeconds);
+    float reach = uTrailSeconds;
+    if (uGround < 0.5) {
+      vec3 head = extrapolate(aPosition, aVelocity, uDt);
+      float away = length((modelViewMatrix * vec4(head, 1.0)).xyz);
+      reach *= clamp(away / ${FULL_TRAIL_FROM.toFixed(1)}, 0.1, 1.0);
+    }
+    vec3 p = extrapolate(aPosition, aVelocity, uDt - tail * reach);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    // From space, and for the ones that cannot be seen from the ground when
+    // all are shown, in the legend's color.
     vColor = vec4(aColor * sunlight(p, uSunDirection, uShadowBrightness), 0.5);
     if (uLight > 0.5 && !isChosen()) {
       // The streak of a light: only where the light itself shows.
@@ -664,12 +707,12 @@ export function Satellites({ world }: { world: World }) {
     // Looking up, the satellites are the lights they are, unless all of
     // them are asked for.
     uniforms.uLight.value = ground > 0.5 && skyShows !== 'all' ? 1 : 0;
-    if (skyShows !== 'all') {
-      uniforms.uFaintest.value = faintestSeen(
-        skyShows,
-        MathUtils.radToDeg(Math.asin(MathUtils.clamp(sunHeight, -1, 1))),
-      );
-    }
+    // With all of them shown, the ones the eye could see are the ones that
+    // stand out.
+    uniforms.uFaintest.value = faintestSeen(
+      skyShows === 'all' ? 'eye' : skyShows,
+      MathUtils.radToDeg(Math.asin(MathUtils.clamp(sunHeight, -1, 1))),
+    );
     uniforms.uSelected.value = selected ?? -1;
     const fov = camera instanceof PerspectiveCamera ? camera.fov : SKY_FOV;
     uniforms.uZoom.value = MathUtils.clamp(
