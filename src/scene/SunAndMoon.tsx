@@ -6,7 +6,6 @@ import {
   type Group,
   MathUtils,
   Matrix4,
-  PerspectiveCamera,
   ShaderMaterial,
   type Sprite,
   SRGBColorSpace,
@@ -19,7 +18,7 @@ import { EARTH_RADIUS_KM } from '../core/constants';
 import { MOON_RADIUS_KM, SUN_RADIUS_KM, sunHiddenByMoon } from '../core/eclipse';
 import type { Vec3 } from '../core/kinematics';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
-import { CAMERA_FOV, SPHERE_POLES_TO_Z, TEME_FROM_WORLD } from './frame';
+import { SPHERE_POLES_TO_Z, TEME_FROM_WORLD } from './frame';
 import { placeBody } from './skyBodies';
 
 const MOON_MAP_URL = `${import.meta.env.BASE_URL}textures/moon_1024.jpg`;
@@ -84,41 +83,6 @@ function createCoronaTexture(): CanvasTexture {
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
   return texture;
-}
-
-/**
- * The Moon is drawn at its true size, which from here is a disc about a
- * dozen pixels across: accurate, and nearly impossible to find among the
- * stars. A small name tag beside it keeps it honest and findable.
- *
- * The tag is a sprite that ignores perspective, so these are its width and
- * height as angles (in radians) rather than distances.
- */
-const MOON_LABEL_HEIGHT = 0.013;
-/** How far below the Moon the tag hangs, in tag heights. */
-const MOON_LABEL_DROP = 2.6;
-/** The tag goes once the Moon is wider than this on screen, CSS px: it would lie across its face. */
-const MOON_LABEL_UNTIL = 40;
-
-function createLabelTexture(text: string): { texture: CanvasTexture; aspect: number } {
-  const fontPx = 44;
-  const font = `500 ${fontPx}px ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif`;
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  if (context) context.font = font;
-  canvas.width = Math.ceil((context?.measureText(text).width ?? fontPx * text.length) + 16);
-  canvas.height = Math.ceil(fontPx * 1.4);
-  if (context) {
-    // Resizing a canvas resets its state, so the font is set again.
-    context.font = font;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillStyle = 'rgba(226, 232, 240, 0.85)';
-    context.fillText(text, canvas.width / 2, canvas.height / 2);
-  }
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  return { texture, aspect: canvas.width / canvas.height };
 }
 
 const moonVertexShader = /* glsl */ `
@@ -192,10 +156,8 @@ export function SunAndMoon() {
   const moonMap = useLoader(TextureLoader, MOON_MAP_URL);
   const corona = useRef<Sprite>(null);
   const moon = useRef<Group>(null);
-  const moonTag = useRef<Sprite>(null);
 
   const coronaTexture = useMemo(createCoronaTexture, []);
-  const moonLabel = useMemo(() => createLabelTexture('Moon'), []);
   const moonMaterial = useMemo(() => {
     moonMap.colorSpace = SRGBColorSpace;
     // Made here, not as an element: see `atmosphereUniforms`.
@@ -209,7 +171,7 @@ export function SunAndMoon() {
   }, [moonMap]);
   useEffect(() => () => moonMaterial.dispose(), [moonMaterial]);
 
-  useFrame(({ camera, size }) => {
+  useFrame(({ camera }) => {
     const simMs = currentSimTime();
     sunPosition(simMs, sunKm);
     moonPosition(simMs, moonKm);
@@ -233,22 +195,6 @@ export function SunAndMoon() {
       );
       const disc = 2 * SUN_DISTANCE_KM * Math.tan(Math.asin(SUN_RADIUS_KM / toSun));
       sprite.scale.setScalar(disc * CORONA_SCALE);
-    }
-
-    // A perspective-free sprite still scales with the field of view; undo
-    // that, so the tag stays the same size on screen when zooming in.
-    if (moonTag.current && camera instanceof PerspectiveCamera) {
-      const zoom =
-        Math.tan(MathUtils.degToRad(camera.fov) / 2) / Math.tan(MathUtils.degToRad(CAMERA_FOV) / 2);
-      const toMoon = Math.hypot(moonKm.x - eye.x, moonKm.y - eye.y, moonKm.z - eye.z);
-      const width =
-        (2 * Math.asin(MOON_RADIUS_KM / toMoon)) / (MathUtils.degToRad(camera.fov) / size.height);
-      moonTag.current.visible = width < MOON_LABEL_UNTIL;
-      moonTag.current.scale.set(
-        MOON_LABEL_HEIGHT * moonLabel.aspect * EARTH_RADIUS_KM * zoom,
-        MOON_LABEL_HEIGHT * EARTH_RADIUS_KM * zoom,
-        1,
-      );
     }
 
     if (moon.current) {
@@ -281,18 +227,6 @@ export function SunAndMoon() {
           <sphereGeometry args={[MOON_RADIUS_KM, 48, 24]} />
           <primitive object={moonMaterial} attach="material" />
         </mesh>
-        {/*
-          Scaled up by the Earth's radius to cancel the enclosing group's
-          kilometers-to-scene scale, which a perspective-free sprite inherits.
-        */}
-        <sprite ref={moonTag} center={[0.5, MOON_LABEL_DROP]}>
-          <spriteMaterial
-            map={moonLabel.texture}
-            sizeAttenuation={false}
-            depthWrite={false}
-            transparent
-          />
-        </sprite>
       </group>
     </>
   );

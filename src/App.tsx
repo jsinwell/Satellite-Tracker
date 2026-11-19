@@ -186,7 +186,8 @@ export function App() {
                   onClick={() => useApp.getState().setShowClouds(!showClouds)}
                   aria-pressed={showClouds}
                   aria-label="Clouds"
-                  title={showClouds ? 'Hide the clouds' : 'Show the clouds'}
+                  // Says whose data it is, as its license asks.
+                  title={`${showClouds ? 'Hide' : 'Show'} the clouds (contains modified EUMETSAT data)`}
                   className="pointer-events-auto flex shrink-0 items-center rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-400 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white aria-pressed:text-slate-100"
                 >
                   <CloudIcon />

@@ -643,11 +643,10 @@ test.describe('with a catalog', () => {
     await page.goto(`/?t=${FIXTURE_TIME}`);
     const clouds = page.getByRole('button', { name: 'Clouds' });
     await expect(clouds).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByText('contains modified EUMETSAT data')).toBeVisible();
+    await expect(clouds).toHaveAttribute('title', /contains modified EUMETSAT data/);
 
     await clouds.click();
     await expect(clouds).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByText('contains modified EUMETSAT data')).toBeHidden();
 
     // And they stay away on the next visit.
     await page.reload();

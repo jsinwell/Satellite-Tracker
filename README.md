@@ -114,8 +114,8 @@
 - The clouds on the globe are the real ones, from weather satellite data that's a few hours
   old at most. Looking up from the ground you see them from below: how cloudy it is over you
   is real, and the individual clouds are generated. They hide the stars, Sun, Moon and
-  planets but not the satellite markers. The cloud button next to the search box turns them
-  off.
+  planets but not the satellite markers, and they clear when you zoom in on the Moon or a
+  planet. The cloud button next to the search box turns them off.
 - Eclipses show up when they really happen. In a solar eclipse you can watch the Moon's
   shadow cross the globe, or stand under it and see the corona. In a lunar eclipse the Moon
   goes dim and red. A good one to try is August 2, 2027 at 10:06 UTC from Luxor

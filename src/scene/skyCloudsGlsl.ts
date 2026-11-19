@@ -19,6 +19,7 @@ const float = (value: number) => value.toExponential(8);
  */
 export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
   uniform vec3 uSkyAmbient;
+  uniform float uCloudsShown;
 
   varying vec3 vRay;
 
@@ -58,7 +59,7 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
 
     // Not from above the layer, and not below the horizon, which is the ground's.
     float horizon = -sqrt(uSkyEyeHeight * (r + SKY_BOTTOM)) / r;
-    if (uLandClouded <= 0.0 || c <= 0.0 || b / r < horizon) discard;
+    if (uLandClouded * uCloudsShown <= 0.0 || c <= 0.0 || b / r < horizon) discard;
 
     // How much cloud the picture has over that place. Mirrors cloudCover,
     // cloudsDrawnAt and, for the latitude, mapLatitude.
@@ -121,7 +122,7 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
     skyView(direction, false, air, through);
     float haze = 1.0 - exp(-reach / CLOUD_HAZE);
     vec3 color = mix(skyTone(light), air, haze);
-    alpha *= uLandClouded * (1.0 - haze * haze);
+    alpha *= uLandClouded * uCloudsShown * (1.0 - haze * haze);
 
     // Blended as the sky is: the color is what to add, the alpha how much
     // of what is behind to hide.
