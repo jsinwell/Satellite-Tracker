@@ -62,8 +62,6 @@ const SKY_START_ELEVATION = MathUtils.degToRad(25);
 const SKY_BELOW_HORIZON = MathUtils.degToRad(5);
 /** How fast the view zooms: shares of what is left per second. */
 const ZOOM_RATE = 7;
-/** A press that moves further than this (CSS px) is a drag, which lets go of what is watched. */
-const DRAG_SLOP = 6;
 
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
 const direction = new Vector3();
@@ -471,20 +469,6 @@ export function CameraRig({ world }: { world: World }) {
     // pan or dolly.
     const touches = new Map<number, { x: number; y: number }>();
     let spread = 0;
-    // Dragging the view away from what it is held on lets go of it. Not a
-    // press alone, which may be the first finger of a pinch, or a click.
-    let pressedAt: { x: number; y: number } | null = null;
-    const onPress = (event: PointerEvent) => {
-      pressedAt = event.isPrimary ? { x: event.clientX, y: event.clientY } : null;
-    };
-    const onDrag = (event: PointerEvent) => {
-      if (!pressedAt || !event.isPrimary || !sky.enabled || touches.size > 1) return;
-      const moved = Math.hypot(event.clientX - pressedAt.x, event.clientY - pressedAt.y);
-      if (moved > DRAG_SLOP && useApp.getState().watching !== null) useApp.getState().watch(null);
-    };
-    const onRelease = () => {
-      pressedAt = null;
-    };
     const span = () => {
       const [a, b] = [...touches.values()];
       return Math.hypot(a.x - b.x, a.y - b.y);
@@ -512,10 +496,6 @@ export function CameraRig({ world }: { world: World }) {
     element.addEventListener('pointermove', onPointerMove);
     element.addEventListener('pointerup', onPointerEnd);
     element.addEventListener('pointercancel', onPointerEnd);
-    element.addEventListener('pointerdown', onPress);
-    element.addEventListener('pointermove', onDrag);
-    element.addEventListener('pointerup', onRelease);
-    element.addEventListener('pointercancel', onRelease);
 
     mode.current = { kind: 'globe' };
     controlsRef.current = { globe, ride, sky };
@@ -526,10 +506,6 @@ export function CameraRig({ world }: { world: World }) {
       element.removeEventListener('pointermove', onPointerMove);
       element.removeEventListener('pointerup', onPointerEnd);
       element.removeEventListener('pointercancel', onPointerEnd);
-      element.removeEventListener('pointerdown', onPress);
-      element.removeEventListener('pointermove', onDrag);
-      element.removeEventListener('pointerup', onRelease);
-      element.removeEventListener('pointercancel', onRelease);
       globe.dispose();
       ride.dispose();
       sky.dispose();
@@ -559,7 +535,7 @@ export function CameraRig({ world }: { world: World }) {
     fitNearPlane(camera);
     const { globe, ride, sky } = controls;
     const { simulation } = world;
-    const { riding, selected, setRiding, lookingUp, observer, watching, watch } = useApp.getState();
+    const { riding, selected, setRiding, lookingUp, observer, watching } = useApp.getState();
     const standing = lookingUp ? observer : null;
 
     // Which satellite to be riding with this frame, if any.
@@ -647,14 +623,16 @@ export function CameraRig({ world }: { world: World }) {
       // the opposite way to an orbit: the sky is grabbed and pulled along
       // with the pointer, as in any panorama, rather than flown around.
       sky.rotateSpeed = -camera.fov / 360;
+      // Held on the Moon or a planet, the view stays on it: a drag or the
+      // keys do not turn it away, which close in would lose it for good at
+      // the slightest touch. A click on the sky, or Escape, lets go.
+      sky.enableRotate = watching === null;
       standAt(standing);
       if (steering) {
-        // Turning the view away from what it is held on lets go of it.
-        if (watching !== null && (steer.right !== 0 || steer.up !== 0)) watch(null);
         // The stand-in sits opposite the way the view faces, so it goes
         // the other way round.
         const turn = KEY_LOOK_RATE * MathUtils.degToRad(camera.fov) * deltaSeconds;
-        orbitBy(sky, -steer.right * turn, -steer.up * turn, 1);
+        if (watching === null) orbitBy(sky, -steer.right * turn, -steer.up * turn, 1);
         skyFov.current = zoomFov(
           skyFov.current,
           zoomFactor(steer, deltaSeconds),

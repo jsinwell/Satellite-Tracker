@@ -291,6 +291,16 @@ test.describe('with a catalog', () => {
       'false',
     );
 
+    // A drag does not turn the view away from it, nor do the keys.
+    const viewport = page.viewportSize();
+    if (!viewport) throw new Error('The page has no viewport.');
+    await page.mouse.move(viewport.width / 2, viewport.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(viewport.width / 2 + 200, viewport.height / 2 + 80, { steps: 5 });
+    await page.mouse.up();
+    await page.keyboard.press('ArrowLeft');
+    await expect(watching).toHaveAccessibleName('Watching Saturn');
+
     // Escape lets go of it, and leaves the view on the ground, looking up.
     await page.keyboard.press('Escape');
     await expect(watching).toBeHidden();
@@ -679,6 +689,32 @@ test('explains what to do when there is no catalog', async ({ page }) => {
 
 test.describe('on a phone-sized screen', () => {
   test.use({ viewport: { width: 420, height: 800 } });
+
+  test('leaves a planet in sight while it is watched', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '90, 0');
+    const sky = page.getByRole('region', { name: 'Your sky' });
+    const watching = page.getByRole('region', { name: /^Watching/ });
+
+    // The list it was chosen from gets out of the way, and what is said
+    // about it is brief: the planet is in the middle of the screen.
+    await sky.getByRole('button', { name: /^Jupiter/ }).click();
+    await expect(watching).toContainText(/° up, [NESW]+/);
+    await expect(sky).toBeHidden();
+    await expect(watching.getByText('Distance')).toBeHidden();
+    const box = await watching.boundingBox();
+    expect(box?.height).toBeLessThan(90);
+
+    // The rest is there for the asking.
+    await watching.getByRole('button', { name: 'More' }).click();
+    await expect(watching.getByText('Distance')).toBeVisible();
+
+    // And the list comes back when it is let go of.
+    await watching.getByRole('button', { name: 'Close' }).click();
+    await expect(watching).toBeHidden();
+    await expect(sky).toBeVisible();
+  });
 
   test('keeps the filters reachable behind a button', async ({ page }) => {
     await serveFixture(page);

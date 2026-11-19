@@ -196,14 +196,15 @@ export function App() {
             </div>
             {skyOpen && (
               // On a phone the selected satellite takes this spot, and the
-              // filters need the room it would cover; the sky comes back when
-              // they are closed. Wider, it shares the left column with the
+              // filters need the room it would cover; and with the view held
+              // on the Moon or a planet it would cover that. The sky comes
+              // back when they are closed. Wider, it shares the left column with the
               // filters, and is fitted to the room above them.
               <div
                 id="your-sky"
                 ref={skyRef}
                 className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-xl sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
-                  selected === null && !filtersOpen ? '' : 'hidden'
+                  selected === null && watching === null && !filtersOpen ? '' : 'hidden'
                 }`}
               >
                 <SkyPanel world={world} onClose={() => setSkyOpen(false)} />
