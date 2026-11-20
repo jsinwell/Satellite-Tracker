@@ -2,7 +2,7 @@
 @import "@fontsource/barlow-semi-condensed/latin-400.css";
 @import "@fontsource/barlow-semi-condensed/latin-500.css";
 @import "@fontsource/barlow-semi-condensed/latin-600.css";
-@import "@fontsource-variable/source-serif-4/wght-italic.css";
+@import "@fontsource-variable/source-serif-4/wght.css";
 
 /*
  * The picture is the scene; the interface is markings on the glass in front
@@ -30,7 +30,7 @@
   /*
    * Two voices. Whatever is read off, a number, a row or a button, is set in
    * a narrow sans, so a column of figures takes no more width than it must.
-   * The name of a thing is set in an italic serif, the way an atlas letters
+   * The name of a thing is set in a serif, the way an atlas letters
    * what it charts: see `atlas-name` below.
    */
   --font-sans:
@@ -79,9 +79,7 @@
 /* The name of a thing: a satellite, a planet, a panel. */
 @utility atlas-name {
   font-family: var(--font-serif);
-  font-style: italic;
   font-weight: 500;
-  letter-spacing: 0.01em;
 }
 
 /* For panels that scroll inside the HUD: a full-width scrollbar is heavier than the panel. */
