@@ -4,7 +4,7 @@ import { setLabelLayer } from './scene/labelLayer';
 import { Scene } from './scene/Scene';
 import { BodyPanel } from './ui/BodyPanel';
 import { BootScreen } from './ui/BootScreen';
-import { FilterPanel } from './ui/FilterPanel';
+import { FilterPanel, LegendLine } from './ui/FilterPanel';
 import { HoverLabel } from './ui/HoverLabel';
 import { InfoPanel } from './ui/InfoPanel';
 import { SURFACE } from './ui/Panel';
@@ -44,35 +44,48 @@ const PANEL_GAP = 12;
  * overlap however short the window. Measured, rather than set in CSS, because
  * the room depends on how tall `below` is at the moment. Where `below` is not
  * shown, the panel's own CSS cap applies.
+ *
+ * `beside` is in the next column along, and counts only while it reaches
+ * under the panel: on a window not much wider than the two of them, with
+ * `below` folded down to a line, it is what the panel would run into.
  */
 function useRoomAbove(
   panel: RefObject<HTMLElement | null>,
   below: RefObject<HTMLElement | null>,
+  beside: RefObject<HTMLElement | null>,
   active: boolean,
 ): void {
   useLayoutEffect(() => {
     const top = panel.current;
     const bottom = below.current;
+    const next = beside.current;
     if (!active || !top || !bottom) return;
     const refit = () => {
       if (bottom.getClientRects().length === 0) {
         top.style.maxHeight = '';
         return;
       }
-      const room = bottom.getBoundingClientRect().top - top.getBoundingClientRect().top - PANEL_GAP;
-      top.style.maxHeight = `${Math.max(0, room)}px`;
+      const box = top.getBoundingClientRect();
+      let floor = bottom.getBoundingClientRect().top;
+      const other = next?.getBoundingClientRect();
+      if (other && other.width > 0 && other.left < box.right && other.right > box.left) {
+        floor = Math.min(floor, other.top);
+      }
+      top.style.maxHeight = `${Math.max(0, floor - box.top - PANEL_GAP)}px`;
     };
     refit();
-    // The filters change height when switching what color stands for.
+    // The filters change height when switching what color stands for, and
+    // fold away looking up; the time bar grows a strip once there is a place.
     const observer = new ResizeObserver(refit);
     observer.observe(bottom);
+    if (next) observer.observe(next);
     window.addEventListener('resize', refit);
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', refit);
       top.style.maxHeight = '';
     };
-  }, [panel, below, active]);
+  }, [panel, below, beside, active]);
 }
 
 /** A crescent and a star: the night sky. */
@@ -115,6 +128,13 @@ const HUD_BUTTON = `pointer-events-auto flex shrink-0 items-center rounded-full 
 const OPEN =
   'aria-expanded:border-transparent aria-expanded:bg-chalk aria-expanded:text-night aria-expanded:hover:text-night';
 
+/**
+ * True on a phone-sized screen, where the filters and the selected
+ * satellite's details share one spot: opening either puts the other away.
+ * Asked at the moment of a click, so nothing has to follow the window's size.
+ */
+const sharingOneSpot = () => !window.matchMedia('(min-width: 40rem)').matches;
+
 const BOTTOM_ROW = [
   'absolute inset-x-3 bottom-3 grid items-end gap-x-3 gap-y-2',
   "grid-cols-[auto_1fr] [grid-template-areas:'filters_filters'_'toggle_status'_'time_time']",
@@ -130,9 +150,10 @@ export function App() {
   const haveClouds = useApp((state) => state.cloudsAtMs !== null);
   const showClouds = useApp((state) => state.showClouds);
   const lookingUp = useApp((state) => state.lookingUp);
-  // Both only matter on narrow screens, where the filters are tucked behind a
-  // button and the selected satellite shows a summary until asked for the rest.
-  // Opening one closes the other: there is not room for both and the globe.
+  // The filters are tucked away on a phone, and behind the one-line legend
+  // while looking up, where the sky is the thing to see. The selected
+  // satellite shows a summary until asked for the rest. On a phone, opening
+  // one closes the other: there is not room for both and the globe.
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   // Closed at the start, even with a place remembered: it covers part of the
@@ -140,7 +161,8 @@ export function App() {
   const [skyOpen, setSkyOpen] = useState(false);
   const skyRef = useRef<HTMLDivElement>(null);
   const filtersRef = useRef<HTMLDivElement>(null);
-  useRoomAbove(skyRef, filtersRef, skyOpen && phase === 'ready');
+  const timeRef = useRef<HTMLDivElement>(null);
+  useRoomAbove(skyRef, filtersRef, timeRef, skyOpen && phase === 'ready');
   // A new place replaces what the sky panel shows; start it from the top,
   // not wherever typing the coordinates left it scrolled.
   const observer = useApp((state) => state.observer);
@@ -239,7 +261,7 @@ export function App() {
                 expanded={detailsOpen}
                 onToggleExpanded={() => {
                   setDetailsOpen((open) => !open);
-                  setFiltersOpen(false);
+                  if (sharingOneSpot()) setFiltersOpen(false);
                 }}
               />
             </div>
@@ -253,20 +275,32 @@ export function App() {
             phone:   filters (when open) / [Filters] status / time, full width
             tablet:  filters, status / time, centered
             desktop: filters, time, status in one row
+          Looking up, from tablet widths, the filters shrink to a line that
+          says what the colors mean, and open from it.
         */}
         <div className={BOTTOM_ROW}>
           <div
-            id="filters"
             ref={filtersRef}
-            className={`[grid-area:filters] sm:block ${filtersOpen ? '' : 'hidden'}`}
+            className={`flex-col items-start gap-2 [grid-area:filters] sm:flex ${
+              filtersOpen ? 'flex' : 'hidden'
+            }`}
           >
-            <FilterPanel world={world} sharingColumn={skyOpen} />
+            <div id="filters" className={filtersOpen || !lookingUp ? '' : 'hidden'}>
+              <FilterPanel world={world} sharingColumn={skyOpen} overLegend={lookingUp} />
+            </div>
+            {lookingUp && (
+              <LegendLine
+                world={world}
+                open={filtersOpen}
+                onToggle={() => setFiltersOpen((open) => !open)}
+              />
+            )}
           </div>
           <button
             type="button"
             onClick={() => {
               setFiltersOpen((open) => !open);
-              setDetailsOpen(false);
+              if (sharingOneSpot()) setDetailsOpen(false);
             }}
             aria-expanded={filtersOpen}
             aria-controls="filters"
@@ -274,7 +308,7 @@ export function App() {
           >
             Filters
           </button>
-          <div className="[grid-area:time] sm:justify-self-center">
+          <div ref={timeRef} className="[grid-area:time] sm:justify-self-center">
             <TimeBar />
           </div>
           <div className="justify-self-end [grid-area:status]">

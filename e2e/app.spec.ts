@@ -37,6 +37,13 @@ function trackErrors(page: Page): string[] {
 
 const selection = (page: Page) => page.getByRole('region', { name: 'Selected satellite' });
 
+/** The selected satellite's panel, asked for everything it has to say. */
+async function selectionInFull(page: Page) {
+  const panel = selection(page);
+  await panel.getByRole('button', { name: 'Details' }).click();
+  return panel;
+}
+
 /** How far across the page something is, or NaN while it is not on it. */
 const acrossOf = async (target: Locator) => (await target.boundingBox())?.x ?? Number.NaN;
 
@@ -123,12 +130,31 @@ test.describe('with a catalog', () => {
     await expect(selection(page)).toContainText('NORAD 25544');
     await expect(selection(page)).toContainText('LEO');
     // A live altitude proves the worker propagated it and the panel read it back.
-    await expect(
-      selection(page)
-        .getByText(/^4\d\d km$/)
-        .first(),
-    ).toBeVisible();
+    await expect(selection(page).getByText(/^4\d\d km up, 7\.\d\d km\/s/)).toBeVisible();
     await expect(page).toHaveURL(/sat=25544/);
+  });
+
+  test('says little about a satellite until asked for the rest', async ({ page }) => {
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const panel = selection(page);
+    // Its name is beside it on the globe, so the panel can be a few lines.
+    await expect(page.locator('[data-selected-name]')).toHaveText('ISS');
+    await expect(panel.getByText('Inclination')).toBeHidden();
+    const brief = await panel.boundingBox();
+    expect(brief?.height).toBeLessThan(200);
+
+    await panel.getByRole('button', { name: 'Details' }).click();
+    await expect(panel.getByText('Inclination')).toBeVisible();
+    await expect(panel.getByText(/^4\d\d km$/).first()).toBeVisible();
+
+    // Asked for once, the rest stays for the next one chosen.
+    await page.getByRole('combobox').fill('goes 16');
+    await page.getByRole('option', { name: /GOES 16/ }).click();
+    await expect(panel).toContainText('GOES 16');
+    await expect(panel.getByText('Inclination')).toBeVisible();
+
+    await panel.getByRole('button', { name: 'Less' }).click();
+    await expect(panel.getByText('Inclination')).toBeHidden();
   });
 
   test('selects from the keyboard', async ({ page }) => {
@@ -149,16 +175,12 @@ test.describe('with a catalog', () => {
 
     await expect(selection(page)).toContainText('GOES 16');
     await expect(selection(page)).toContainText('GEO');
-    await expect(
-      selection(page)
-        .getByText(/^35,[78]\d\d km$/)
-        .first(),
-    ).toBeVisible();
+    await expect(selection(page).getByText(/^35,[78]\d\d km up/)).toBeVisible();
   });
 
   test('rides along with a satellite, and gets off again', async ({ page }) => {
     await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
-    const panel = selection(page);
+    const panel = await selectionInFull(page);
     await expect(panel.getByText(/^4,\d\d\d km across$/)).toBeVisible();
 
     await panel.getByRole('button', { name: 'Ride along' }).click();
@@ -194,7 +216,7 @@ test.describe('with a catalog', () => {
 
   test('turns what is drawn for a satellite on and off', async ({ page }) => {
     await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
-    const panel = selection(page);
+    const panel = await selectionInFull(page);
     const groundTrack = panel.getByRole('switch', { name: 'Ground track' });
     // Times along the ground track are labeled on the globe.
     const timeLabels = page.locator('[data-track-label]').filter({ visible: true });
@@ -235,7 +257,7 @@ test.describe('with a catalog', () => {
     // Half past midnight there: it says when to come back.
     await expect(sky.getByText(/^Best time to look: /)).toBeVisible();
 
-    const passes = selection(page).getByRole('list', { name: 'Next passes' });
+    const passes = (await selectionInFull(page)).getByRole('list', { name: 'Next passes' });
     await expect(passes.getByRole('listitem').first()).toContainText(/\d+° high, \d+ min/);
 
     // Choosing a pass sets the clock to just before it.
@@ -251,6 +273,30 @@ test.describe('with a catalog', () => {
     await expect(page.getByRole('region', { name: 'Your sky' })).toBeHidden();
     await page.getByRole('button', { name: 'Your sky' }).click();
     await expect(page.getByRole('region', { name: 'Your sky' })).toContainText('41.88° N');
+  });
+
+  test('leaves a line of legend where the filters were, looking up', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    await setPlace(page, '41.88, -87.63');
+    const filters = page.getByRole('region', { name: 'Filters' });
+    const legend = page.getByRole('button', { name: 'Filters', exact: true });
+    await expect(filters).toBeVisible();
+    await expect(legend).toBeHidden();
+
+    // From the ground the sky is the thing to see: the colors keep their key.
+    await page.getByRole('button', { name: 'Look up from here' }).click();
+    await expect(filters).toBeHidden();
+    await expect(legend).toContainText('Payloads');
+    await expect(legend).toContainText('Debris');
+
+    await legend.click();
+    await expect(filters).toBeVisible();
+    await legend.click();
+    await expect(filters).toBeHidden();
+
+    await page.getByRole('button', { name: 'Back to the globe' }).click();
+    await expect(filters).toBeVisible();
+    await expect(legend).toBeHidden();
   });
 
   test('looks up at the sky from the chosen place, and comes back', async ({ page }) => {
@@ -533,6 +579,7 @@ test.describe('with a catalog', () => {
     await colorByConstellation.click();
     await lowOrbit.click();
     await slider.fill('2010');
+    await selectionInFull(page);
     await groundTrack().click();
     await expect(groundTrack()).toHaveAttribute('aria-checked', 'false');
 
@@ -540,6 +587,7 @@ test.describe('with a catalog', () => {
     await expect(colorByConstellation).toHaveAttribute('aria-pressed', 'true');
     await expect(lowOrbit).toHaveAttribute('aria-pressed', 'false');
     await expect(slider).toHaveValue('2010');
+    await selectionInFull(page);
     await expect(groundTrack()).toHaveAttribute('aria-checked', 'false');
   });
 
@@ -843,7 +891,7 @@ test.describe('on a phone-sized screen', () => {
     const box = await panel.boundingBox();
     expect(box?.height).toBeLessThan(800 * 0.3);
 
-    await page.getByRole('button', { name: 'Show details' }).click();
+    await page.getByRole('button', { name: 'Details' }).click();
     await expect(panel.getByText('Inclination')).toBeVisible();
 
     // There is not room for both, so opening the filters folds the details away.

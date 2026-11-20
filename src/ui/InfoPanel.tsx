@@ -21,7 +21,7 @@ import { PassList } from './PassList';
 const STALE_ELEMENTS_MS = 14 * 86_400_000;
 
 const actionClass =
-  'flex-1 rounded-lg bg-chalk/10 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/20';
+  'flex-1 rounded-lg bg-chalk/10 px-2 py-1.5 text-xs font-medium whitespace-nowrap text-chalk hover:bg-chalk/20';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -45,14 +45,18 @@ interface InfoPanelProps {
   world: World;
   index: number;
   /**
-   * Narrow screens only: whether everything is shown, or just a summary that
-   * leaves the globe in view. Wide screens always show everything.
+   * Whether everything is shown, or just a summary that leaves the scene in
+   * view: what it is, where it is, and what can be done with it.
    */
   expanded: boolean;
   onToggleExpanded(): void;
 }
 
-/** Details of the selected satellite: where it is now, and the orbit it is on. */
+/**
+ * The selected satellite. A few lines to begin with, since its name is
+ * already beside it in the scene: see `SelectedName`. Asked for the rest, it
+ * says where it is now, when it passes over, and the orbit it is on.
+ */
 export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPanelProps) {
   const satellite = world.satellites[index];
   const orbit = world.orbits[index];
@@ -92,14 +96,14 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
       </header>
 
       {!expanded && telemetry && (
-        <p className="border-t border-chalk/10 px-4 py-2 text-xs text-chalk tabular-nums sm:hidden">
+        <p className="border-t border-chalk/10 px-4 py-2 text-xs text-chalk tabular-nums">
           {`${formatInteger(telemetry.altitudeKm)} km up, ${telemetry.speedKmS.toFixed(2)} km/s, ${
             telemetry.sunlit ? 'sunlit' : 'in eclipse'
           }`}
         </p>
       )}
 
-      <div id="satellite-details" className={`sm:block ${expanded ? '' : 'hidden'}`}>
+      <div id="satellite-details" className={expanded ? '' : 'hidden'}>
         <Section title="Position now">
           {telemetry ? (
             <>
@@ -152,9 +156,9 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
           onClick={onToggleExpanded}
           aria-expanded={expanded}
           aria-controls="satellite-details"
-          className={`${actionClass} sm:hidden`}
+          className={actionClass}
         >
-          {expanded ? 'Hide details' : 'Show details'}
+          {expanded ? 'Less' : 'Details'}
         </button>
         {/* During a ride the camera is already on the satellite; on the ground it stays put. */}
         {!riding && !lookingUp && (
