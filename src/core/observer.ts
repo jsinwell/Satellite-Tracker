@@ -281,6 +281,16 @@ export interface ViewingWindow {
   endMs: number;
 }
 
+/**
+ * True while the sky is good for spotting satellites, going by how high the
+ * Sun is: dark, but with low orbit still in sunlight.
+ */
+export function goodForSpotting(sunElevationDeg: number): boolean {
+  return (
+    sunElevationDeg <= DARK_SKY_SUN_ELEVATION && sunElevationDeg >= LOW_ORBIT_DARK_SUN_ELEVATION
+  );
+}
+
 /** How high the Sun is for `observer` at `timeMs`, degrees. */
 export function sunElevationAt(observer: Observer, timeMs: number): number {
   return sunElevation(observerFrame(observer, timeMs, sunFrame), sunDirection(timeMs, sunScratch));
@@ -301,10 +311,7 @@ const WINDOW_SEARCH_MS = 36 * 3_600_000;
  * half, as near the poles in summer.
  */
 export function nextViewingWindow(observer: Observer, fromMs: number): ViewingWindow | null {
-  const good = (timeMs: number) => {
-    const elevation = sunElevationAt(observer, timeMs);
-    return elevation <= DARK_SKY_SUN_ELEVATION && elevation >= LOW_ORBIT_DARK_SUN_ELEVATION;
-  };
+  const good = (timeMs: number) => goodForSpotting(sunElevationAt(observer, timeMs));
   /** The instant between `before` and `after`, where `good` changes, to within the tolerance. */
   const edge = (before: number, after: number): number => {
     const wanted = good(after);

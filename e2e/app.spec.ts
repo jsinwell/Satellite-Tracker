@@ -735,6 +735,46 @@ test.describe('with a catalog', () => {
     await goLive.click();
     await expect(live).toBeVisible();
   });
+
+  test('shows tonight on a strip, and goes where it is pointed', async ({ page }) => {
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const strip = page.getByRole('slider', { name: /^Time, from noon to noon/ });
+    // With no place there is no night to show.
+    await expect(strip).toBeHidden();
+
+    await setPlace(page, '41.88, -87.63');
+    await expect(strip).toBeVisible();
+    // Half past midnight in Chicago: dark, between the good hour after dusk
+    // and the one before dawn.
+    await expect(strip).toHaveAttribute('aria-valuetext', /Dark sky$/);
+    await expect(strip.locator('[data-good-time]')).toHaveCount(2);
+    await expect(strip.locator('[data-pass]')).toHaveCount(0);
+
+    const read = async (name: string) => Number(await strip.getAttribute(name));
+    const start = await read('aria-valuemin');
+    const day = (await read('aria-valuemax')) - start;
+    expect(day).toBe(86_400_000);
+
+    // An arrow key is ten minutes. The clock runs on meanwhile, so a little more.
+    const before = await read('aria-valuenow');
+    await strip.press('ArrowRight');
+    await expect.poll(async () => (await read('aria-valuenow')) - before).toBeGreaterThan(599_000);
+    expect((await read('aria-valuenow')) - before).toBeLessThan(900_000);
+
+    // A click nine tenths of the way along is nine tenths of the way to the next noon.
+    const box = await strip.boundingBox();
+    if (!box) throw new Error('The strip has no box.');
+    await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2);
+    await expect
+      .poll(async () => Math.abs((await read('aria-valuenow')) - (start + 0.9 * day)))
+      .toBeLessThan(600_000);
+    await expect(strip).toHaveAttribute('aria-valuetext', /Daylight$/);
+
+    // And a satellite's passes that night are marked on it.
+    await page.getByRole('combobox').fill('ISS');
+    await page.getByRole('option', { name: /ISS \(ZARYA\)/ }).click();
+    await expect(strip.locator('[data-pass]').first()).toBeAttached();
+  });
 });
 
 test('explains what to do when there is no catalog', async ({ page }) => {
@@ -753,6 +793,8 @@ test.describe('on a phone-sized screen', () => {
     await setPlace(page, '90, 0');
     const sky = page.getByRole('region', { name: 'Your sky' });
     const watching = page.getByRole('region', { name: /^Watching/ });
+    // The night strip is for screens with the room for it.
+    await expect(page.getByRole('slider', { name: /^Time, from noon to noon/ })).toBeHidden();
 
     // The list it was chosen from gets out of the way, and what is said
     // about it is brief: the planet is in the middle of the screen.
