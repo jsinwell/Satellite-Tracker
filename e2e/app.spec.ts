@@ -90,9 +90,20 @@ async function atRest(page: Page, read: () => Promise<number>): Promise<number> 
   return last;
 }
 
+/** Opens something from the menu a phone keeps its controls in. */
+async function fromMenu(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.locator('#menu').getByRole('button', { name }).click();
+}
+
 /** Opens the sky panel and sets the place by typing its coordinates. */
 async function setPlace(page: Page, coordinates: string): Promise<void> {
-  await page.getByRole('button', { name: 'Your sky' }).click();
+  // The sky has a button of its own, or on a phone is in the menu. Which one
+  // cannot be told until the page has started.
+  await expect(page.getByRole('combobox')).toBeVisible();
+  if (await page.getByRole('button', { name: 'Menu' }).isVisible())
+    await fromMenu(page, 'Your sky');
+  else await page.getByRole('button', { name: 'Your sky' }).click();
   const field = page
     .getByRole('region', { name: 'Your sky' })
     .getByLabel('Or type its coordinates');
@@ -841,8 +852,6 @@ test.describe('on a phone-sized screen', () => {
     await setPlace(page, '90, 0');
     const sky = page.getByRole('region', { name: 'Your sky' });
     const watching = page.getByRole('region', { name: /^Watching/ });
-    // The night strip is for screens with the room for it.
-    await expect(page.getByRole('slider', { name: /^Time, from noon to noon/ })).toBeHidden();
 
     // The list it was chosen from gets out of the way, and what is said
     // about it is brief: the planet is in the middle of the screen.
@@ -854,7 +863,7 @@ test.describe('on a phone-sized screen', () => {
     expect(box?.height).toBeLessThan(90);
 
     // The rest is there for the asking.
-    await watching.getByRole('button', { name: 'More' }).click();
+    await watching.getByRole('button', { name: 'Show more' }).click();
     await expect(watching.getByText('Distance')).toBeVisible();
 
     // And the list comes back when it is let go of.
@@ -863,63 +872,98 @@ test.describe('on a phone-sized screen', () => {
     await expect(sky).toBeVisible();
   });
 
-  test('keeps the filters reachable behind a button', async ({ page }) => {
+  test('keeps the filters, and what is being tracked, in the menu', async ({ page }) => {
     await serveFixture(page);
     await page.goto(`/?t=${FIXTURE_TIME}`);
-
     const filters = page.getByRole('region', { name: 'Filters' });
-    const toggle = page.getByRole('button', { name: 'Filters', exact: true });
-    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+    const menu = page.getByRole('button', { name: 'Menu' });
     await expect(filters).toBeHidden();
 
-    await toggle.click();
+    await menu.click();
+    await expect(page.getByText(`${FIXTURE_SIZE} objects tracked`)).toBeVisible();
+    await page.locator('#menu').getByRole('button', { name: 'Filters' }).click();
     await expect(filters).toBeVisible();
-    await page.getByRole('button', { name: /^Debris/ }).click();
-    await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+    // Choosing from the menu puts it away.
+    await expect(page.locator('#menu')).toBeHidden();
 
-    await toggle.click();
+    await filters.getByRole('button', { name: /^Debris/ }).click();
+    await menu.click();
+    await expect(page.getByText(new RegExp(`\\d+ of ${FIXTURE_SIZE} objects shown`))).toBeVisible();
+    // A touch anywhere else puts it away too.
+    await page.getByRole('combobox').click();
+    await expect(page.locator('#menu')).toBeHidden();
+
+    await filters.getByRole('button', { name: 'Close' }).click();
     await expect(filters).toBeHidden();
   });
 
-  test('shows a summary of the selection until asked for more', async ({ page }) => {
+  test('shows the selection in a sheet that folds down to a line', async ({ page }) => {
     await serveFixture(page);
     await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
     const panel = selection(page);
     await expect(panel.getByText(/^4\d\d km up/)).toBeVisible();
     await expect(panel.getByText('Inclination')).toBeHidden();
     // Short enough to leave the globe in view.
-    const box = await panel.boundingBox();
-    expect(box?.height).toBeLessThan(800 * 0.3);
+    const card = await panel.boundingBox();
+    expect(card?.height).toBeLessThan(800 * 0.3);
 
-    await page.getByRole('button', { name: 'Details' }).click();
+    await panel.getByRole('button', { name: 'Details' }).click();
     await expect(panel.getByText('Inclination')).toBeVisible();
+    // However much there is to say, the sheet stops short of the top of the screen.
+    const sheet = await panel.locator('xpath=..').boundingBox();
+    expect(sheet?.height).toBeLessThanOrEqual(800 * 0.6 + 1);
 
-    // There is not room for both, so opening the filters folds the details away.
-    await page.getByRole('button', { name: 'Filters', exact: true }).click();
+    // Folded, it is its name and one line saying where it is.
+    await panel.getByRole('button', { name: 'Show less' }).click();
     await expect(panel.getByText('Inclination')).toBeHidden();
+    await expect(panel.getByText(/^4\d\d km up/)).toBeVisible();
+    const line = await panel.boundingBox();
+    expect(line?.height).toBeLessThan(90);
+    await panel.getByRole('button', { name: 'Show more' }).click();
+    await expect(panel.getByText('Inclination')).toBeVisible();
   });
 
-  test('takes turns between the sky panel and the filters', async ({ page }) => {
+  test('shows one thing at a time in the sheet', async ({ page }) => {
     await serveFixture(page);
-    await page.goto(`/?t=${FIXTURE_TIME}`);
-    await setPlace(page, '41.88, -87.63');
+    await page.goto(`/?sat=25544&t=${FIXTURE_TIME}`);
+    const panel = selection(page);
     const sky = page.getByRole('region', { name: 'Your sky' });
     const filters = page.getByRole('region', { name: 'Filters' });
-    const toggle = page.getByRole('button', { name: 'Filters', exact: true });
+    await expect(panel).toBeVisible();
 
-    await toggle.click();
+    // What is asked for takes the place of what was there.
+    await fromMenu(page, 'Filters');
     await expect(filters).toBeVisible();
-    await expect(sky).toBeHidden();
-
-    await toggle.click();
-    await expect(sky).toBeVisible();
-
-    // And the other way round: the sky button brings the sky back.
-    await toggle.click();
-    await expect(sky).toBeHidden();
-    await page.getByRole('button', { name: 'Your sky' }).click();
+    await expect(panel).toBeHidden();
+    await fromMenu(page, 'Your sky');
     await expect(sky).toBeVisible();
     await expect(filters).toBeHidden();
+
+    // And what was there comes back as each is put away.
+    await sky.getByRole('button', { name: 'Close' }).click();
+    await expect(sky).toBeHidden();
+    await expect(panel).toBeVisible();
+    await panel.getByRole('button', { name: 'Close' }).click();
+    await expect(filters).toBeVisible();
+  });
+
+  test('keeps the clock to one row', async ({ page }) => {
+    await serveFixture(page);
+    await page.goto(`/?t=${FIXTURE_TIME}`);
+    const timeBar = page.getByRole('region', { name: 'Simulation time' });
+    const box = await timeBar.boundingBox();
+    expect(box?.height).toBeLessThan(50);
+
+    // One button steps through the speeds.
+    await timeBar.getByRole('button', { name: /^Speed: 1 times/ }).click();
+    await expect(timeBar.getByRole('button', { name: /^Speed: 10 times/ })).toBeVisible();
+
+    // Tonight's strip has no room in the row, so it is where the time is set.
+    const strip = page.getByRole('slider', { name: /^Time, from noon to noon/ });
+    await setPlace(page, '41.88, -87.63');
+    await expect(strip).toBeHidden();
+    await timeBar.getByRole('button', { name: /UTC$/ }).click();
+    await expect(strip).toBeVisible();
   });
 
   test('keeps every control on screen', async ({ page }) => {
@@ -929,9 +973,10 @@ test.describe('on a phone-sized screen', () => {
 
     for (const control of [
       page.getByRole('combobox'),
-      page.getByRole('button', { name: 'Filters', exact: true }),
+      page.getByRole('button', { name: 'Menu' }),
       page.getByRole('button', { name: 'Pause' }),
-      page.getByText(`${FIXTURE_SIZE} objects tracked`),
+      page.getByRole('button', { name: 'Ride along' }),
+      page.getByRole('button', { name: /UTC$/ }),
     ]) {
       await expect(control).toBeInViewport({ ratio: 1 });
     }

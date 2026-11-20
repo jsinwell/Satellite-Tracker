@@ -7,7 +7,7 @@ import { ORBIT_REGIMES } from '../core/orbit';
 import { formatInteger } from './format';
 import { ChevronIcon } from './icons';
 import { LaunchSlider } from './LaunchSlider';
-import { Panel, SURFACE } from './Panel';
+import { Panel, PanelBody, PanelHeader, SURFACE } from './Panel';
 
 interface ToggleProps {
   label: string;
@@ -78,31 +78,20 @@ function formatAltitude(km: number | null): string | undefined {
 
 /** Doubles as the color legend: each swatch is that group's color on the globe. */
 /**
- * How tall the panel may be from tablet widths up, by what shares its column:
+ * How tall the panel may be, by what shares its column:
  * the search box above always, on tablet widths the time bar below, the sky
  * panel if it is open, which then gets the upper half, and the one-line
  * legend under it while looking up.
  */
 const HEIGHT_CAPS = {
-  alone: 'sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]',
-  aloneOverLegend: 'sm:max-h-[calc(100dvh-11.25rem)] lg:max-h-[calc(100dvh-8.25rem)]',
-  sharing: 'sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)]',
-  sharingOverLegend: 'sm:max-h-[calc(50dvh-7.25rem)] lg:max-h-[calc(50dvh-5.75rem)]',
+  alone: 'max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]',
+  aloneOverLegend: 'max-h-[calc(100dvh-11.25rem)] lg:max-h-[calc(100dvh-8.25rem)]',
+  sharing: 'max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)]',
+  sharingOverLegend: 'max-h-[calc(50dvh-7.25rem)] lg:max-h-[calc(50dvh-5.75rem)]',
 };
 
-interface FilterPanelProps {
-  world: World;
-  /**
-   * The sky panel is open above, in the same column. The filters then keep
-   * to the lower half of it, so neither has to cover the other; the sky
-   * panel takes whatever they leave.
-   */
-  sharingColumn: boolean;
-  /** The one-line legend is showing under it: see `LegendLine`. */
-  overLegend: boolean;
-}
-
-export function FilterPanel({ world, sharingColumn, overLegend }: FilterPanelProps) {
+/** The filters themselves, which are also the legend, whatever they are put in. */
+function FilterRows({ world }: { world: World }) {
   const filters = useApp((state) => state.filters);
   // What each row would show under the other filters, so the numbers follow the globe.
   const counts = useApp((state) => state.counts);
@@ -112,21 +101,7 @@ export function FilterPanel({ world, sharingColumn, overLegend }: FilterPanelPro
     useApp.getState();
 
   return (
-    <Panel
-      aria-label="Filters"
-      // Scrolls rather than running under the search box on a short window.
-      className={`thin-scrollbar max-h-[42dvh] w-56 overflow-y-auto p-1.5 ${
-        HEIGHT_CAPS[
-          sharingColumn
-            ? overLegend
-              ? 'sharingOverLegend'
-              : 'sharing'
-            : overLegend
-              ? 'aloneOverLegend'
-              : 'alone'
-        ]
-      }`}
-    >
+    <>
       <fieldset className="mb-1.5 flex gap-0.5 rounded-lg bg-chalk/10 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>
         {COLOR_MODES.map(({ value, label }) => (
@@ -182,6 +157,54 @@ export function FilterPanel({ world, sharingColumn, overLegend }: FilterPanelPro
       ))}
       <hr className="my-1.5 border-chalk/10" />
       <LaunchSlider world={world} />
+    </>
+  );
+}
+
+interface FilterPanelProps {
+  world: World;
+  /**
+   * The sky panel is open above, in the same column. The filters then keep
+   * to the lower half of it, so neither has to cover the other; the sky
+   * panel takes whatever they leave.
+   */
+  sharingColumn: boolean;
+  /** The one-line legend is showing under it: see `LegendLine`. */
+  overLegend: boolean;
+}
+
+export function FilterPanel({ world, sharingColumn, overLegend }: FilterPanelProps) {
+  return (
+    <Panel
+      aria-label="Filters"
+      // Scrolls rather than running under the search box on a short window.
+      className={`thin-scrollbar w-56 overflow-y-auto p-1.5 ${
+        HEIGHT_CAPS[
+          sharingColumn
+            ? overLegend
+              ? 'sharingOverLegend'
+              : 'sharing'
+            : overLegend
+              ? 'aloneOverLegend'
+              : 'alone'
+        ]
+      }`}
+    >
+      <FilterRows world={world} />
+    </Panel>
+  );
+}
+
+/** The same on a phone, where it is the sheet at the bottom and has a heading to fold down to. */
+export function FilterSheet({ world, onClose }: { world: World; onClose(): void }) {
+  return (
+    <Panel aria-label="Filters" className="w-full">
+      <PanelHeader title="Filters" onClose={onClose} />
+      <PanelBody>
+        <div className="border-t border-chalk/10 p-1.5">
+          <FilterRows world={world} />
+        </div>
+      </PanelBody>
     </Panel>
   );
 }
@@ -236,8 +259,7 @@ interface LegendLineProps {
 /**
  * The legend on one line: what each color stands for, and nothing else. It
  * stands in for the filters while looking up, where the sky is the thing to
- * see, and opens them. Not on a phone, which has a button for that already
- * and no width for this. And between the `lg` and `xl` breakpoints, where
+ * see, and opens them. Between the `lg` and `xl` breakpoints, where
  * the time bar has just moved up beside it and left it a couple of hundred
  * pixels, the colors go without their names.
  */
@@ -252,7 +274,7 @@ export function LegendLine({ world, open, onToggle }: LegendLineProps) {
       aria-controls="filters"
       aria-label="Filters"
       title={open ? 'Hide the filters' : 'Show the filters'}
-      className={`pointer-events-auto hidden max-w-full items-center gap-2.5 rounded-full py-2 pr-3 pl-3.5 text-xs text-chalk/80 hover:text-chalk sm:flex ${SURFACE}`}
+      className={`pointer-events-auto flex max-w-full items-center gap-2.5 rounded-full py-2 pr-3 pl-3.5 text-xs text-chalk/80 hover:text-chalk ${SURFACE}`}
     >
       {/* It wraps, onto lines that are cut off: an entry there is no room for drops out whole. */}
       <span className="flex h-4 min-w-0 flex-wrap gap-x-3 overflow-hidden">

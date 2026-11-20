@@ -17,6 +17,21 @@ export function formatUtc(timeMs: number): string {
   return utcFormat.format(timeMs);
 }
 
+const utcBriefFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'UTC',
+  month: 'short',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** The same without the year, for where there is one row to fit it in: `Nov 16, 06:31:07` */
+export function formatUtcBrief(timeMs: number): string {
+  return utcBriefFormat.format(timeMs);
+}
+
 /** `19,575` */
 export function formatInteger(value: number): string {
   return integerFormat.format(value);

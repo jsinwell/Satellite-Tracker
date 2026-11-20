@@ -17,8 +17,7 @@ const SHORT_PASS_MS = 20 * 60_000;
 const PASS_SLACK_MS = 6 * 60_000;
 /** How much of the band's white shows in full night and in full day. */
 const SHADE = { night: 0.1, day: 0.6 };
-/** Hours are named this far apart, and not so near an end that the name would be cut off. */
-const HOURS_APART = 3;
+/** Hours are not named so near an end that the name would be cut off. */
 const EDGE_SHARE = 0.04;
 
 const hourFormat = new Intl.DateTimeFormat('en-US', { hour: 'numeric' });
@@ -33,14 +32,14 @@ function shadingOf(night: Night): string {
   return `linear-gradient(to right, ${stops.join(', ')})`;
 }
 
-/** The whole hours to name along it, by the viewer's clock. */
-function hoursOf(night: Night): { atMs: number; label: string }[] {
+/** The whole hours to name along it, `apart` hours apart, by the viewer's clock. */
+function hoursOf(night: Night, apart: number): { atMs: number; label: string }[] {
   const hours = [];
   const hour = new Date(night.startMs);
   hour.setMinutes(0, 0, 0);
   for (hour.setHours(hour.getHours() + 1); hour.getTime() < night.endMs; ) {
     const share = (hour.getTime() - night.startMs) / MS_PER_DAY;
-    if (hour.getHours() % HOURS_APART === 0 && share > EDGE_SHARE && share < 1 - EDGE_SHARE) {
+    if (hour.getHours() % apart === 0 && share > EDGE_SHARE && share < 1 - EDGE_SHARE) {
       hours.push({ atMs: hour.getTime(), label: hourFormat.format(hour) });
     }
     hour.setHours(hour.getHours() + 1);
@@ -60,7 +59,16 @@ const SKY_WORDS = { day: 'Daylight', twilight: 'Twilight', dark: 'Dark sky' } as
  * satellite can be seen, and this shows how far off the next good hour is,
  * and takes you there.
  */
-export function NightStrip({ observer, simMs }: { observer: Observer; simMs: number }) {
+interface NightStripProps {
+  observer: Observer;
+  simMs: number;
+  /** How many hours apart the hours along it are named: more where it is narrow. */
+  hoursApart?: number;
+  /** Told each time it sends the clock somewhere. */
+  onGoTo?(timeMs: number): void;
+}
+
+export function NightStrip({ observer, simMs, hoursApart = 3, onGoTo }: NightStripProps) {
   const world = useApp((state) => state.world);
   const selected = useApp((state) => state.selected);
   // While it is being dragged it stays the night it was: at speed, time can
@@ -70,7 +78,7 @@ export function NightStrip({ observer, simMs }: { observer: Observer; simMs: num
   const startMs = held ?? nightStart(observer.longitude, simMs);
   const night = useMemo(() => nightOf(observer, startMs), [observer, startMs]);
   const shading = useMemo(() => shadingOf(night), [night]);
-  const hours = useMemo(() => hoursOf(night), [night]);
+  const hours = useMemo(() => hoursOf(night, hoursApart), [night, hoursApart]);
   const satellite = world !== null && selected !== null ? world.satellites[selected] : null;
   const passes = useMemo((): Pass[] => {
     if (!satellite) return [];
@@ -92,7 +100,9 @@ export function NightStrip({ observer, simMs }: { observer: Observer; simMs: num
     if (frame.current !== 0) return;
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
-      if (wanted.current !== null) useApp.getState().jumpTo(wanted.current);
+      if (wanted.current === null) return;
+      useApp.getState().jumpTo(wanted.current);
+      onGoTo?.(wanted.current);
     });
   };
 
@@ -121,7 +131,11 @@ export function NightStrip({ observer, simMs }: { observer: Observer; simMs: num
     setPointerMs(timeMs);
     if (held !== null) goTo(timeMs);
   };
-  const letGo = () => setHeld(null);
+  const letGo = (event: PointerEvent<HTMLDivElement>) => {
+    setHeld(null);
+    // A finger does not hover: once it lifts there is nothing being pointed at.
+    if (event.pointerType !== 'mouse') setPointerMs(null);
+  };
 
   const onKeyDown = (event: KeyboardEvent) => {
     const now = currentSimTime();

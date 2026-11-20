@@ -154,7 +154,9 @@
 - Pause, or run time at up to 1000x. Click the date to jump to any moment from 1957 to 2100.
   The satellites' tails get longer as time runs faster.
 - WASD or the arrow keys move the camera, and Q and E zoom.
-- Works on a phone.
+- On a phone it's laid out like a maps app: search and one menu at the top, the clock in a
+  row at the bottom, and over it one sheet for whatever you've picked. The sheet folds down
+  to a line so you can see the scene.
 - Your filters, colors and location are saved between visits.
 - You can link to a satellite with `?sat=25544`, to a ride with `?sat=25544&ride=1`, or to a
   moment in time with `?t=2026-11-16T06:30:00Z`.

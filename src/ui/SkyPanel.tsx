@@ -22,7 +22,7 @@ import {
   useSkyNow,
   useViewingWindow,
 } from './hooks';
-import { CloseButton, Panel, PanelHeading, PanelTitle, SUNLIT_TAG } from './Panel';
+import { Panel, PanelBody, PanelHeader, PanelHeading, SUNLIT_TAG } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
 const LISTED = 8;
@@ -384,33 +384,31 @@ export function SkyPanel({ world, onClose }: { world: World; onClose(): void }) 
 
   return (
     <Panel aria-label="Your sky" className="w-full text-sm">
-      <header className="flex items-start gap-3 px-4 pt-3 pb-2.5">
-        <div className="min-w-0 flex-1">
-          <PanelTitle>Your sky</PanelTitle>
-          {shown ? (
-            <p className="mt-0.5 flex items-baseline gap-2 text-xs text-graphite tabular-nums">
-              {formatPlace(shown.latitude, shown.longitude)}
-              <button
-                type="button"
-                onClick={() => setChangingFrom(shown)}
-                className="rounded text-chalk underline decoration-chalk/40 underline-offset-2 hover:decoration-chalk"
-              >
-                Change
-              </button>
-            </p>
-          ) : (
-            <p className="mt-0.5 text-xs text-graphite">
-              Where are you? See what's overhead, and when a satellite passes over.
-            </p>
-          )}
-        </div>
-        <CloseButton onClick={onClose} />
-      </header>
-      {shown ? (
-        <UpNow world={world} observer={shown} />
-      ) : (
-        <ChooseLocation onCancel={observer ? () => setChangingFrom(null) : undefined} />
-      )}
+      <PanelHeader title="Your sky" onClose={onClose}>
+        {shown ? (
+          <p className="mt-0.5 flex items-baseline gap-2 text-xs text-graphite tabular-nums">
+            {formatPlace(shown.latitude, shown.longitude)}
+            <button
+              type="button"
+              onClick={() => setChangingFrom(shown)}
+              className="rounded text-chalk underline decoration-chalk/40 underline-offset-2 hover:decoration-chalk"
+            >
+              Change
+            </button>
+          </p>
+        ) : (
+          <p className="mt-0.5 text-xs text-graphite">
+            Where are you? See what's overhead, and when a satellite passes over.
+          </p>
+        )}
+      </PanelHeader>
+      <PanelBody>
+        {shown ? (
+          <UpNow world={world} observer={shown} />
+        ) : (
+          <ChooseLocation onCancel={observer ? () => setChangingFrom(null) : undefined} />
+        )}
+      </PanelBody>
     </Panel>
   );
 }

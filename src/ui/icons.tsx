@@ -54,3 +54,46 @@ export function ChevronIcon({ pointing }: { pointing: 'left' | 'right' | 'up' | 
     </svg>
   );
 }
+
+/** A crescent and a star: the night sky. */
+export function SkyIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path d="M11.5 3.2a6.8 6.8 0 1 0 5.3 9.9 5.6 5.6 0 0 1-5.3-9.9Z" {...line} />
+      <path d="m15 2.5.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** A cloud, struck through when the clouds are hidden. */
+export function CloudIcon({ hidden }: { hidden: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path
+        d="M6 15.5a3.5 3.5 0 0 1-.6-6.95 4.75 4.75 0 0 1 9.15 1.2A3 3 0 0 1 14 15.5Z"
+        {...line}
+      />
+      {hidden && <path d="m3.5 3.5 13 13" {...line} />}
+    </svg>
+  );
+}
+
+/** Three lines, each shorter than the last: the filters. */
+export function FiltersIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <path d="M3 6h14M5.5 10h9M8 14h4" {...line} />
+    </svg>
+  );
+}
+
+/** Three dots: more. */
+export function MoreIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
+      <circle cx="4.5" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+      <circle cx="15.5" cy="10" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
