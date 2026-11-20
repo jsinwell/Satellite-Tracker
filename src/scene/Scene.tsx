@@ -17,6 +17,7 @@ import { PlanetDiscs } from './PlanetDiscs';
 import { Planets } from './Planets';
 import { SatelliteNames } from './SatelliteNames';
 import { Satellites } from './Satellites';
+import { SelectedName } from './SelectedName';
 import { Sky } from './Sky';
 import { SkyCompass } from './SkyCompass';
 import { SunAndMoon } from './SunAndMoon';
@@ -68,6 +69,7 @@ export function Scene({ world }: { world: World }) {
       <Picker world={world} />
       <SkyCompass />
       <SatelliteNames world={world} />
+      <SelectedName world={world} />
       <Atmosphere />
 
       <group rotation={[...TEME_GROUP_ROTATION]} scale={TEME_GROUP_SCALE}>
