@@ -21,7 +21,7 @@ import { PassList } from './PassList';
 const STALE_ELEMENTS_MS = 14 * 86_400_000;
 
 const actionClass =
-  'flex-1 rounded-sm px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/10';
+  'flex-1 rounded-lg bg-chalk/10 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/20';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -146,7 +146,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
       </div>
 
       {/* Stays in reach at the bottom of the panel while the details scroll behind it. */}
-      <div className="sticky bottom-0 flex gap-1 rounded-b-md border-t border-chalk/10 bg-night/95 p-1.5 backdrop-blur-md">
+      <div className="sticky bottom-0 flex gap-2 rounded-b-2xl border-t border-chalk/10 bg-night/90 p-2 backdrop-blur-xl">
         <button
           type="button"
           onClick={onToggleExpanded}

@@ -5,6 +5,7 @@ import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
 import type { SearchResults } from '../core/search';
 import { formatInteger } from './format';
+import { SearchIcon } from './icons';
 import { SURFACE } from './Panel';
 
 /**
@@ -109,7 +110,7 @@ export function SearchBox({ world }: { world: World }) {
         }
         autoComplete="off"
         spellCheck={false}
-        placeholder="Search satellites"
+        placeholder="Search"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -119,21 +120,24 @@ export function SearchBox({ world }: { world: World }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
-        className={`peer w-full px-4 py-2.5 text-sm text-chalk outline-none placeholder:text-graphite focus:border-chalk/60 [&::-webkit-search-cancel-button]:hidden ${SURFACE}`}
+        className={`peer w-full rounded-full py-2.5 pr-4 pl-9 text-sm text-chalk outline-none placeholder:text-graphite focus:border-chalk/40 [&::-webkit-search-cancel-button]:hidden ${SURFACE}`}
       />
+      <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-graphite peer-focus:text-chalk">
+        <SearchIcon />
+      </span>
       {/*
         The key that brings the keyboard here. Not on a phone, which has no
         such key, nor where the box is too narrow to hold it and the words.
       */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded-sm border border-chalk/20 px-1.5 font-sans text-2xs text-graphite sm:@[12rem]:peer-placeholder-shown:block"
+        className="pointer-events-none absolute top-1/2 right-3.5 hidden -translate-y-1/2 rounded-md bg-chalk/10 px-1.5 py-px text-2xs text-graphite sm:@[9rem]:peer-placeholder-shown:block"
       >
         /
       </span>
 
       {showResults && (
-        <div className="absolute top-full right-0 left-0 z-10 mt-2 overflow-hidden rounded-md border border-chalk/10 bg-night/95 backdrop-blur-md">
+        <div className="absolute top-full right-0 left-0 z-10 mt-2 overflow-hidden rounded-2xl border border-chalk/10 bg-night/90 backdrop-blur-xl backdrop-saturate-150">
           <div
             id={listId}
             role="listbox"

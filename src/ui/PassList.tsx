@@ -18,7 +18,7 @@ function PassRow({ pass }: { pass: Pass }) {
         type="button"
         onClick={() => useApp.getState().jumpTo(pass.riseMs - LEAD_IN_MS)}
         title="Go to this pass"
-        className="w-full rounded-sm px-2 py-1 text-left text-xs hover:bg-chalk/10"
+        className="w-full rounded-lg px-2 py-1 text-left text-xs hover:bg-chalk/10"
       >
         <span className="flex items-baseline gap-2">
           <span className="flex-1 text-chalk tabular-nums">{formatLocalTime(pass.riseMs)}</span>

@@ -54,10 +54,10 @@ const CONSTELLATION_COLORS: Record<ConstellationId, string> = {
 
 /**
  * What the interface itself draws in the scene: the ring around the selected
- * satellite, the dot where you stand. Chalk, the same as its text
+ * satellite, the dot where you stand. White, the same as its text
  * (`--color-chalk` in `index.css`), and no satellite's color.
  */
-export const MARK_COLOR = '#e8e6df';
+export const MARK_COLOR = '#f5f5f7';
 
 /**
  * The selected satellite's orbit wears its own color, but what it is drawn on

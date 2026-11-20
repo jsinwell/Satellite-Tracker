@@ -110,7 +110,10 @@ function CloudIcon({ hidden }: { hidden: boolean }) {
 }
 
 /** The buttons beside the search box, and the one that opens the filters on a phone. */
-const HUD_BUTTON = `pointer-events-auto flex shrink-0 items-center px-3 text-xs hover:text-chalk ${SURFACE}`;
+const HUD_BUTTON = `pointer-events-auto flex shrink-0 items-center rounded-full px-3 text-xs hover:text-chalk ${SURFACE}`;
+/** How one of them looks while what it opens is open: lit, so it reads over any sky. */
+const OPEN =
+  'aria-expanded:border-transparent aria-expanded:bg-chalk aria-expanded:text-night aria-expanded:hover:text-night';
 
 const BOTTOM_ROW = [
   'absolute inset-x-3 bottom-3 grid items-end gap-x-3 gap-y-2',
@@ -185,7 +188,7 @@ export function App() {
                 aria-controls="your-sky"
                 aria-label="Your sky"
                 title="What's over you"
-                className={`${HUD_BUTTON} text-chalk/80 aria-expanded:border-chalk/50 aria-expanded:text-chalk`}
+                className={`${HUD_BUTTON} text-chalk/80 ${OPEN}`}
               >
                 <SkyIcon />
               </button>
@@ -213,7 +216,7 @@ export function App() {
               <div
                 id="your-sky"
                 ref={skyRef}
-                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-md sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
+                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-2xl sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
                   selected === null && watching === null && !filtersOpen ? '' : 'hidden'
                 }`}
               >
@@ -228,7 +231,7 @@ export function App() {
           )}
           {selected !== null && (
             // Capped and scrollable, so it can never run under the bottom row.
-            <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-md sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
+            <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-2xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
               <InfoPanel
                 key={selected}
                 world={world}
@@ -267,7 +270,7 @@ export function App() {
             }}
             aria-expanded={filtersOpen}
             aria-controls="filters"
-            className={`${HUD_BUTTON} py-2 text-chalk/80 [grid-area:toggle] aria-expanded:border-chalk/50 aria-expanded:text-chalk sm:hidden`}
+            className={`${HUD_BUTTON} py-2 text-chalk/80 [grid-area:toggle] ${OPEN} sm:hidden`}
           >
             Filters
           </button>

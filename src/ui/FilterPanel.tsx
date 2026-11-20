@@ -30,12 +30,12 @@ function Toggle({ label, detail, title, count, enabled, color, onToggle, onSolo 
         onClick={onToggle}
         aria-pressed={enabled}
         title={title}
-        className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-graphite/70 hover:bg-chalk/10 aria-pressed:text-chalk"
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-xs text-graphite/70 hover:bg-chalk/10 aria-pressed:text-chalk"
       >
         {/* Filled when shown, hollow when hidden. Color-neutral filters get a neutral square. */}
         <span
           className={`size-2 shrink-0 border border-graphite bg-graphite ${
-            color ? 'rounded-full' : 'rounded-[1px]'
+            color ? 'rounded-full' : 'rounded-[2px]'
           } ${enabled ? '' : '!bg-transparent'}`}
           style={color ? { backgroundColor: color, borderColor: color } : undefined}
         />
@@ -55,7 +55,7 @@ function Toggle({ label, detail, title, count, enabled, color, onToggle, onSolo 
           type="button"
           onClick={onSolo}
           aria-label={`Show only ${label}`}
-          className="absolute right-1 hidden rounded-sm border border-chalk/30 bg-night px-1.5 text-2xs text-chalk group-hover:block group-has-[:focus-visible]:block hover:bg-chalk hover:text-night"
+          className="absolute right-1.5 hidden rounded-full bg-chalk px-2 py-px text-2xs font-medium text-night group-hover:block group-has-[:focus-visible]:block hover:bg-chalk/85"
         >
           only
         </button>
@@ -102,7 +102,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
           : 'sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]'
       }`}
     >
-      <fieldset className="mb-1.5 flex gap-0.5 rounded-sm bg-chalk/5 p-0.5 text-xs">
+      <fieldset className="mb-1.5 flex gap-0.5 rounded-lg bg-chalk/10 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>
         {COLOR_MODES.map(({ value, label }) => (
           <button
@@ -110,7 +110,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
             type="button"
             onClick={() => setColorBy(value)}
             aria-pressed={colorBy === value}
-            className="flex-1 rounded-sm px-2 py-0.5 text-graphite hover:text-chalk aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night"
+            className="flex-1 rounded-md px-2 py-0.5 text-graphite hover:text-chalk aria-pressed:bg-chalk/25 aria-pressed:font-medium aria-pressed:text-chalk"
           >
             {label}
           </button>

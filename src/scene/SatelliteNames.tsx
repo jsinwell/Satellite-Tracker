@@ -47,7 +47,7 @@ export function SatelliteNames({ world }: { world: World }) {
         const label = document.createElement('span');
         label.dataset.satelliteName = '';
         label.className =
-          'atlas-name absolute top-0 left-0 hidden text-xs leading-none text-chalk [text-shadow:0_1px_3px_#000]';
+          'absolute top-0 left-0 hidden text-xs leading-none font-medium text-chalk [text-shadow:0_1px_3px_#000]';
         return layer.appendChild(label);
       });
     }

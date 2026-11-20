@@ -239,7 +239,5 @@ Orbital data from [CelesTrak](https://celestrak.org), propagation by
 [Solar System Scope](https://www.solarsystemscope.com/textures/) (CC BY 4.0), star map from
 [NASA's Scientific Visualization Studio](https://svs.gsfc.nasa.gov/4851), clouds from Matt
 Eason's [live cloud maps](https://github.com/matteason/live-cloud-maps) (contains modified
-EUMETSAT data). The interface is set in
-[Barlow Semi Condensed](https://github.com/jpt/barlow) and
-[Source Serif 4](https://github.com/adobe-fonts/source-serif), both under the SIL Open Font
-License.
+EUMETSAT data). The interface is set in [Inter](https://rsms.me/inter/), under the
+SIL Open Font License.

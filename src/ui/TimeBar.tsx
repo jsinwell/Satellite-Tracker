@@ -11,7 +11,7 @@ import { TimePicker } from './TimePicker';
 const LIVE_TOLERANCE_MS = 1500;
 
 const buttonClass =
-  'grid h-6 place-items-center rounded-sm px-2 text-xs text-chalk/80 tabular-nums hover:bg-chalk/10 aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night';
+  'grid h-6 place-items-center rounded-full px-2.5 text-xs text-chalk/80 tabular-nums hover:bg-chalk/10 aria-pressed:bg-chalk/25 aria-pressed:font-medium aria-pressed:text-chalk';
 
 /** The simulation clock: what instant is shown, and how fast it is moving. */
 export function TimeBar() {
@@ -38,9 +38,11 @@ export function TimeBar() {
           aria-expanded={picking}
           aria-haspopup="dialog"
           title="Go to a date and time"
-          className="-mx-1 rounded-sm px-1 py-0.5 hover:bg-chalk/10 aria-expanded:bg-chalk/10"
+          className="-mx-1.5 rounded-lg px-1.5 py-0.5 hover:bg-chalk/10 aria-expanded:bg-chalk/10"
         >
-          <time className="text-sm text-chalk tabular-nums">{formatUtc(simMs)} UTC</time>
+          <time className="text-sm font-medium text-chalk tabular-nums">
+            {formatUtc(simMs)} UTC
+          </time>
         </button>
 
         <div className="flex items-center gap-0.5">
@@ -72,7 +74,7 @@ export function TimeBar() {
           onClick={goLive}
           disabled={live}
           title={live ? 'Showing the present, in real time' : 'Return to the present'}
-          className="flex h-6 items-center gap-1.5 rounded-sm px-2 text-xs text-graphite enabled:hover:bg-chalk/10 enabled:hover:text-chalk disabled:text-chalk"
+          className="flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs text-graphite enabled:hover:bg-chalk/10 enabled:hover:text-chalk disabled:text-chalk"
         >
           {/* Filled while the clock is the real one, hollow while it is not. */}
           <span

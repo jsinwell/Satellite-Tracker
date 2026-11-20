@@ -85,7 +85,7 @@ function useLabels(): () => HTMLElement[] {
         const label = document.createElement('span');
         label.dataset.trackLabel = '';
         label.className =
-          'absolute top-0 left-0 hidden rounded-sm bg-night/80 px-1 py-0.5 text-2xs leading-none whitespace-nowrap text-chalk tabular-nums';
+          'absolute top-0 left-0 hidden rounded-full bg-night/80 px-1.5 py-0.5 text-2xs leading-none whitespace-nowrap text-chalk tabular-nums';
         return layer.appendChild(label);
       });
     }

@@ -13,12 +13,12 @@ export function BootScreen() {
         </output>
       ) : (
         <div role="alert" className="max-w-md">
-          <h1 className="atlas-name text-base text-chalk">The tracker could not start</h1>
+          <h1 className="text-base font-semibold text-chalk">The tracker could not start</h1>
           <p className="mt-2 text-sm text-chalk/80">{error}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-4 rounded border border-chalk/30 px-4 py-1.5 text-sm text-chalk hover:bg-chalk/10"
+            className="mt-4 rounded-full bg-chalk/10 px-4 py-1.5 text-sm font-medium text-chalk hover:bg-chalk/20"
           >
             Try again
           </button>

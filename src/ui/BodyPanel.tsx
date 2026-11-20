@@ -51,7 +51,7 @@ export function BodyPanel({ body, observer }: { body: SkyBody; observer: Observe
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls="body-details"
-          className="-mt-0.5 rounded-sm px-2 py-1 text-xs text-chalk/80 hover:bg-chalk/10 hover:text-chalk sm:hidden"
+          className="rounded-full bg-chalk/10 px-2.5 py-1 text-xs text-chalk/80 hover:bg-chalk/20 hover:text-chalk sm:hidden"
         >
           {expanded ? 'Less' : 'More'}
         </button>

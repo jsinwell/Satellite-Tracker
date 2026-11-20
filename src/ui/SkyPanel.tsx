@@ -28,7 +28,7 @@ import { CloseButton, Panel, PanelHeading, PanelTitle, SUNLIT_TAG } from './Pane
 const LISTED = 8;
 
 const buttonClass =
-  'rounded-sm border border-chalk/20 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/10 disabled:text-graphite';
+  'rounded-full bg-chalk/10 px-3.5 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/20 disabled:text-graphite';
 
 type Locating = { state: 'idle' } | { state: 'busy' } | { state: 'failed'; message: string };
 
@@ -106,7 +106,7 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
         {onCancel && (
           <button
             type="button"
-            className="rounded-sm px-2 py-1.5 text-xs text-graphite hover:text-chalk"
+            className="rounded-full px-2 py-1.5 text-xs text-graphite hover:text-chalk"
             onClick={onCancel}
           >
             Cancel
@@ -134,7 +134,7 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
           spellCheck={false}
           aria-invalid={typedError}
           aria-describedby={typedError ? `${inputId}-error` : undefined}
-          className="w-full rounded-sm border border-chalk/20 bg-space/60 px-3 py-1.5 text-xs text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/60 aria-invalid:border-caution"
+          className="w-full rounded-lg border border-chalk/15 bg-space/40 px-3 py-1.5 text-xs text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/50 aria-invalid:border-caution"
         />
         {typedError && (
           <p id={`${inputId}-error`} className="mt-1 text-xs text-caution">
@@ -226,7 +226,7 @@ function BodyRow({
         onClick={() => useApp.getState().watch(body)}
         aria-pressed={watching}
         title={`Look at ${body === 'moon' ? 'the Moon' : BODY_NAMES[body]} up close`}
-        className="flex w-full items-baseline gap-2.5 rounded-sm px-2 py-0.5 text-left text-xs hover:bg-chalk/10 aria-pressed:bg-chalk/15"
+        className="flex w-full items-baseline gap-2.5 rounded-lg px-2 py-1 text-left text-xs hover:bg-chalk/10 aria-pressed:bg-chalk/20"
       >
         <span className="text-chalk">{BODY_NAMES[body]}</span>
         <span className="min-w-0 flex-1 truncate text-graphite">{note}</span>
@@ -300,7 +300,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
           type="button"
           onClick={() => useApp.getState().setLookingUp(!lookingUp)}
           aria-pressed={lookingUp}
-          className="w-full rounded-sm border border-chalk/40 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk hover:text-night"
+          className="w-full rounded-lg bg-chalk/15 px-3 py-2 text-xs font-semibold text-chalk hover:bg-chalk/25"
         >
           {lookingUp ? 'Back to the globe' : 'Look up from here'}
         </button>
@@ -334,7 +334,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
               <button
                 type="button"
                 onClick={() => useApp.getState().selectAndFocus(entry.index)}
-                className="flex w-full items-center gap-2.5 rounded-sm px-2 py-1 text-left text-xs hover:bg-chalk/10"
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1 text-left text-xs hover:bg-chalk/10"
               >
                 <span
                   className="size-2 shrink-0 rounded-full"
@@ -393,7 +393,7 @@ export function SkyPanel({ world, onClose }: { world: World; onClose(): void }) 
               <button
                 type="button"
                 onClick={() => setChangingFrom(shown)}
-                className="rounded-sm text-chalk underline decoration-chalk/40 underline-offset-2 hover:decoration-chalk"
+                className="rounded text-chalk underline decoration-chalk/40 underline-offset-2 hover:decoration-chalk"
               >
                 Change
               </button>

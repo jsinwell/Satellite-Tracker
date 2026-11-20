@@ -68,7 +68,7 @@ export function SkyShowsButton() {
       onClick={() => useApp.getState().setSkyShows(next)}
       aria-label={`Satellites shown: ${name}`}
       title={`Showing ${showing}. Click for ${CHOICES[next].name.toLowerCase()}.`}
-      className={`pointer-events-auto flex shrink-0 items-center gap-1.5 px-3 text-xs text-chalk/80 hover:text-chalk ${SURFACE}`}
+      className={`pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 text-xs text-chalk/80 hover:text-chalk ${SURFACE}`}
     >
       <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
         {icon}

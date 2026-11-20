@@ -64,7 +64,7 @@ export function ObserverMarker() {
     if (layer && !label.current) {
       label.current = document.createElement('span');
       label.current.className =
-        'absolute top-0 left-0 hidden rounded-sm bg-night/80 px-1 py-0.5 text-2xs leading-none font-medium text-chalk';
+        'absolute top-0 left-0 hidden rounded-full bg-night/80 px-1.5 py-0.5 text-2xs leading-none font-medium text-chalk';
       label.current.textContent = 'You';
       layer.appendChild(label.current);
     }

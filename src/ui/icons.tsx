@@ -14,8 +14,17 @@ const line = {
 
 export function CloseIcon() {
   return (
+    <svg viewBox="0 0 16 16" className="size-3" aria-hidden="true">
+      <path d="m3.5 3.5 9 9m0-9-9 9" {...line} strokeWidth={2} />
+    </svg>
+  );
+}
+
+export function SearchIcon() {
+  return (
     <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden="true">
-      <path d="m3.5 3.5 9 9m0-9-9 9" {...line} />
+      <circle cx="7" cy="7" r="4.5" {...line} />
+      <path d="m10.5 10.5 3.5 3.5" {...line} />
     </svg>
   );
 }

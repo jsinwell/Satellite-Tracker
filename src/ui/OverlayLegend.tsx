@@ -64,7 +64,7 @@ function OverlayRow({ overlay, label, hint, swatch }: RowProps) {
       aria-labelledby={`${id}-label`}
       aria-describedby={`${id}-hint`}
       onClick={() => useApp.getState().toggleOverlay(overlay)}
-      className="group flex w-full items-center gap-3 rounded-sm px-2 py-1.5 text-left hover:bg-chalk/5"
+      className="group flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-chalk/5"
     >
       <span className="shrink-0 opacity-35 transition-opacity group-aria-checked:opacity-100">
         {swatch}

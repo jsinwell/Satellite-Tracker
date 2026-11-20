@@ -57,7 +57,7 @@ export function LaunchSlider({ world }: { world: World }) {
           onClick={togglePlaying}
           aria-label={playing ? 'Stop the launch timeline' : 'Play the launch timeline'}
           aria-pressed={playing}
-          className="grid size-5 shrink-0 place-items-center rounded-sm text-chalk/80 hover:text-chalk"
+          className="grid size-5 shrink-0 place-items-center rounded-full text-chalk/80 hover:text-chalk"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>

@@ -58,11 +58,11 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 });
 
 const stepClass =
-  'grid size-7 place-items-center rounded-sm text-chalk/80 enabled:hover:bg-chalk/10 disabled:text-graphite/30';
+  'grid size-7 place-items-center rounded-full text-chalk/80 enabled:hover:bg-chalk/10 disabled:text-graphite/30';
 
 /** A box to type a figure in: the date, the year, a part of the time. */
 const FIELD =
-  'rounded-sm border border-chalk/20 bg-space/60 text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/60';
+  'rounded-lg border border-chalk/15 bg-space/40 text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/50';
 
 /**
  * Sets the simulated date and time, in UTC like the time bar: by typing it,
@@ -159,7 +159,7 @@ export function TimePicker({ onClose }: { onClose(): void }) {
             />
             <button
               type="submit"
-              className="rounded-sm bg-chalk px-3 py-1.5 font-medium text-night hover:bg-chalk/85"
+              className="rounded-lg bg-chalk px-3.5 py-1.5 font-semibold text-night hover:bg-chalk/85"
             >
               Go
             </button>
@@ -190,7 +190,7 @@ export function TimePicker({ onClose }: { onClose(): void }) {
               onClick={() => setChoosingMonth((open) => !open)}
               aria-expanded={choosingMonth}
               title={choosingMonth ? 'Back to the days' : 'Choose a month and year'}
-              className="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium text-chalk hover:bg-chalk/10 aria-expanded:bg-chalk/10"
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold text-chalk hover:bg-chalk/10 aria-expanded:bg-chalk/10"
             >
               {choosingMonth ? page.year : `${MONTH_NAMES[page.month]} ${page.year}`}
               <span className="text-graphite">
@@ -237,7 +237,7 @@ export function TimePicker({ onClose }: { onClose(): void }) {
           <button
             type="button"
             onClick={() => choose(Math.floor(wallNow() / 1000) * 1000)}
-            className="ml-auto rounded-sm px-2 py-1 text-chalk/80 hover:bg-chalk/10"
+            className="ml-auto rounded-full bg-chalk/10 px-2.5 py-1 text-chalk hover:bg-chalk/20"
           >
             Now
           </button>
@@ -332,7 +332,7 @@ function DayGrid({
                   aria-label={dayLabel.format(day.startMs)}
                   aria-pressed={day.startMs === chosenDay}
                   aria-current={day.startMs === today ? 'date' : undefined}
-                  className={`h-8 w-full rounded-sm tabular-nums enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk aria-pressed:font-semibold aria-pressed:text-night aria-pressed:hover:bg-chalk aria-[current=date]:ring-1 aria-[current=date]:ring-chalk/40 ${
+                  className={`mx-auto grid size-8 place-items-center rounded-full tabular-nums enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk aria-pressed:font-semibold aria-pressed:text-night aria-pressed:hover:bg-chalk aria-[current=date]:ring-1 aria-[current=date]:ring-chalk/40 ${
                     day.inMonth ? 'text-chalk' : 'text-graphite/60'
                   }`}
                 >
@@ -399,7 +399,7 @@ function MonthGrid({
               disabled={!monthSettable({ year: page.year, month })}
               onClick={() => onChoose({ year: page.year, month })}
               aria-pressed={isChosen}
-              className="h-9 rounded-sm text-chalk enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night"
+              className="h-9 rounded-lg text-chalk enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk/25 aria-pressed:font-medium"
             >
               {name.slice(0, 3)}
             </button>
