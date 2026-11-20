@@ -11,7 +11,7 @@ export function StatusLine({ world }: { world: World }) {
   const total = world.satellites.length;
 
   return (
-    <p className="pointer-events-auto text-right text-[0.7rem] leading-relaxed text-slate-400 [text-shadow:0_1px_3px_#000]">
+    <p className="pointer-events-auto text-right text-2xs leading-relaxed text-graphite [text-shadow:0_1px_3px_#000]">
       {visibleCount === total
         ? `${formatInteger(total)} objects tracked`
         : `${formatInteger(visibleCount)} of ${formatInteger(total)} objects shown`}
@@ -21,7 +21,7 @@ export function StatusLine({ world }: { world: World }) {
         href="https://celestrak.org"
         target="_blank"
         rel="noreferrer"
-        className="underline decoration-slate-600 hover:text-slate-200"
+        className="underline decoration-graphite/50 hover:text-chalk"
       >
         CelesTrak
       </a>

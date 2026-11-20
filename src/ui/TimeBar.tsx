@@ -3,6 +3,7 @@ import { useApp } from '../app/store';
 import { TIME_RATES, wallNow } from '../core/clock';
 import { formatUtc } from './format';
 import { useSimTime } from './hooks';
+import { PauseIcon, PlayIcon } from './icons';
 import { Panel } from './Panel';
 import { TimePicker } from './TimePicker';
 
@@ -10,7 +11,7 @@ import { TimePicker } from './TimePicker';
 const LIVE_TOLERANCE_MS = 1500;
 
 const buttonClass =
-  'rounded-md px-2 py-1 font-mono text-xs text-slate-300 hover:bg-white/10 aria-pressed:bg-accent/20 aria-pressed:text-accent';
+  'grid h-6 place-items-center rounded-sm px-2 text-xs text-chalk/80 tabular-nums hover:bg-chalk/10 aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night';
 
 /** The simulation clock: what instant is shown, and how fast it is moving. */
 export function TimeBar() {
@@ -37,11 +38,9 @@ export function TimeBar() {
           aria-expanded={picking}
           aria-haspopup="dialog"
           title="Go to a date and time"
-          className="-mx-1 rounded-md px-1 py-0.5 hover:bg-white/10 aria-expanded:bg-white/10"
+          className="-mx-1 rounded-sm px-1 py-0.5 hover:bg-chalk/10 aria-expanded:bg-chalk/10"
         >
-          <time className="font-mono text-sm text-slate-100 tabular-nums">
-            {formatUtc(simMs)} UTC
-          </time>
+          <time className="text-sm text-chalk tabular-nums">{formatUtc(simMs)} UTC</time>
         </button>
 
         <div className="flex items-center gap-0.5">
@@ -52,7 +51,7 @@ export function TimeBar() {
             aria-pressed={paused}
             className={`${buttonClass} w-8`}
           >
-            {paused ? '▶' : '❚❚'}
+            {paused ? <PlayIcon /> : <PauseIcon />}
           </button>
           {TIME_RATES.map((option) => (
             <button
@@ -73,10 +72,13 @@ export function TimeBar() {
           onClick={goLive}
           disabled={live}
           title={live ? 'Showing the present, in real time' : 'Return to the present'}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold tracking-wider text-slate-400 enabled:hover:bg-white/10 disabled:text-emerald-300"
+          className="flex h-6 items-center gap-1.5 rounded-sm px-2 text-xs text-graphite enabled:hover:bg-chalk/10 enabled:hover:text-chalk disabled:text-chalk"
         >
-          <span className={`size-1.5 rounded-full ${live ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-          {live ? 'LIVE' : 'GO LIVE'}
+          {/* Filled while the clock is the real one, hollow while it is not. */}
+          <span
+            className={`size-1.5 rounded-full border ${live ? 'border-chalk bg-chalk' : 'border-graphite'}`}
+          />
+          {live ? 'Live' : 'Go live'}
         </button>
       </Panel>
     </div>

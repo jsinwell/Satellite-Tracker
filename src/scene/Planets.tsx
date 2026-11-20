@@ -230,7 +230,7 @@ export function Planets() {
         label.dataset.body = body;
         label.textContent = BODY_NAMES[body];
         label.className =
-          'absolute top-0 left-0 hidden text-[0.65rem] leading-none text-slate-300 [text-shadow:0_1px_3px_#000]';
+          'atlas-name absolute top-0 left-0 hidden text-xs leading-none text-chalk/80 [text-shadow:0_1px_3px_#000]';
         return layer.appendChild(label);
       });
     }

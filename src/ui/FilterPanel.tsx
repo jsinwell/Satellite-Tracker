@@ -30,20 +30,20 @@ function Toggle({ label, detail, title, count, enabled, color, onToggle, onSolo 
         onClick={onToggle}
         aria-pressed={enabled}
         title={title}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-500 hover:bg-white/10 aria-pressed:text-slate-200"
+        className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs text-graphite/70 hover:bg-chalk/10 aria-pressed:text-chalk"
       >
         {/* Filled when shown, hollow when hidden. Color-neutral filters get a neutral square. */}
         <span
-          className={`size-2 shrink-0 border border-slate-400 bg-slate-400 ${
-            color ? 'rounded-full' : 'rounded-[2px]'
+          className={`size-2 shrink-0 border border-graphite bg-graphite ${
+            color ? 'rounded-full' : 'rounded-[1px]'
           } ${enabled ? '' : '!bg-transparent'}`}
           style={color ? { backgroundColor: color, borderColor: color } : undefined}
         />
         <span className={enabled ? '' : 'line-through'}>{label}</span>
-        {detail && <span className="text-slate-500">{detail}</span>}
+        {detail && <span className="text-graphite">{detail}</span>}
         {/* On rows with an "only" control, the count steps aside for it rather than being overlapped. */}
         <span
-          className={`ml-auto pl-3 font-mono tabular-nums ${
+          className={`ml-auto pl-3 tabular-nums ${
             onSolo ? 'group-hover:invisible group-has-[:focus-visible]:invisible' : ''
           }`}
         >
@@ -55,7 +55,7 @@ function Toggle({ label, detail, title, count, enabled, color, onToggle, onSolo 
           type="button"
           onClick={onSolo}
           aria-label={`Show only ${label}`}
-          className="absolute right-1 hidden rounded bg-slate-800 px-1.5 py-0.5 text-[0.65rem] font-medium text-accent group-hover:block group-has-[:focus-visible]:block hover:bg-slate-700"
+          className="absolute right-1 hidden rounded-sm border border-chalk/30 bg-night px-1.5 text-2xs text-chalk group-hover:block group-has-[:focus-visible]:block hover:bg-chalk hover:text-night"
         >
           only
         </button>
@@ -102,7 +102,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
           : 'sm:max-h-[calc(100dvh-8.5rem)] lg:max-h-[calc(100dvh-5.5rem)]'
       }`}
     >
-      <fieldset className="mb-1.5 flex gap-0.5 rounded-md bg-white/5 p-0.5 text-xs">
+      <fieldset className="mb-1.5 flex gap-0.5 rounded-sm bg-chalk/5 p-0.5 text-xs">
         <legend className="sr-only">Color by</legend>
         {COLOR_MODES.map(({ value, label }) => (
           <button
@@ -110,7 +110,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
             type="button"
             onClick={() => setColorBy(value)}
             aria-pressed={colorBy === value}
-            className="flex-1 rounded px-2 py-0.5 text-slate-400 hover:text-slate-200 aria-pressed:bg-white/10 aria-pressed:text-slate-100"
+            className="flex-1 rounded-sm px-2 py-0.5 text-graphite hover:text-chalk aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night"
           >
             {label}
           </button>
@@ -144,7 +144,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
               onSolo={() => soloConstellation(id)}
             />
           ))}
-      <hr className="my-1.5 border-white/10" />
+      <hr className="my-1.5 border-chalk/10" />
       {ORBIT_REGIMES.map((regime) => (
         <Toggle
           key={regime}
@@ -155,7 +155,7 @@ export function FilterPanel({ world, sharingColumn }: { world: World; sharingCol
           onToggle={() => toggleRegime(regime)}
         />
       ))}
-      <hr className="my-1.5 border-white/10" />
+      <hr className="my-1.5 border-chalk/10" />
       <LaunchSlider world={world} />
     </Panel>
   );

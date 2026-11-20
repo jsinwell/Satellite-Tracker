@@ -11,13 +11,13 @@ import {
   litWords,
 } from './format';
 import { useBodyView } from './hooks';
-import { Panel } from './Panel';
+import { CloseButton, Panel, PanelTitle } from './Panel';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-0.5">
-      <dt className="text-slate-400">{label}</dt>
-      <dd className="text-right font-mono text-slate-100 tabular-nums">{children}</dd>
+      <dt className="text-graphite">{label}</dt>
+      <dd className="text-right text-chalk tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -40,10 +40,10 @@ export function BodyPanel({ body, observer }: { body: SkyBody; observer: Observe
     <Panel aria-label={`Watching ${BODY_NAMES[body]}`} className="w-full text-sm">
       <header className="flex items-start gap-3 px-4 pt-3 pb-2.5">
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold text-white">{BODY_NAMES[body]}</h2>
-          <p className="text-xs text-slate-400">
-            {body === 'moon' ? 'The Moon' : 'Planet'} · in {view.constellation}
-            <span className="sm:hidden"> · {where}</span>
+          <PanelTitle>{BODY_NAMES[body]}</PanelTitle>
+          <p className="text-xs text-graphite">
+            {body === 'moon' ? 'In' : 'Planet in'} {view.constellation}
+            <span className="sm:hidden">, {where}</span>
           </p>
         </div>
         <button
@@ -51,22 +51,15 @@ export function BodyPanel({ body, observer }: { body: SkyBody; observer: Observe
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls="body-details"
-          className="-mt-0.5 rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-white/10 hover:text-white sm:hidden"
+          className="-mt-0.5 rounded-sm px-2 py-1 text-xs text-chalk/80 hover:bg-chalk/10 hover:text-chalk sm:hidden"
         >
           {expanded ? 'Less' : 'More'}
         </button>
-        <button
-          type="button"
-          onClick={() => useApp.getState().watch(null)}
-          aria-label="Close"
-          className="-mt-0.5 -mr-1.5 rounded-md px-2 py-0.5 text-lg leading-none text-slate-400 hover:bg-white/10 hover:text-white"
-        >
-          ×
-        </button>
+        <CloseButton onClick={() => useApp.getState().watch(null)} />
       </header>
 
       <div id="body-details" className={`sm:block ${expanded ? '' : 'hidden'}`}>
-        <div className="border-t border-white/10 px-4 py-2.5">
+        <div className="border-t border-chalk/10 px-4 py-2.5">
           <dl>
             <Row label="Distance">{formatBodyDistance(view.distanceKm)}</Row>
             <Row label="Light takes">{formatLightTime(view.distanceKm)}</Row>
@@ -79,7 +72,7 @@ export function BodyPanel({ body, observer }: { body: SkyBody; observer: Observe
           </dl>
         </div>
 
-        <p className="border-t border-white/10 px-4 py-2.5 text-xs text-slate-400">
+        <p className="border-t border-chalk/10 px-4 py-2.5 text-xs text-graphite">
           {up
             ? 'Scroll or pinch to zoom. Click or tap the sky, or press Esc, to let go.'
             : 'It has set, so the ground is in the way. Try another time of day.'}

@@ -27,6 +27,7 @@ import {
   withTimePart,
 } from './calendar';
 import { fromUtcField, SETTABLE_RANGE_MS, toUtcField } from './format';
+import { ChevronIcon } from './icons';
 import { Panel } from './Panel';
 
 /**
@@ -57,7 +58,11 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 });
 
 const stepClass =
-  'grid size-7 place-items-center rounded-md text-lg leading-none text-slate-300 enabled:hover:bg-white/10 disabled:text-slate-700';
+  'grid size-7 place-items-center rounded-sm text-chalk/80 enabled:hover:bg-chalk/10 disabled:text-graphite/30';
+
+/** A box to type a figure in: the date, the year, a part of the time. */
+const FIELD =
+  'rounded-sm border border-chalk/20 bg-space/60 text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/60';
 
 /**
  * Sets the simulated date and time, in UTC like the time bar: by typing it,
@@ -134,7 +139,7 @@ export function TimePicker({ onClose }: { onClose(): void }) {
         className="thin-scrollbar max-h-[calc(100dvh-5rem)] space-y-3 overflow-y-auto p-3 text-xs"
       >
         <div className="space-y-1.5">
-          <label htmlFor={fieldId} className="block text-slate-300">
+          <label htmlFor={fieldId} className="block text-chalk/80">
             Go to a date and time (UTC)
           </label>
           <div className="flex gap-2">
@@ -150,17 +155,17 @@ export function TimePicker({ onClose }: { onClose(): void }) {
               aria-invalid={refused}
               // biome-ignore lint/a11y/noAutofocus: the picker is opened to type in it
               autoFocus={TYPES_FIRST}
-              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-accent/60 aria-invalid:border-amber-300/60"
+              className={`min-w-0 flex-1 px-2 py-1.5 text-xs aria-invalid:border-caution ${FIELD}`}
             />
             <button
               type="submit"
-              className="rounded-lg bg-accent/15 px-3 py-1.5 font-medium text-accent hover:bg-accent/25"
+              className="rounded-sm bg-chalk px-3 py-1.5 font-medium text-night hover:bg-chalk/85"
             >
               Go
             </button>
           </div>
           {refused && (
-            <p role="alert" className="text-amber-300/90">
+            <p role="alert" className="text-caution">
               Type a date as year-month-day, from {FIRST_YEAR} to {LAST_YEAR}, then a time if you
               like: 2027-08-02 10:07
             </p>
@@ -178,18 +183,18 @@ export function TimePicker({ onClose }: { onClose(): void }) {
               aria-label={choosingMonth ? 'Previous year' : 'Previous month'}
               className={stepClass}
             >
-              ‹
+              <ChevronIcon pointing="left" />
             </button>
             <button
               type="button"
               onClick={() => setChoosingMonth((open) => !open)}
               aria-expanded={choosingMonth}
               title={choosingMonth ? 'Back to the days' : 'Choose a month and year'}
-              className="rounded-md px-2 py-1 text-sm font-medium text-slate-100 hover:bg-white/10 aria-expanded:bg-white/10"
+              className="flex items-center gap-1.5 rounded-sm px-2 py-1 text-sm font-medium text-chalk hover:bg-chalk/10 aria-expanded:bg-chalk/10"
             >
               {choosingMonth ? page.year : `${MONTH_NAMES[page.month]} ${page.year}`}
-              <span aria-hidden className="ml-1 text-[0.6rem] text-slate-500">
-                {choosingMonth ? '▴' : '▾'}
+              <span className="text-graphite">
+                <ChevronIcon pointing={choosingMonth ? 'up' : 'down'} />
               </span>
             </button>
             <button
@@ -201,7 +206,7 @@ export function TimePicker({ onClose }: { onClose(): void }) {
               aria-label={choosingMonth ? 'Next year' : 'Next month'}
               className={stepClass}
             >
-              ›
+              <ChevronIcon pointing="right" />
             </button>
           </div>
 
@@ -222,24 +227,24 @@ export function TimePicker({ onClose }: { onClose(): void }) {
 
         {/* biome-ignore lint/a11y/useSemanticElements: a fieldset's legend will not sit in a row */}
         <div role="group" aria-label="Time" className="flex items-center gap-1.5">
-          <span className="mr-1.5 text-slate-400">Time</span>
+          <span className="mr-1.5 text-graphite">Time</span>
           <TimeField label="Hours" part="hours" instant={instant} onChoose={choose} />
-          <span className="text-slate-500">:</span>
+          <span className="text-graphite">:</span>
           <TimeField label="Minutes" part="minutes" instant={instant} onChoose={choose} />
-          <span className="text-slate-500">:</span>
+          <span className="text-graphite">:</span>
           <TimeField label="Seconds" part="seconds" instant={instant} onChoose={choose} />
-          <span className="ml-1 text-slate-500">UTC</span>
+          <span className="ml-1 text-graphite">UTC</span>
           <button
             type="button"
             onClick={() => choose(Math.floor(wallNow() / 1000) * 1000)}
-            className="ml-auto rounded-md px-2 py-1 text-slate-300 hover:bg-white/10"
+            className="ml-auto rounded-sm px-2 py-1 text-chalk/80 hover:bg-chalk/10"
           >
             Now
           </button>
         </div>
 
         {farFromNow && !refused && (
-          <p className="text-slate-400">
+          <p className="text-graphite">
             The Sun, Moon and planets are right for any date. Satellites this far from today are
             only a guess: their orbits are known as they are now.
           </p>
@@ -306,7 +311,7 @@ function DayGrid({
               key={name}
               scope="col"
               abbr={name}
-              className="py-1 text-center text-[0.65rem] font-normal text-slate-500"
+              className="py-1 text-center text-2xs font-normal text-graphite"
             >
               {name.slice(0, 2)}
             </th>
@@ -327,8 +332,8 @@ function DayGrid({
                   aria-label={dayLabel.format(day.startMs)}
                   aria-pressed={day.startMs === chosenDay}
                   aria-current={day.startMs === today ? 'date' : undefined}
-                  className={`h-8 w-full rounded-md font-mono tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-accent/70 enabled:hover:bg-white/10 disabled:text-slate-800 aria-pressed:bg-accent aria-pressed:font-semibold aria-pressed:text-slate-950 aria-pressed:hover:bg-accent aria-[current=date]:ring-1 aria-[current=date]:ring-accent/50 ${
-                    day.inMonth ? 'text-slate-200' : 'text-slate-600'
+                  className={`h-8 w-full rounded-sm tabular-nums enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk aria-pressed:font-semibold aria-pressed:text-night aria-pressed:hover:bg-chalk aria-[current=date]:ring-1 aria-[current=date]:ring-chalk/40 ${
+                    day.inMonth ? 'text-chalk' : 'text-graphite/60'
                   }`}
                 >
                   {day.day}
@@ -359,7 +364,7 @@ function MonthGrid({
 
   return (
     <div className="space-y-2">
-      <label className="flex items-center justify-center gap-2 text-slate-400">
+      <label className="flex items-center justify-center gap-2 text-graphite">
         Year
         <input
           type="text"
@@ -378,9 +383,9 @@ function MonthGrid({
             }
           }}
           onBlur={() => setDraft(null)}
-          className="w-16 rounded-md border border-white/10 bg-slate-900/80 px-2 py-1 text-center font-mono text-slate-100 outline-none focus:border-accent/60"
+          className={`w-16 px-2 py-1 text-center ${FIELD}`}
         />
-        <span className="text-slate-600">
+        <span className="text-graphite/60">
           {FIRST_YEAR}–{LAST_YEAR}
         </span>
       </label>
@@ -394,7 +399,7 @@ function MonthGrid({
               disabled={!monthSettable({ year: page.year, month })}
               onClick={() => onChoose({ year: page.year, month })}
               aria-pressed={isChosen}
-              className="h-9 rounded-md text-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-accent/70 enabled:hover:bg-white/10 disabled:text-slate-800 aria-pressed:bg-accent/20 aria-pressed:text-accent"
+              className="h-9 rounded-sm text-chalk enabled:hover:bg-chalk/10 disabled:text-graphite/30 aria-pressed:bg-chalk aria-pressed:font-medium aria-pressed:text-night"
             >
               {name.slice(0, 3)}
             </button>
@@ -450,7 +455,7 @@ function TimeField({
         setDraft(null);
         onChoose(withTimePart(instant, part, (value + step + count) % count));
       }}
-      className="w-9 rounded-md border border-white/10 bg-slate-900/80 py-1 text-center font-mono text-slate-100 tabular-nums outline-none focus:border-accent/60"
+      className={`w-9 py-1 text-center ${FIELD}`}
     />
   );
 }

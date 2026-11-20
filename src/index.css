@@ -1,33 +1,91 @@
 @import "tailwindcss";
+@import "@fontsource/barlow-semi-condensed/latin-400.css";
+@import "@fontsource/barlow-semi-condensed/latin-500.css";
+@import "@fontsource/barlow-semi-condensed/latin-600.css";
+@import "@fontsource-variable/source-serif-4/wght-italic.css";
 
+/*
+ * The picture is the scene; the interface is markings on the glass in front
+ * of it. So the interface has no hue of its own: a dark surface, chalk for
+ * what is written on it and graphite for what is written smaller. Color is
+ * left to mean something. The satellites wear the legend's colors, and the
+ * one color the interface does use says the one thing worth looking up for:
+ * lit by the Sun, to be seen now.
+ */
 @theme {
+  --color-*: initial;
+  /* Behind everything: space itself. */
   --color-space: #05070d;
-  --color-accent: #5eead4;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  /* What the panels are made of. */
+  --color-night: #0d1424;
+  /* Text, and a control that is on, which is chalk with the text cut out of it. */
+  --color-chalk: #e8e6df;
+  /* Text that explains other text. */
+  --color-graphite: #8f96a3;
+  /* In sunlight against a dark sky: what can be seen, and when. */
+  --color-sunlit: #ffd27a;
+  /* Something is wrong, or less sure than it looks. */
+  --color-caution: #ff8f70;
+
+  /*
+   * Two voices. Whatever is read off, a number, a row or a button, is set in
+   * a narrow sans, so a column of figures takes no more width than it must.
+   * The name of a thing is set in an italic serif, the way an atlas letters
+   * what it charts: see `atlas-name` below.
+   */
+  --font-sans:
+    "Barlow Semi Condensed", Bahnschrift, "DIN Alternate", "Roboto Condensed", system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", "Iowan Old Style", Georgia, serif;
+
+  /* A narrow face reads smaller than its size, so each step is a little up on the usual. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.35;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.4;
+  --text-base: 1.1875rem;
+  --text-base--line-height: 1.25;
 }
 
-html,
-body,
-#root {
-  height: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-space);
+    color: var(--color-chalk);
+    color-scheme: dark;
+    /* The page never scrolls; stop touch drags on the globe from rubber-banding it. */
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  canvas {
+    /* Pointer gestures on the canvas belong to the camera, not the browser. */
+    touch-action: none;
+  }
+
+  /* One ring for the keyboard, everywhere, in place of each browser's own. */
+  :focus-visible {
+    outline: 2px solid var(--color-chalk);
+    outline-offset: 1px;
+  }
 }
 
-body {
-  background: var(--color-space);
-  color-scheme: dark;
-  /* The page never scrolls; stop touch drags on the globe from rubber-banding it. */
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-canvas {
-  /* Pointer gestures on the canvas belong to the camera, not the browser. */
-  touch-action: none;
+/* The name of a thing: a satellite, a planet, a panel. */
+@utility atlas-name {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 /* For panels that scroll inside the HUD: a full-width scrollbar is heavier than the panel. */
 @utility thin-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-slate-600) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-graphite) 50%, transparent) transparent;
 }

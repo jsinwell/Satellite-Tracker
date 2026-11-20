@@ -4,6 +4,7 @@ import type { World } from '../app/world';
 import { MIN_PASS_ELEVATION, type Observer, type Pass } from '../core/observer';
 import { formatCompass, formatLocalTime, localTimeZone } from './format';
 import { PASS_HORIZON_MS, usePasses } from './hooks';
+import { PanelHeading, SUNLIT_TAG } from './Panel';
 
 /** Jumping to a pass lands this long before it rises, to see it come up. */
 const LEAD_IN_MS = 60_000;
@@ -17,22 +18,22 @@ function PassRow({ pass }: { pass: Pass }) {
         type="button"
         onClick={() => useApp.getState().jumpTo(pass.riseMs - LEAD_IN_MS)}
         title="Go to this pass"
-        className="w-full rounded-md px-2 py-1 text-left text-xs hover:bg-white/10"
+        className="w-full rounded-sm px-2 py-1 text-left text-xs hover:bg-chalk/10"
       >
         <span className="flex items-baseline gap-2">
-          <span className="flex-1 text-slate-100">{formatLocalTime(pass.riseMs)}</span>
+          <span className="flex-1 text-chalk tabular-nums">{formatLocalTime(pass.riseMs)}</span>
           {seeable && (
             <span
-              className="rounded bg-emerald-400/15 px-1.5 py-0.5 text-[0.65rem] text-emerald-300"
+              className={SUNLIT_TAG}
               title={`Sunlit in a dark sky from ${formatLocalTime(seeable.fromMs)} to ${formatLocalTime(seeable.toMs)}`}
             >
               visible
             </span>
           )}
         </span>
-        <span className="block font-mono text-slate-400 tabular-nums">
-          {Math.round(pass.peakElevation)}° high · {minutes} min · {formatCompass(pass.riseAzimuth)}{' '}
-          → {formatCompass(pass.setAzimuth)}
+        <span className="block text-graphite tabular-nums">
+          {Math.round(pass.peakElevation)}° high, {minutes} min, {formatCompass(pass.riseAzimuth)}{' '}
+          to {formatCompass(pass.setAzimuth)}
         </span>
       </button>
     </li>
@@ -55,18 +56,18 @@ export function PassList({
   let body: ReactNode;
   if (prediction === null) {
     body = (
-      <p className="px-2 text-xs text-slate-400">Passes can't be predicted from these elements.</p>
+      <p className="px-2 text-xs text-graphite">Passes can't be predicted from these elements.</p>
     );
   } else if (prediction.kind === 'always-up') {
     body = (
-      <p className="px-2 text-xs text-slate-300">
+      <p className="px-2 text-xs text-chalk/80">
         Always above your horizon, {Math.round(prediction.elevation)}° up in the{' '}
         {formatCompass(prediction.azimuth)}.
       </p>
     );
   } else if (prediction.passes.length === 0) {
     body = (
-      <p className="px-2 text-xs text-slate-400">
+      <p className="px-2 text-xs text-graphite">
         Doesn't rise more than {MIN_PASS_ELEVATION}° over you in the next {days} days.
       </p>
     );
@@ -78,7 +79,7 @@ export function PassList({
             <PassRow key={pass.riseMs} pass={pass} />
           ))}
         </ul>
-        <p className="mt-1 px-2 text-[0.7rem] text-slate-500">
+        <p className="mt-1 px-2 text-2xs text-graphite">
           Your local time ({localTimeZone(prediction.passes[0].riseMs)}). Highest point, length, and
           where it rises and sets. Select one to watch it.
         </p>
@@ -87,10 +88,8 @@ export function PassList({
   }
 
   return (
-    <div className="border-t border-white/10 px-2 py-2.5">
-      <h3 className="mb-1 px-2 text-[0.65rem] font-semibold tracking-widest text-slate-500 uppercase">
-        Passes over you
-      </h3>
+    <div className="border-t border-chalk/10 px-2 py-2.5">
+      <PanelHeading className="px-2">Passes over you</PanelHeading>
       {body}
     </div>
   );

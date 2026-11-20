@@ -236,7 +236,7 @@ test.describe('with a catalog', () => {
     await expect(sky.getByText(/^Best time to look: /)).toBeVisible();
 
     const passes = selection(page).getByRole('list', { name: 'Next passes' });
-    await expect(passes.getByRole('listitem').first()).toContainText(/\d+° high · \d+ min/);
+    await expect(passes.getByRole('listitem').first()).toContainText(/\d+° high, \d+ min/);
 
     // Choosing a pass sets the clock to just before it.
     const clock = page.getByRole('region', { name: 'Simulation time' }).locator('time');
@@ -316,7 +316,7 @@ test.describe('with a catalog', () => {
     // Choosing one goes down to the ground to look at it, and says what is seen.
     await sky.getByRole('button', { name: /^Jupiter/ }).click();
     await expect(watching).toHaveAccessibleName('Watching Jupiter');
-    await expect(watching).toContainText(/Planet · in \w+/);
+    await expect(watching).toContainText(/Planet in \w+/);
     await expect(watching).toContainText(/Distance\s*\d\.\d\d AU/);
     await expect(watching).toContainText(/\d\d\.\d″ wide/);
     await expect(watching).toContainText('full');
@@ -725,11 +725,11 @@ test.describe('with a catalog', () => {
 
   test('controls simulated time', async ({ page }) => {
     await page.goto('/');
-    const live = page.getByRole('button', { name: 'LIVE', exact: true });
+    const live = page.getByRole('button', { name: 'Live', exact: true });
     await expect(live).toBeVisible();
 
     await page.getByRole('button', { name: '1000 times real speed' }).click();
-    const goLive = page.getByRole('button', { name: 'GO LIVE' });
+    const goLive = page.getByRole('button', { name: 'Go live' });
     await expect(goLive).toBeVisible();
 
     await goLive.click();

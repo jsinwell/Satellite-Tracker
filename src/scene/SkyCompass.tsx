@@ -37,7 +37,7 @@ export function SkyCompass() {
         label.dataset.compassPoint = name;
         // The cardinal points stand out from the ones between.
         label.className = `absolute top-0 left-0 hidden font-semibold [text-shadow:0_1px_3px_#000] ${
-          name.length === 1 ? 'text-sm text-slate-100' : 'text-[0.7rem] text-slate-400'
+          name.length === 1 ? 'text-sm text-chalk' : 'text-2xs text-graphite'
         }`;
         label.textContent = name;
         return layer.appendChild(label);

@@ -11,7 +11,7 @@ import {
 } from './format';
 import { useSimTime, useTelemetry } from './hooks';
 import { OverlayLegend } from './OverlayLegend';
-import { Panel } from './Panel';
+import { CloseButton, Panel, PanelHeading, PanelTitle } from './Panel';
 import { PassList } from './PassList';
 
 /**
@@ -21,23 +21,21 @@ import { PassList } from './PassList';
 const STALE_ELEMENTS_MS = 14 * 86_400_000;
 
 const actionClass =
-  'flex-1 rounded-lg px-3 py-1.5 text-xs font-medium text-accent hover:bg-white/10';
+  'flex-1 rounded-sm px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/10';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-0.5">
-      <dt className="text-slate-400">{label}</dt>
-      <dd className="text-right font-mono text-slate-100 tabular-nums">{children}</dd>
+      <dt className="text-graphite">{label}</dt>
+      <dd className="text-right text-chalk tabular-nums">{children}</dd>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="border-t border-white/10 px-4 py-2.5">
-      <h3 className="mb-1 text-[0.65rem] font-semibold tracking-widest text-slate-500 uppercase">
-        {title}
-      </h3>
+    <div className="border-t border-chalk/10 px-4 py-2.5">
+      <PanelHeading>{title}</PanelHeading>
       <dl>{children}</dl>
     </div>
   );
@@ -70,14 +68,15 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
     <Panel aria-label="Selected satellite" className="w-full text-sm">
       <header className="flex items-start gap-3 px-4 pt-3 pb-2.5">
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base font-semibold text-white" title={satellite.name}>
+          <PanelTitle className="truncate" title={satellite.name}>
             {satellite.name}
-          </h2>
-          <p className="font-mono text-xs text-slate-400">
+          </PanelTitle>
+          <p className="text-xs text-graphite tabular-nums">
             NORAD {satellite.noradId}
-            {satellite.intlDesignator && ` · ${satellite.intlDesignator}`}
+            {satellite.intlDesignator && `, ${satellite.intlDesignator}`}
           </p>
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-300">
+          {/* What it is, where it orbits and whose it is, each its own word. */}
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-chalk/80">
             <span className="inline-flex items-center gap-1.5">
               <span
                 className="size-2 rounded-full"
@@ -85,29 +84,16 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
               />
               {TYPE_LABELS[satellite.objectType]}
             </span>
-            <span className="text-slate-600">·</span>
             <span title={REGIME_LABELS[orbit.regime]}>{orbit.regime}</span>
-            {satellite.owner && (
-              <>
-                <span className="text-slate-600">·</span>
-                <span>{satellite.owner}</span>
-              </>
-            )}
+            {satellite.owner && <span>{satellite.owner}</span>}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => useApp.getState().select(null)}
-          aria-label="Close"
-          className="-mt-0.5 -mr-1.5 rounded-md px-2 py-0.5 text-lg leading-none text-slate-400 hover:bg-white/10 hover:text-white"
-        >
-          ×
-        </button>
+        <CloseButton onClick={() => useApp.getState().select(null)} />
       </header>
 
       {!expanded && telemetry && (
-        <p className="border-t border-white/10 px-4 py-2 font-mono text-xs text-slate-100 tabular-nums sm:hidden">
-          {`${formatInteger(telemetry.altitudeKm)} km up · ${telemetry.speedKmS.toFixed(2)} km/s · ${
+        <p className="border-t border-chalk/10 px-4 py-2 text-xs text-chalk tabular-nums sm:hidden">
+          {`${formatInteger(telemetry.altitudeKm)} km up, ${telemetry.speedKmS.toFixed(2)} km/s, ${
             telemetry.sunlit ? 'sunlit' : 'in eclipse'
           }`}
         </p>
@@ -125,7 +111,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
               <Row label="Coverage">{formatInteger(telemetry.footprintKm)} km across</Row>
             </>
           ) : (
-            <p className="py-1 text-slate-400">
+            <p className="py-1 text-graphite">
               No position: these elements cannot be propagated to this time.
             </p>
           )}
@@ -144,13 +130,13 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
         <Section title="Record">
           {satellite.launchDate && <Row label="Launched">{satellite.launchDate}</Row>}
           <Row label="Elements age">
-            <span className={stale ? 'text-amber-300' : undefined}>
+            <span className={stale ? 'text-caution' : undefined}>
               {formatDuration(elementsAgeMs)}
               {elementsAgeMs < 0 && ' ahead'}
             </span>
           </Row>
           {stale && (
-            <p className="pt-1 text-xs text-amber-300/90">
+            <p className="pt-1 text-xs text-caution">
               This far from the elements' epoch, the position shown is only approximate.
             </p>
           )}
@@ -160,7 +146,7 @@ export function InfoPanel({ world, index, expanded, onToggleExpanded }: InfoPane
       </div>
 
       {/* Stays in reach at the bottom of the panel while the details scroll behind it. */}
-      <div className="sticky bottom-0 flex gap-1 rounded-b-xl border-t border-white/10 bg-slate-950/90 p-2 backdrop-blur-md">
+      <div className="sticky bottom-0 flex gap-1 rounded-b-md border-t border-chalk/10 bg-night/95 p-1.5 backdrop-blur-md">
         <button
           type="button"
           onClick={onToggleExpanded}

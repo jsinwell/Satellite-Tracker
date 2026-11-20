@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useId, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { satelliteColor } from '../app/palette';
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
@@ -22,21 +22,13 @@ import {
   useSkyNow,
   useViewingWindow,
 } from './hooks';
-import { Panel } from './Panel';
+import { CloseButton, Panel, PanelHeading, PanelTitle, SUNLIT_TAG } from './Panel';
 
 /** Rows listed under "Up now"; the rest are counted. */
 const LISTED = 8;
 
 const buttonClass =
-  'rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-accent hover:bg-white/10 disabled:text-slate-500';
-
-function Heading({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="mb-1.5 text-[0.65rem] font-semibold tracking-widest text-slate-500 uppercase">
-      {children}
-    </h3>
-  );
-}
+  'rounded-sm border border-chalk/20 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk/10 disabled:text-graphite';
 
 type Locating = { state: 'idle' } | { state: 'busy' } | { state: 'failed'; message: string };
 
@@ -89,7 +81,7 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
   if (picking) {
     return (
       <div className="space-y-2 px-4 pb-3">
-        <p className="text-xs text-slate-300">Click where you are on the globe.</p>
+        <p className="text-xs text-chalk/80">Click where you are on the globe.</p>
         <button type="button" className={buttonClass} onClick={() => setPickingObserver(false)}>
           Cancel
         </button>
@@ -114,7 +106,7 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
         {onCancel && (
           <button
             type="button"
-            className="px-2 py-1.5 text-xs text-slate-400 hover:text-slate-200"
+            className="rounded-sm px-2 py-1.5 text-xs text-graphite hover:text-chalk"
             onClick={onCancel}
           >
             Cancel
@@ -122,12 +114,12 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
         )}
       </div>
       {locating.state === 'failed' && (
-        <p role="alert" className="text-xs text-amber-300/90">
+        <p role="alert" className="text-xs text-caution">
           {locating.message}
         </p>
       )}
       <form onSubmit={submit}>
-        <label htmlFor={inputId} className="mb-1 block text-xs text-slate-400">
+        <label htmlFor={inputId} className="mb-1 block text-xs text-graphite">
           Or type its coordinates
         </label>
         <input
@@ -142,10 +134,10 @@ function ChooseLocation({ onCancel }: { onCancel?: () => void }) {
           spellCheck={false}
           aria-invalid={typedError}
           aria-describedby={typedError ? `${inputId}-error` : undefined}
-          className="w-full rounded-lg border border-white/10 bg-slate-900/80 px-3 py-1.5 font-mono text-xs text-slate-100 outline-none placeholder:text-slate-600 focus:border-accent/60 aria-invalid:border-amber-300/60"
+          className="w-full rounded-sm border border-chalk/20 bg-space/60 px-3 py-1.5 text-xs text-chalk tabular-nums outline-none placeholder:text-graphite/60 focus:border-chalk/60 aria-invalid:border-caution"
         />
         {typedError && (
-          <p id={`${inputId}-error`} className="mt-1 text-xs text-amber-300/90">
+          <p id={`${inputId}-error`} className="mt-1 text-xs text-caution">
             That doesn't look like a latitude and longitude. Try "41.88, -87.63".
           </p>
         )}
@@ -172,7 +164,7 @@ function EclipseNow({ observer }: { observer: Observer }) {
   if (!eclipse) return null;
   if (eclipse.kind === 'solar') {
     return (
-      <p className="text-amber-200">
+      <p className="text-sunlit">
         {eclipse.covered >= 1
           ? 'Total solar eclipse: the Moon is covering the Sun.'
           : `Partial solar eclipse: the Moon covers ${Math.max(1, Math.round(eclipse.covered * 100))}% of the Sun.`}
@@ -180,7 +172,7 @@ function EclipseNow({ observer }: { observer: Observer }) {
     );
   }
   return (
-    <p className="text-amber-200">
+    <p className="text-sunlit">
       {eclipse.inUmbra
         ? "Lunar eclipse: the Moon is in the Earth's shadow."
         : "Lunar eclipse: the Moon is passing through the edge of the Earth's shadow."}
@@ -196,11 +188,11 @@ function WhenToLook({ observer }: { observer: Observer }) {
   const window = useViewingWindow(observer);
   const simMs = useSimTime(10_000);
   if (!window) {
-    return <p className="text-slate-400">The sky doesn't get dark enough here for a while.</p>;
+    return <p className="text-graphite">The sky doesn't get dark enough here for a while.</p>;
   }
   if (window.startMs <= simMs) {
     return (
-      <p className="text-emerald-300">
+      <p className="text-sunlit">
         A good time to look: low satellites are lit against a dark sky until{' '}
         {formatLocalClock(window.endMs)}.
       </p>
@@ -234,11 +226,11 @@ function BodyRow({
         onClick={() => useApp.getState().watch(body)}
         aria-pressed={watching}
         title={`Look at ${body === 'moon' ? 'the Moon' : BODY_NAMES[body]} up close`}
-        className="flex w-full items-baseline gap-2.5 rounded-md px-2 py-0.5 text-left text-xs hover:bg-white/10 aria-pressed:bg-accent/15"
+        className="flex w-full items-baseline gap-2.5 rounded-sm px-2 py-0.5 text-left text-xs hover:bg-chalk/10 aria-pressed:bg-chalk/15"
       >
-        <span className="text-slate-100">{BODY_NAMES[body]}</span>
-        <span className="min-w-0 flex-1 truncate text-slate-500">{note}</span>
-        <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
+        <span className="text-chalk">{BODY_NAMES[body]}</span>
+        <span className="min-w-0 flex-1 truncate text-graphite">{note}</span>
+        <span className="w-16 shrink-0 text-right text-chalk/80 tabular-nums">
           {Math.round(elevation)}° {formatCompass(azimuth)}
         </span>
       </button>
@@ -257,12 +249,10 @@ function PlanetsUp({ observer }: { observer: Observer }) {
   const moon = useBodyView('moon', observer);
   const moonUp = moon.elevation > 0;
   return (
-    <div className="border-t border-white/10 px-2 py-2.5">
-      <div className="px-2">
-        <Heading>Moon and planets</Heading>
-      </div>
+    <div className="border-t border-chalk/10 px-2 py-2.5">
+      <PanelHeading className="px-2">Moon and planets</PanelHeading>
       {planets.length === 0 && !moonUp ? (
-        <p className="px-2 text-xs text-slate-400">None above the horizon right now.</p>
+        <p className="px-2 text-xs text-graphite">None above the horizon right now.</p>
       ) : (
         <ul aria-label="Moon and planets above the horizon">
           {moonUp && (
@@ -300,7 +290,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
 
   return (
     <>
-      <div className="space-y-2.5 border-t border-white/10 px-4 py-2.5 text-xs text-slate-300">
+      <div className="space-y-2.5 border-t border-chalk/10 px-4 py-2.5 text-xs text-chalk/80">
         <div className="space-y-1">
           <EclipseNow observer={observer} />
           <SkyDarkness sunElevation={sky.sunElevation} />
@@ -310,21 +300,21 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
           type="button"
           onClick={() => useApp.getState().setLookingUp(!lookingUp)}
           aria-pressed={lookingUp}
-          className="w-full rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25"
+          className="w-full rounded-sm border border-chalk/40 px-3 py-1.5 text-xs font-medium text-chalk hover:bg-chalk hover:text-night"
         >
           {lookingUp ? 'Back to the globe' : 'Look up from here'}
         </button>
       </div>
       <PlanetsUp observer={observer} />
-      <div className="border-t border-white/10 px-2 py-2.5">
+      <div className="border-t border-chalk/10 px-2 py-2.5">
         <div className="px-2">
-          <Heading>Up now</Heading>
-          <p className="mb-1.5 text-xs text-slate-400">
+          <PanelHeading>Up now</PanelHeading>
+          <p className="mb-1.5 text-xs text-graphite">
             {formatInteger(sky.above.length)} above the horizon
             {dark && (
               <>
-                {' · '}
-                <span className={sky.seeable > 0 ? 'text-emerald-300' : undefined}>
+                {', '}
+                <span className={sky.seeable > 0 ? 'text-sunlit' : undefined}>
                   {sky.seeable === 0 ? 'none' : formatInteger(sky.seeable)}{' '}
                   {binoculars ? 'in binoculars' : 'you could see'}
                 </span>
@@ -332,7 +322,7 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
             )}
           </p>
           {skyState(sky.sunElevation) === 'dark' && sky.seeable === 0 && sky.withinReach > 0 && (
-            <p className="mb-1.5 text-xs text-slate-400">
+            <p className="mb-1.5 text-xs text-graphite">
               The {formatInteger(sky.withinReach)} bright enough{' '}
               {binoculars ? 'for binoculars' : 'to see'} are all in the Earth's shadow at this hour.
             </p>
@@ -344,18 +334,18 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
               <button
                 type="button"
                 onClick={() => useApp.getState().selectAndFocus(entry.index)}
-                className="flex w-full items-center gap-2.5 rounded-md px-2 py-1 text-left text-xs hover:bg-white/10"
+                className="flex w-full items-center gap-2.5 rounded-sm px-2 py-1 text-left text-xs hover:bg-chalk/10"
               >
                 <span
                   className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: satelliteColor(world, entry.index, colorBy, alone) }}
                 />
-                <span className="min-w-0 flex-1 truncate text-slate-100">
+                <span className="min-w-0 flex-1 truncate text-chalk">
                   {world.satellites[entry.index].name}
                 </span>
                 {entry.seeable && (
                   <span
-                    className="shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[0.65rem] text-emerald-300"
+                    className={SUNLIT_TAG}
                     title={
                       binoculars
                         ? 'Sunlit, and bright enough for binoculars'
@@ -365,14 +355,14 @@ function UpNow({ world, observer }: { world: World; observer: Observer }) {
                     {binoculars ? 'binoculars' : 'visible'}
                   </span>
                 )}
-                <span className="w-16 shrink-0 text-right font-mono text-slate-300 tabular-nums">
+                <span className="w-16 shrink-0 text-right text-chalk/80 tabular-nums">
                   {Math.round(entry.elevation)}° {formatCompass(entry.azimuth)}
                 </span>
               </button>
             </li>
           ))}
         </ul>
-        <p className="mt-1.5 px-2 text-[0.7rem] text-slate-500">
+        <p className="mt-1.5 px-2 text-2xs text-graphite">
           Height above the horizon and direction. Select a satellite to see when it passes over
           next.
         </p>
@@ -396,34 +386,25 @@ export function SkyPanel({ world, onClose }: { world: World; onClose(): void }) 
     <Panel aria-label="Your sky" className="w-full text-sm">
       <header className="flex items-start gap-3 px-4 pt-3 pb-2.5">
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold text-white">Your sky</h2>
+          <PanelTitle>Your sky</PanelTitle>
           {shown ? (
-            // Baselines, not centers: the coordinates are monospaced and the
-            // button is not, and the two fonts sit differently in their boxes.
-            <p className="mt-0.5 flex items-baseline gap-2 font-mono text-xs text-slate-400">
+            <p className="mt-0.5 flex items-baseline gap-2 text-xs text-graphite tabular-nums">
               {formatPlace(shown.latitude, shown.longitude)}
               <button
                 type="button"
                 onClick={() => setChangingFrom(shown)}
-                className="font-sans text-accent hover:underline"
+                className="rounded-sm text-chalk underline decoration-chalk/40 underline-offset-2 hover:decoration-chalk"
               >
                 Change
               </button>
             </p>
           ) : (
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-graphite">
               Where are you? See what's overhead, and when a satellite passes over.
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close"
-          className="-mt-0.5 -mr-1.5 rounded-md px-2 py-0.5 text-lg leading-none text-slate-400 hover:bg-white/10 hover:text-white"
-        >
-          ×
-        </button>
+        <CloseButton onClick={onClose} />
       </header>
       {shown ? (
         <UpNow world={world} observer={shown} />

@@ -5,6 +5,7 @@ import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
 import type { SearchResults } from '../core/search';
 import { formatInteger } from './format';
+import { SURFACE } from './Panel';
 
 /**
  * A one-letter query matches thousands of satellites. Only the best few are
@@ -93,7 +94,7 @@ export function SearchBox({ world }: { world: World }) {
   };
 
   return (
-    <div className="pointer-events-auto relative">
+    <div className="@container pointer-events-auto relative">
       <input
         ref={inputRef}
         type="search"
@@ -102,12 +103,13 @@ export function SearchBox({ world }: { world: World }) {
         aria-expanded={showResults}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-keyshortcuts="/"
         aria-activedescendant={
           showResults && results.indices.length > 0 ? optionId(active) : undefined
         }
         autoComplete="off"
         spellCheck={false}
-        placeholder="Search satellites…  ( / )"
+        placeholder="Search satellites"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -117,16 +119,26 @@ export function SearchBox({ world }: { world: World }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
-        className="w-full rounded-xl border border-white/10 bg-slate-950/75 px-4 py-2.5 text-sm text-slate-100 shadow-xl shadow-black/40 backdrop-blur-md outline-none placeholder:text-slate-500 focus:border-accent/60 [&::-webkit-search-cancel-button]:hidden"
+        className={`peer w-full px-4 py-2.5 text-sm text-chalk outline-none placeholder:text-graphite focus:border-chalk/60 [&::-webkit-search-cancel-button]:hidden ${SURFACE}`}
       />
+      {/*
+        The key that brings the keyboard here. Not on a phone, which has no
+        such key, nor where the box is too narrow to hold it and the words.
+      */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded-sm border border-chalk/20 px-1.5 font-sans text-2xs text-graphite sm:@[12rem]:peer-placeholder-shown:block"
+      >
+        /
+      </span>
 
       {showResults && (
-        <div className="absolute top-full right-0 left-0 z-10 mt-2 overflow-hidden rounded-xl border border-white/10 bg-slate-950/90 shadow-xl shadow-black/40 backdrop-blur-md">
+        <div className="absolute top-full right-0 left-0 z-10 mt-2 overflow-hidden rounded-md border border-chalk/10 bg-night/95 backdrop-blur-md">
           <div
             id={listId}
             role="listbox"
             aria-label="Matching satellites"
-            className="max-h-80 overflow-y-auto py-1"
+            className="thin-scrollbar max-h-80 overflow-y-auto py-1"
           >
             {results.indices.map((index, position) => {
               const satellite = world.satellites[index];
@@ -144,21 +156,21 @@ export function SearchBox({ world }: { world: World }) {
                     choose(index);
                   }}
                   onMouseEnter={() => setActive(position)}
-                  className="flex cursor-pointer items-center gap-2.5 px-4 py-1.5 text-sm aria-selected:bg-white/10"
+                  className="flex cursor-pointer items-center gap-2.5 px-4 py-1.5 text-sm aria-selected:bg-chalk/10"
                 >
                   <span
                     className="size-2 shrink-0 rounded-full"
                     style={{ backgroundColor: satelliteColor(world, index, colorBy, alone) }}
                   />
-                  <span className="truncate text-slate-100">{satellite.name}</span>
-                  <span className="ml-auto shrink-0 font-mono text-xs text-slate-500">
+                  <span className="truncate text-chalk">{satellite.name}</span>
+                  <span className="ml-auto shrink-0 text-xs text-graphite tabular-nums">
                     {satellite.noradId}
                   </span>
                 </div>
               );
             })}
           </div>
-          <p className="border-t border-white/10 px-4 py-1.5 text-xs text-slate-500">
+          <p className="border-t border-chalk/10 px-4 py-1.5 text-xs text-graphite">
             {summarize(results, filtered)}
           </p>
         </div>

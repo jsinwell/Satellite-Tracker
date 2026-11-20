@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useApp } from '../app/store';
 import { SKY_SHOWS, type SkyShows } from '../core/brightness';
+import { SURFACE } from './Panel';
 
 const stroke = {
   fill: 'none',
@@ -67,7 +68,7 @@ export function SkyShowsButton() {
       onClick={() => useApp.getState().setSkyShows(next)}
       aria-label={`Satellites shown: ${name}`}
       title={`Showing ${showing}. Click for ${CHOICES[next].name.toLowerCase()}.`}
-      className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white"
+      className={`pointer-events-auto flex shrink-0 items-center gap-1.5 px-3 text-xs text-chalk/80 hover:text-chalk ${SURFACE}`}
     >
       <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
         {icon}

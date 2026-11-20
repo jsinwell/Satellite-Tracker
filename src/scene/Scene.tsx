@@ -1,6 +1,6 @@
 import { addAfterEffect, addEffect, Canvas } from '@react-three/fiber';
 import { Suspense, useEffect, useState } from 'react';
-import { ACCENT_COLOR } from '../app/palette';
+import { MARK_COLOR } from '../app/palette';
 import { holdSimTime, releaseSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { Atmosphere } from './Atmosphere';
@@ -22,7 +22,7 @@ import { SkyCompass } from './SkyCompass';
 import { SunAndMoon } from './SunAndMoon';
 
 const UnsupportedNotice = (
-  <p className="p-6 text-center text-slate-300">
+  <p className="p-6 text-center text-chalk/80">
     This browser cannot display the 3D view because WebGL is unavailable.
   </p>
 );
@@ -93,7 +93,7 @@ export function Scene({ world }: { world: World }) {
         <GroundTrack world={world} />
         <ObserverMarker />
         <Marker world={world} target="hovered" color="#ffffff" size={18} />
-        <Marker world={world} target="selected" color={ACCENT_COLOR} size={26} />
+        <Marker world={world} target="selected" color={MARK_COLOR} size={26} />
       </group>
     </Canvas>
   );

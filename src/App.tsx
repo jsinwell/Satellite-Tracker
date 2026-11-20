@@ -7,6 +7,7 @@ import { BootScreen } from './ui/BootScreen';
 import { FilterPanel } from './ui/FilterPanel';
 import { HoverLabel } from './ui/HoverLabel';
 import { InfoPanel } from './ui/InfoPanel';
+import { SURFACE } from './ui/Panel';
 import { SearchBox } from './ui/SearchBox';
 import { SkyPanel } from './ui/SkyPanel';
 import { SkyShowsButton } from './ui/SkyShowsButton';
@@ -90,8 +91,8 @@ function SkyIcon() {
   );
 }
 
-/** A cloud. */
-function CloudIcon() {
+/** A cloud, struck through when the clouds are hidden. */
+function CloudIcon({ hidden }: { hidden: boolean }) {
   return (
     <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
       <path
@@ -101,9 +102,15 @@ function CloudIcon() {
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
+      {hidden && (
+        <path d="m3.5 3.5 13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      )}
     </svg>
   );
 }
+
+/** The buttons beside the search box, and the one that opens the filters on a phone. */
+const HUD_BUTTON = `pointer-events-auto flex shrink-0 items-center px-3 text-xs hover:text-chalk ${SURFACE}`;
 
 const BOTTOM_ROW = [
   'absolute inset-x-3 bottom-3 grid items-end gap-x-3 gap-y-2',
@@ -142,7 +149,7 @@ export function App() {
   if (phase !== 'ready' || world === null) return <BootScreen />;
 
   return (
-    <main className="relative h-dvh w-screen overflow-hidden bg-space font-sans text-slate-200">
+    <main className="relative h-dvh w-screen overflow-hidden bg-space font-sans text-chalk">
       <div className="absolute inset-0">
         <Scene world={world} />
       </div>
@@ -178,7 +185,7 @@ export function App() {
                 aria-controls="your-sky"
                 aria-label="Your sky"
                 title="What's over you"
-                className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white aria-expanded:border-accent/60 aria-expanded:text-accent"
+                className={`${HUD_BUTTON} text-chalk/80 aria-expanded:border-chalk/50 aria-expanded:text-chalk`}
               >
                 <SkyIcon />
               </button>
@@ -190,9 +197,9 @@ export function App() {
                   aria-label="Clouds"
                   // Says whose data it is, as its license asks.
                   title={`${showClouds ? 'Hide' : 'Show'} the clouds (contains modified EUMETSAT data)`}
-                  className="pointer-events-auto flex shrink-0 items-center rounded-xl border border-white/10 bg-slate-950/75 px-3 text-xs text-slate-400 shadow-xl shadow-black/40 backdrop-blur-md hover:text-white aria-pressed:text-slate-100"
+                  className={`${HUD_BUTTON} text-graphite aria-pressed:text-chalk/80`}
                 >
-                  <CloudIcon />
+                  <CloudIcon hidden={!showClouds} />
                 </button>
               )}
               {lookingUp && <SkyShowsButton />}
@@ -206,7 +213,7 @@ export function App() {
               <div
                 id="your-sky"
                 ref={skyRef}
-                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-xl sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
+                className={`thin-scrollbar pointer-events-auto max-h-[40dvh] overflow-y-auto rounded-md sm:block sm:max-h-[calc(50dvh-4.5rem)] lg:max-h-[calc(50dvh-3rem)] ${
                   selected === null && watching === null && !filtersOpen ? '' : 'hidden'
                 }`}
               >
@@ -221,7 +228,7 @@ export function App() {
           )}
           {selected !== null && (
             // Capped and scrollable, so it can never run under the bottom row.
-            <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-xl sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
+            <div className="thin-scrollbar pointer-events-auto max-h-[48dvh] w-full overflow-y-auto rounded-md sm:max-h-[calc(100dvh-7.5rem)] sm:w-72">
               <InfoPanel
                 key={selected}
                 world={world}
@@ -260,7 +267,7 @@ export function App() {
             }}
             aria-expanded={filtersOpen}
             aria-controls="filters"
-            className="pointer-events-auto rounded-xl border border-white/10 bg-slate-950/75 px-3 py-2 text-xs text-slate-200 shadow-xl shadow-black/40 backdrop-blur-md [grid-area:toggle] aria-expanded:border-accent/60 sm:hidden"
+            className={`${HUD_BUTTON} py-2 text-chalk/80 [grid-area:toggle] aria-expanded:border-chalk/50 aria-expanded:text-chalk sm:hidden`}
           >
             Filters
           </button>
