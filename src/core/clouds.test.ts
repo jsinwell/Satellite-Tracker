@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { CLOUD_DRIFT, cloudCover, cloudsDrawnAt, cloudWind, driftClouds } from './clouds';
+import {
+  CLOUD_DRIFT,
+  cloudCover,
+  cloudsDrawnAt,
+  cloudWind,
+  driftClouds,
+  stepToward,
+} from './clouds';
 
 describe('cloudCover', () => {
   it('is none for the dark of the picture and all for its white', () => {
@@ -15,6 +22,28 @@ describe('cloudsDrawnAt', () => {
     expect(cloudsDrawnAt(0)).toBe(1);
     expect(cloudsDrawnAt(-50)).toBe(1);
     expect(cloudsDrawnAt(89)).toBe(0);
+  });
+});
+
+describe('stepToward', () => {
+  it('goes a step at a time, either way', () => {
+    expect(stepToward(0.2, 1, 0.05)).toBeCloseTo(0.25);
+    expect(stepToward(0.8, 0, 0.05)).toBeCloseTo(0.75);
+  });
+
+  it('lands on the target and not past it', () => {
+    expect(stepToward(0.98, 1, 0.05)).toBe(1);
+    expect(stepToward(0.02, 0, 0.05)).toBe(0);
+  });
+
+  it('stays there', () => {
+    // It used to step back off and on again every frame, which showed as
+    // every cloud flickering.
+    let value = 0;
+    for (let frame = 0; frame < 100; frame++) value = stepToward(value, 1, 0.05);
+    expect(value).toBe(1);
+    expect(stepToward(1, 1, 0.05)).toBe(1);
+    expect(stepToward(0, 0, 0.05)).toBe(0);
   });
 });
 

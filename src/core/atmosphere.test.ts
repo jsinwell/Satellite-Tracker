@@ -6,6 +6,7 @@ import {
   EXPOSURE,
   integrateTransmittance,
   luminance,
+  MOON_SKY_STEPS,
   meterSky,
   meterView,
   NIGHT_EXPOSURE,
@@ -290,6 +291,45 @@ describe('sunlightReaching', () => {
     const outside: Vec3 = { x: 0, y: 0, z: ATMOSPHERE.topKm + 5000 };
     const light = sunlightReaching(tables, outside, above(30), SUN_ANGULAR_RADIUS, rgb());
     for (const channel of light) expect(channel).toBeCloseTo(1, 12);
+  });
+});
+
+describe('the sky by the light of the Moon, in fewer steps', () => {
+  // The Moon's light is the Sun's, fainter: the same sky, marched in a third
+  // of the steps. This is what that costs in accuracy.
+  const eye = { x: 0, y: 0, z: ATMOSPHERE.bottomKm + 0.6 };
+  const toward = (elevationDeg: number, azimuthDeg = 0) => {
+    const elevation = (elevationDeg * Math.PI) / 180;
+    const azimuth = (azimuthDeg * Math.PI) / 180;
+    return {
+      x: Math.cos(elevation) * Math.cos(azimuth),
+      y: Math.cos(elevation) * Math.sin(azimuth),
+      z: Math.sin(elevation),
+    };
+  };
+
+  it('is within a tenth of the sky marched in full, wherever it is looked at', () => {
+    for (const moonUp of [60, 25, 8]) {
+      for (const lookUp of [2, 15, 40, 85]) {
+        for (const around of [0, 90, 180]) {
+          const fine = luminance(
+            skyLight(tables, eye, toward(lookUp, around), toward(moonUp), [0, 0, 0]),
+          );
+          const coarse = luminance(
+            skyLight(
+              tables,
+              eye,
+              toward(lookUp, around),
+              toward(moonUp),
+              [0, 0, 0],
+              undefined,
+              MOON_SKY_STEPS,
+            ),
+          );
+          expect(Math.abs(coarse / fine - 1)).toBeLessThan(0.1);
+        }
+      }
+    }
   });
 });
 

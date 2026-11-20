@@ -116,6 +116,15 @@ export function driftClouds(
   drift.y = (drift.y + wind.north * km) % CLOUD_DRIFT.periodKm;
 }
 
+/**
+ * `value` moved toward `target` by at most `step`, and never past it: there
+ * it stays. For fading something in and out a frame at a time.
+ */
+export function stepToward(value: number, target: number, step: number): number {
+  const gap = target - value;
+  return Math.abs(gap) <= step ? target : value + Math.sign(gap) * step;
+}
+
 export function cloudCover(value: number): number {
   const t = Math.min(
     1,
