@@ -52,7 +52,12 @@ const CONSTELLATION_COLORS: Record<ConstellationId, string> = {
   other: MUTED_COLOR,
 };
 
-export const ACCENT_COLOR = '#5eead4';
+/**
+ * What the interface itself draws in the scene: the ring around the selected
+ * satellite, the dot where you stand. White, the same as its text
+ * (`--color-chalk` in `index.css`), and no satellite's color.
+ */
+export const MARK_COLOR = '#f5f5f7';
 
 /**
  * The selected satellite's orbit wears its own color, but what it is drawn on
@@ -67,11 +72,11 @@ export const COVERAGE_COLOR = '#bef264';
 /**
  * The color a constellation is drawn in. `alone` says it is the only group
  * being shown: then it is the subject of the view rather than its backdrop,
- * so a group that would otherwise be muted takes the accent color instead.
+ * so a group that would otherwise be muted is drawn as brightly as a neutral can be.
  */
 export function constellationColor(id: ConstellationId, alone: boolean): string {
   const color = CONSTELLATION_COLORS[id];
-  return alone && color === MUTED_COLOR ? ACCENT_COLOR : color;
+  return alone && color === MUTED_COLOR ? MARK_COLOR : color;
 }
 
 /**

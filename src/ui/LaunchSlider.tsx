@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../app/store';
 import type { World } from '../app/world';
+import { PauseIcon, PlayIcon } from './icons';
 
 /** How long the animation takes to run from the first launch to the present. */
 const SWEEP_MS = 14_000;
@@ -44,9 +45,9 @@ export function LaunchSlider({ world }: { world: World }) {
 
   return (
     <div className="px-2 pt-1 pb-1.5 text-xs">
-      <div className="flex items-center justify-between text-slate-200">
+      <div className="flex items-center justify-between text-chalk">
         <label htmlFor="launched-by">Launched by</label>
-        <output htmlFor="launched-by" className="font-mono tabular-nums">
+        <output htmlFor="launched-by" className="tabular-nums">
           {year}
         </output>
       </div>
@@ -56,9 +57,9 @@ export function LaunchSlider({ world }: { world: World }) {
           onClick={togglePlaying}
           aria-label={playing ? 'Stop the launch timeline' : 'Play the launch timeline'}
           aria-pressed={playing}
-          className="w-5 shrink-0 text-slate-300 hover:text-white"
+          className="grid size-5 shrink-0 place-items-center rounded-full text-chalk/80 hover:text-chalk"
         >
-          {playing ? '❚❚' : '▶'}
+          {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <input
           id="launched-by"
@@ -72,7 +73,7 @@ export function LaunchSlider({ world }: { world: World }) {
             show(Number(event.target.value));
           }}
           title="Only objects still in orbit are shown"
-          className="w-full accent-accent"
+          className="w-full accent-chalk"
         />
       </div>
     </div>

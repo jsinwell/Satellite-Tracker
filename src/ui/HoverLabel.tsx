@@ -23,12 +23,14 @@ export function HoverLabel({ world }: { world: World }) {
     <div
       ref={labelRef}
       role="tooltip"
-      className={`pointer-events-none fixed top-0 left-0 z-20 rounded-md border border-white/10 bg-slate-950/90 px-2 py-1 text-xs whitespace-nowrap text-slate-100 shadow-lg ${
+      className={`pointer-events-none fixed top-0 left-0 z-20 flex items-baseline gap-2 rounded-lg border border-chalk/10 bg-night/90 px-2 py-1 whitespace-nowrap ${
         satellite ? '' : 'invisible'
       }`}
     >
-      {satellite?.name}{' '}
-      {satellite && <span className="ml-2 font-mono text-slate-500">{satellite.noradId}</span>}
+      <span className="text-xs font-medium text-chalk">{satellite?.name}</span>
+      {satellite && (
+        <span className="text-2xs text-graphite tabular-nums">{satellite.noradId}</span>
+      )}
     </div>
   );
 }

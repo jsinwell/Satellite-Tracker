@@ -523,7 +523,7 @@ export function PlanetDiscs() {
         label.dataset.moon = moon;
         label.textContent = JUPITER_MOON_NAMES[moon];
         label.className =
-          'absolute top-0 left-0 hidden -translate-x-1/2 text-[0.65rem] leading-none text-slate-400 [text-shadow:0_1px_3px_#000]';
+          'absolute top-0 left-0 hidden -translate-x-1/2 text-2xs leading-none text-graphite [text-shadow:0_1px_3px_#000]';
         return layer.appendChild(label);
       });
     }

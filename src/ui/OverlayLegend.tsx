@@ -3,6 +3,7 @@ import { COVERAGE_COLOR, GROUND_TRACK_COLOR, satelliteColor } from '../app/palet
 import { type Overlay, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { soleEnabled } from '../core/constellation';
+import { PanelHeading } from './Panel';
 
 /** Small pictures of each drawing, as it looks on the globe. */
 function OrbitSwatch({ color }: { color: string }) {
@@ -63,7 +64,7 @@ function OverlayRow({ overlay, label, hint, swatch }: RowProps) {
       aria-labelledby={`${id}-label`}
       aria-describedby={`${id}-hint`}
       onClick={() => useApp.getState().toggleOverlay(overlay)}
-      className="group flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+      className="group flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-chalk/5"
     >
       <span className="shrink-0 opacity-35 transition-opacity group-aria-checked:opacity-100">
         {swatch}
@@ -71,20 +72,20 @@ function OverlayRow({ overlay, label, hint, swatch }: RowProps) {
       <span className="min-w-0 flex-1">
         <span
           id={`${id}-label`}
-          className="block text-xs text-slate-400 group-aria-checked:text-slate-100"
+          className="block text-xs text-graphite group-aria-checked:text-chalk"
         >
           {label}
         </span>
-        <span id={`${id}-hint`} className="block text-[0.7rem] leading-snug text-slate-500">
+        <span id={`${id}-hint`} className="block text-2xs leading-snug text-graphite">
           {hint}
         </span>
       </span>
       {/* The switch itself: a track with a knob that slides across when on. */}
       <span
         aria-hidden="true"
-        className="relative h-4 w-7 shrink-0 rounded-full bg-slate-700 transition-colors group-aria-checked:bg-accent/70"
+        className="relative h-4 w-7 shrink-0 rounded-full bg-chalk/15 transition-colors group-aria-checked:bg-chalk"
       >
-        <span className="absolute top-0.5 left-0.5 size-3 rounded-full bg-slate-300 transition-transform group-aria-checked:translate-x-3 group-aria-checked:bg-white" />
+        <span className="absolute top-0.5 left-0.5 size-3 rounded-full bg-graphite transition-transform group-aria-checked:translate-x-3 group-aria-checked:bg-night" />
       </span>
     </button>
   );
@@ -100,10 +101,8 @@ export function OverlayLegend({ world, index }: { world: World; index: number })
   );
 
   return (
-    <div className="border-t border-white/10 px-2 py-2.5">
-      <h3 className="mb-1 px-2 text-[0.65rem] font-semibold tracking-widest text-slate-500 uppercase">
-        On the globe
-      </h3>
+    <div className="border-t border-chalk/10 px-2 py-2.5">
+      <PanelHeading className="px-2">On the globe</PanelHeading>
       <OverlayRow
         overlay="orbit"
         label="Orbit"
