@@ -15,6 +15,7 @@ import {
   ATMOSPHERE,
   atmosphereTables,
   ECLIPSE_SKYLIGHT,
+  MOON_SKY_STEPS,
   MULTISCATTER_MIN_SUN,
   MULTISCATTER_SIZE,
   NIGHT_VISION,
@@ -192,6 +193,7 @@ const SHARED_GLSL = /* glsl */ `
   const float SKY_SUN_RADIUS = ${float(SUN_ANGULAR_RADIUS)};
   const float SKY_ECLIPSE_SKYLIGHT = ${float(ECLIPSE_SKYLIGHT)};
   const int SKY_STEPS = ${SKY_STEPS};
+  const int MOON_SKY_STEPS = ${MOON_SKY_STEPS};
   const float SKY_STEP_OFFSET = ${float(SKY_STEP_OFFSET)};
   const float SKY_VIEW_WIDTH = ${float(SKY_VIEW.width)};
   const float SKY_VIEW_ABOVE = ${float(SKY_VIEW.above)};
@@ -290,7 +292,7 @@ export const ATMOSPHERE_MARCH_GLSL = /* glsl */ `
   // "start" and "end" along a line of sight, and how much of what lies beyond
   // gets through. The light is from "toLight", as much of it as the Sun
   // gives: the Sun itself, which the Moon can eclipse, or the Moon.
-  void skyMarch(vec3 direction, float start, float end, vec3 toLight, bool eclipsed, out vec3 light, out vec3 through) {
+  void skyMarch(vec3 direction, float start, float end, vec3 toLight, bool eclipsed, int steps, out vec3 light, out vec3 through) {
     light = vec3(0.0);
     through = vec3(1.0);
     float span = end - start;
@@ -308,7 +310,8 @@ export const ATMOSPHERE_MARCH_GLSL = /* glsl */ `
 
     float from = 0.0;
     for (int i = 0; i < SKY_STEPS; i++) {
-      float x = float(i + 1) / float(SKY_STEPS);
+      if (i >= steps) break;
+      float x = float(i + 1) / float(steps);
       float to = span * (x + bunching * (x * x - x));
       float stride = to - from;
       float t = start + from + SKY_STEP_OFFSET * stride;

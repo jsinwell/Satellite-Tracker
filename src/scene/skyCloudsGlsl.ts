@@ -20,6 +20,8 @@ const float = (value: number) => value.toExponential(8);
 export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
   uniform vec3 uSkyAmbient;
   uniform float uCloudsShown;
+  // The Moon's radius in the sky, radians.
+  uniform float uMoonRadius;
 
   varying vec3 vRay;
 
@@ -128,6 +130,23 @@ export const SKY_CLOUDS_FRAGMENT = /* glsl */ `
     float haze = 1.0 - exp(-reach / CLOUD_HAZE);
     vec3 color = mix(skyTone(light), air, haze);
     alpha *= uLandClouded * uCloudsShown * (1.0 - haze * haze);
+
+    // The Moon behind cloud. A cloud that looks half there is still far too
+    // thick to see the Moon's face through: what comes through is its light,
+    // spread out, a bright patch in the cloud with no edge to it. So in
+    // front of the Moon any cloud to speak of hides it, and thin cloud glows
+    // there in its place. Without this the Moon showed through as a dim
+    // disc with a sharp edge, and looked to be in front of the cloud.
+    if (uSkyMoonGlare.g > 0.0) {
+      float fromMoon = acos(clamp(dot(direction, uSkyMoon), -1.0, 1.0)) / uMoonRadius;
+      float veiled = smoothstep(0.03, 0.3, alpha);
+      // Less of it through thick cloud, but some: a full Moon shows where
+      // it is behind all but the heaviest overcast.
+      float bright = (1.0 - 0.75 * thick) * veiled
+        * (0.75 * exp(-fromMoon * fromMoon / 40.0) + 0.25 * exp(-fromMoon / 14.0));
+      color = skyAdd(color, 0.8 * uSkyMoonGlare * bright);
+      alpha = mix(alpha, max(alpha, veiled), 1.0 - smoothstep(1.5, 4.0, fromMoon));
+    }
 
     // Blended as the sky is: the color is what to add, the alpha how much
     // of what is behind to hide.

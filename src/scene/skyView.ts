@@ -49,14 +49,14 @@ const fragmentShader = /* glsl */ `
           float low = b * b - uSkyEyeHeight * (r + SKY_BOTTOM);
           end = max(start, -b - sqrt(max(low, 0.0)));
         }
-        skyMarch(direction, start, end, uSkySun, true, light, through);
+        skyMarch(direction, start, end, uSkySun, true, SKY_STEPS, light, through);
         // By night, the Moon's light in the air as well: the same blue sky
         // as by day, a few hundred thousand times fainter, and seen with
         // little of its color.
         if (!wantThrough && uSkyMoonlight.g > 0.0) {
           vec3 byMoon;
           vec3 unused;
-          skyMarch(direction, start, end, uSkyMoon, false, byMoon, unused);
+          skyMarch(direction, start, end, uSkyMoon, false, MOON_SKY_STEPS, byMoon, unused);
           light += skyByNight(byMoon * uSkyMoonlight);
         }
       }

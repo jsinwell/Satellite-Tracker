@@ -10,7 +10,7 @@ import {
 } from 'three';
 import { currentSimTime, useApp } from '../app/store';
 import { gmst } from '../core/astro';
-import { CLOUD_COVER, CLOUD_LATITUDES, CLOUD_MAPS } from '../core/clouds';
+import { CLOUD_COVER, CLOUD_LATITUDES, CLOUD_MAPS, stepToward } from '../core/clouds';
 import { EARTH_RADIUS_KM } from '../core/constants';
 import { ATMOSPHERE_GLSL, atmosphereUniforms } from './atmosphereGlsl';
 import { SPHERE_POLES_TO_Z } from './frame';
@@ -186,8 +186,7 @@ export function Earth() {
     if (spin.current) spin.current.rotation.z = gmst(currentSimTime());
     const wanted = cloudMap.current && useApp.getState().showClouds ? 1 : 0;
     const clouds = material.uniforms.uClouds;
-    const step = CLOUDS_FADE_RATE * deltaSeconds;
-    clouds.value = Math.min(1, Math.max(0, clouds.value + (wanted > clouds.value ? step : -step)));
+    clouds.value = stepToward(clouds.value, wanted, CLOUDS_FADE_RATE * deltaSeconds);
     landscapeUniforms().uLandClouded.value = clouds.value;
   });
 

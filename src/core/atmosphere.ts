@@ -77,6 +77,13 @@ export const MULTISCATTER_MIN_SUN = -0.4;
  * every line sampled at the same places, with no need to shuffle them.
  */
 export const SKY_STEPS = 24;
+/**
+ * And for the Moon's light in the sky at night, which is marched as well:
+ * fewer. It is a few hundred thousand times fainter and has no sunset in
+ * it, nothing bright and fine for coarse steps to get wrong, and each step
+ * is paid for on every pixel of the sky's map, every frame.
+ */
+export const MOON_SKY_STEPS = 8;
 /** How far along each step the air is sampled: early, as it thins along most lines. */
 export const SKY_STEP_OFFSET = 0.3;
 /** The Sun's radius in the sky, radians: it sets over this far either side of the horizon. */
@@ -531,7 +538,8 @@ const span: Span = { start: 0, end: 0, ground: false };
 /**
  * The light of the sky arriving at `eye` from `direction` (a unit vector),
  * with the Sun in the direction `sun`, into `out`. If the line of sight ends
- * on the ground, this is the light of the air in front of it.
+ * on the ground, this is the light of the air in front of it. In `steps`
+ * steps along the line of sight: `SKY_STEPS` unless told otherwise.
  */
 export function skyLight(
   tables: AtmosphereTables,
@@ -540,12 +548,13 @@ export function skyLight(
   sun: Vec3,
   out: Rgb,
   sunLeft?: SunLeft,
+  steps: number = SKY_STEPS,
 ): Rgb {
   if (!spanOf(eye, direction, span)) {
     out[0] = out[1] = out[2] = 0;
     return out;
   }
-  const { light } = march(tables, eye, direction, sun, span.start, span.end, SKY_STEPS, sunLeft);
+  const { light } = march(tables, eye, direction, sun, span.start, span.end, steps, sunLeft);
   out[0] = light[0];
   out[1] = light[1];
   out[2] = light[2];
