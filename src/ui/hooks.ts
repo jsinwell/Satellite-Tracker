@@ -40,11 +40,17 @@ function usePolled<T>(read: () => T, intervalMs: number): T {
 /** Tailwind's `lg` breakpoint: from here up the bottom of the screen is one row. */
 const WIDE_SCREEN = '(min-width: 64rem)';
 
-function watchWidth(onChange: () => void): () => void {
-  const query = window.matchMedia(WIDE_SCREEN);
+/** Tailwind's `sm` breakpoint: below it is a phone, with a layout of its own. */
+const NOT_A_PHONE = '(min-width: 40rem)';
+
+/** Tells `onChange` whenever the answer to a media query changes. */
+const watching = (media: string) => (onChange: () => void) => {
+  const query = window.matchMedia(media);
   query.addEventListener('change', onChange);
   return () => query.removeEventListener('change', onChange);
-}
+};
+const watchWidth = watching(WIDE_SCREEN);
+const watchPhone = watching(NOT_A_PHONE);
 
 /**
  * True on a screen wide enough for the time bar to sit beside the filters.
@@ -53,6 +59,14 @@ function watchWidth(onChange: () => void): () => void {
  */
 export function useWideScreen(): boolean {
   return useSyncExternalStore(watchWidth, () => window.matchMedia(WIDE_SCREEN).matches);
+}
+
+/**
+ * True on a phone-sized screen, which gets a layout of its own: one sheet at
+ * the bottom in place of panels at the sides.
+ */
+export function usePhoneScreen(): boolean {
+  return !useSyncExternalStore(watchPhone, () => window.matchMedia(NOT_A_PHONE).matches);
 }
 
 /** The simulated instant, refreshed every `intervalMs`. */

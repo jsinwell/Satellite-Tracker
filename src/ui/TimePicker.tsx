@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { currentSimTime, useApp } from '../app/store';
 import { wallNow } from '../core/clock';
+import type { Observer } from '../core/observer';
 import {
   clampSettable,
   MONTH_NAMES,
@@ -27,7 +28,9 @@ import {
   withTimePart,
 } from './calendar';
 import { fromUtcField, SETTABLE_RANGE_MS, toUtcField } from './format';
+import { useSimTime, useWideScreen } from './hooks';
 import { ChevronIcon } from './icons';
+import { NightStrip } from './NightStrip';
 import { Panel } from './Panel';
 
 /**
@@ -81,6 +84,10 @@ export function TimePicker({ onClose }: { onClose(): void }) {
   const [page, setPage] = useState(() => monthOf(instant));
   const [choosingMonth, setChoosingMonth] = useState(false);
   const fieldId = useId();
+  // Where the time bar has no room for tonight's strip, it is here: this is
+  // where the time is set.
+  const observer = useApp((state) => state.observer);
+  const stripHere = !useWideScreen();
   const panel = useRef<HTMLFormElement>(null);
   const typed = fromUtcField(text);
   const farFromNow = typed !== null && Math.abs(typed - wallNow()) > RELIABLE_MS;
@@ -139,6 +146,13 @@ export function TimePicker({ onClose }: { onClose(): void }) {
         // Room is left under it for the time bar, which is taller on a wide screen: see `NightStrip`.
         className="thin-scrollbar max-h-[calc(100dvh-5rem)] space-y-3 overflow-y-auto p-3 text-xs lg:max-h-[calc(100dvh-8rem)]"
       >
+        {stripHere && observer && (
+          <div>
+            <p className="mb-1.5 text-chalk/80">Tonight</p>
+            <Tonight observer={observer} onGoTo={choose} />
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label htmlFor={fieldId} className="block text-chalk/80">
             Go to a date and time (UTC)
@@ -253,6 +267,12 @@ export function TimePicker({ onClose }: { onClose(): void }) {
       </Panel>
     </form>
   );
+}
+
+/** Tonight's strip, keeping its own time, so that the picker is not redrawn as the clock runs. */
+function Tonight({ observer, onGoTo }: { observer: Observer; onGoTo(timeMs: number): void }) {
+  const simMs = useSimTime(200);
+  return <NightStrip observer={observer} simMs={simMs} hoursApart={6} onGoTo={onGoTo} />;
 }
 
 /**

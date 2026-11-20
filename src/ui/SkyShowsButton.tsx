@@ -11,7 +11,11 @@ const stroke = {
   strokeLinecap: 'round',
 } as const;
 
-const CHOICES: Record<SkyShows, { name: string; showing: string; icon: ReactNode }> = {
+/** The three answers to which satellites the view from the ground shows. */
+export const SKY_SHOWS_CHOICES: Record<
+  SkyShows,
+  { name: string; showing: string; icon: ReactNode }
+> = {
   eye: {
     name: 'By eye',
     showing: 'the satellites you could see by eye',
@@ -61,19 +65,19 @@ const CHOICES: Record<SkyShows, { name: string; showing: string; icon: ReactNode
 export function SkyShowsButton() {
   const shows = useApp((state) => state.skyShows);
   const next = SKY_SHOWS[(SKY_SHOWS.indexOf(shows) + 1) % SKY_SHOWS.length];
-  const { name, showing, icon } = CHOICES[shows];
+  const { name, showing, icon } = SKY_SHOWS_CHOICES[shows];
   return (
     <button
       type="button"
       onClick={() => useApp.getState().setSkyShows(next)}
       aria-label={`Satellites shown: ${name}`}
-      title={`Showing ${showing}. Click for ${CHOICES[next].name.toLowerCase()}.`}
+      title={`Showing ${showing}. Click for ${SKY_SHOWS_CHOICES[next].name.toLowerCase()}.`}
       className={`pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full px-3 text-xs text-chalk/80 hover:text-chalk ${SURFACE}`}
     >
       <svg viewBox="0 0 20 20" className="size-4" aria-hidden="true">
         {icon}
       </svg>
-      <span className="hidden sm:inline">{name}</span>
+      <span>{name}</span>
     </button>
   );
 }
