@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { currentSimTime, useApp } from '../app/store';
 import type { World } from '../app/world';
 import { isSunlit, subSatellitePoint } from '../core/astro';
@@ -35,6 +35,24 @@ function usePolled<T>(read: () => T, intervalMs: number): T {
     return () => clearInterval(timer);
   }, [read, intervalMs]);
   return value;
+}
+
+/** Tailwind's `lg` breakpoint: from here up the bottom of the screen is one row. */
+const WIDE_SCREEN = '(min-width: 64rem)';
+
+function watchWidth(onChange: () => void): () => void {
+  const query = window.matchMedia(WIDE_SCREEN);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+/**
+ * True on a screen wide enough for the time bar to sit beside the filters.
+ * For what is not worth working out, let alone drawing, where there is no
+ * room to show it: CSS alone would hide it and still pay for it.
+ */
+export function useWideScreen(): boolean {
+  return useSyncExternalStore(watchWidth, () => window.matchMedia(WIDE_SCREEN).matches);
 }
 
 /** The simulated instant, refreshed every `intervalMs`. */

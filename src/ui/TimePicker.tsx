@@ -136,7 +136,8 @@ export function TimePicker({ onClose }: { onClose(): void }) {
     >
       <Panel
         aria-label="Go to a date and time"
-        className="thin-scrollbar max-h-[calc(100dvh-5rem)] space-y-3 overflow-y-auto p-3 text-xs"
+        // Room is left under it for the time bar, which is taller on a wide screen: see `NightStrip`.
+        className="thin-scrollbar max-h-[calc(100dvh-5rem)] space-y-3 overflow-y-auto p-3 text-xs lg:max-h-[calc(100dvh-8rem)]"
       >
         <div className="space-y-1.5">
           <label htmlFor={fieldId} className="block text-chalk/80">

@@ -35,31 +35,31 @@
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/sunset-under-cloud.jpg" alt="The Sun setting into the Atlantic under broken cloud lit gold from below, with a path of glitter on the water" />
+      <img src="docs/screenshots/atlantic-sunset.jpg" alt="The Sun setting into the Atlantic under broken cloud lit gold from below, with a path of glitter on the water" />
       <p>Sunset over the Atlantic near Lisbon. How much cloud there is comes from weather-satellite data.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/desert-evening.jpg" alt="Red desert hills lit from the side by a low Sun, under a clear evening sky" />
+      <img src="docs/screenshots/monument-valley-evening.jpg" alt="Red desert hills lit from the side by a low Sun, under a clear evening sky" />
       <p>Near Monument Valley, Utah, a little before sunset.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/satellites-at-dusk.jpg" alt="A dusk sky with the Moon, Saturn and a dozen points of light, each with a tail" />
+      <img src="docs/screenshots/dusk-over-los-angeles.jpg" alt="A dusk sky with the Moon, Saturn and a dozen points of light, each with a tail" />
       <p>Los Angeles an hour after sunset. The points with tails are the satellites you could see.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/full-moon.jpg" alt="A full Moon with a wide glow around it in a blue-gray sky, with few stars and moonlit clouds below" />
+      <img src="docs/screenshots/honolulu-full-moon.jpg" alt="A full Moon with a wide glow around it in a blue-gray sky, with few stars and moonlit clouds below" />
       <p>A full Moon over Honolulu. It lights the sky and the clouds and drowns out most of the stars.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/saturn-rings.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
+      <img src="docs/screenshots/saturn-from-luxor.jpg" alt="Saturn close up, its rings tilted toward the camera and casting a shadow on the planet" />
       <p>Zoomed in on Saturn from the ground.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/moon-close.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
+      <img src="docs/screenshots/moon-from-luxor.jpg" alt="The Moon close up, a little past half lit, with craters along the line between day and night" />
       <p>The Moon the same way, a day past first quarter.</p>
     </td>
   </tr>
@@ -69,7 +69,7 @@
       <p>South America at night.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="docs/screenshots/solar-eclipse.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
+      <img src="docs/screenshots/eclipse-from-luxor.jpg" alt="The eclipsed Sun's corona in a darkened sky, with Venus and Mercury beside it" />
       <p>The total solar eclipse of August 2, 2027, seen from Luxor. Venus and Mercury are the two dots next to it.</p>
     </td>
   </tr>
@@ -98,6 +98,10 @@
 - Set your location (GPS, a click on the globe, or typed coordinates) and it lists what's
   overhead and which of those you could actually see.
 - Pick a satellite and it shows its next passes over you. Click a pass to jump to that time.
+- On a wide screen the time bar grows a strip of the 24 hours around tonight, from noon to
+  noon. It's shaded light and dark like the sky, the good hours for spotting satellites are
+  yellow, and the selected satellite's passes are marked above it. Click or drag along it
+  to go to that time.
 - "Look up from here" puts the camera on the ground and shows the sky from where you're
   standing: satellites, stars, planets, the Sun and the Moon. Drag to look around, scroll or
   pinch to zoom.

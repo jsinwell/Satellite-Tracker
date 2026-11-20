@@ -2,8 +2,9 @@ import { useCallback, useState } from 'react';
 import { useApp } from '../app/store';
 import { TIME_RATES, wallNow } from '../core/clock';
 import { formatUtc } from './format';
-import { useSimTime } from './hooks';
+import { useSimTime, useWideScreen } from './hooks';
 import { PauseIcon, PlayIcon } from './icons';
+import { NightStrip } from './NightStrip';
 import { Panel } from './Panel';
 import { TimePicker } from './TimePicker';
 
@@ -18,6 +19,8 @@ export function TimeBar() {
   const rate = useApp((state) => state.clock.rate);
   const setRate = useApp((state) => state.setRate);
   const goLive = useApp((state) => state.goLive);
+  const observer = useApp((state) => state.observer);
+  const wide = useWideScreen();
   const simMs = useSimTime(100);
   const live = rate === 1 && Math.abs(simMs - wallNow()) < LIVE_TOLERANCE_MS;
   const paused = rate === 0;
@@ -31,6 +34,14 @@ export function TimeBar() {
         aria-label="Simulation time"
         className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 py-2"
       >
+        {/*
+          Tonight, once there is a place for it to be the night of. Only on a
+          wide screen, where the time bar sits beside the filters: narrower,
+          it is stacked under them, and growing would push them up into the
+          panels above.
+        */}
+        {observer && wide && <NightStrip observer={observer} simMs={simMs} />}
+
         {/* The time itself is the way to set it. */}
         <button
           type="button"
